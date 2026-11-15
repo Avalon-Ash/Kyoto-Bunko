@@ -1,9 +1,8 @@
 // Explicit 3D builder for high-makie rocks (takamaki-e mound + kirikane/kirigin square tile mosaic).
 // Pure geometry returning a plate part with `mesh` + original `fills`/`lines` for picking and bounds, zero `thick`.
-import {MAT, KIND, rand} from './vocab.js';
+import {MAT} from './mat.js';
+import {KIND, rand} from './vocab.js';
 
-/** The body material of a silver (kirigin) rock: three-pack.js gives it the silver foil, MAT.mura the gold. */
-export const ROCK_BODY_SILVER = 13; // = MAT.kasumi (vocab.js imports this file, so MAT is not ready here; a test pins them equal); an id no other mesh chunk uses; three-pack.js MATERIALS marks it as a silver rock body
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -208,7 +207,7 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1}
     return r > 1e-9 ? [cx + dx / r * along, cz + dz / r * along] : [cx, cz];
   }));
 
-  const bodyMat = mat === MAT.kirigin ? ROCK_BODY_SILVER : MAT.mura;
+  const bodyMat = mat === MAT.kirigin ? MAT.muraSilver : MAT.mura;
   const bodyVerts = [];
   for (const [[j0, i0], [j1, i1], [j2, i2]] of topTris) {
     pushTri(bodyVerts, pos[j0][i0], pos[j1][i1], pos[j2][i2], [0, 1, 0], norm[j0][i0], norm[j1][i1], norm[j2][i2], foilUv[j0][i0], foilUv[j1][i1], foilUv[j2][i2]);

@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {PLATE, MAT, KIND, rand} from './vocab.js';
 import {PLATES, LAYERS, preparePlate, createLife, partAt} from './parts.js';
-import {paintLayer, identMaps} from './bake.js';
+import {paintLayer, identMaps, bakeDensityField} from './bake.js';
 import {blankStats} from './fillers.js';
 import {buildBox, FITTINGS} from './box.js';
 import {bakeStamps} from './stamps.js';
@@ -22,7 +22,7 @@ import {
   MATERIALS, BOX_MATERIALS, GROUND_LID, STATE_WIDTH, STATE_HEIGHT, packLifeState,
   meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox,
   bakeSoftLayer, mistGeometryData, PART_MOTION_GLSL, PART_LIGHT_GLSL, PART_KIRIKANE_GLSL, BOX_MOTION_GLSL, BOX_GROUND_GLSL, BOX_GROUND_DEPTH_GLSL,
-  TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL,
+  TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, DENSITY,
   MAKIE_GROUND_PARS_GLSL, MAKIE_GROUND_FRAG_GLSL, MAKIE_MIST_VERT_GLSL, MAKIE_MIST_FRAG_GLSL,
   BOX_SIDE_VERT_GLSL, BOX_SIDE_PARS_GLSL, BOX_SIDE_FRAG_GLSL,
 } from './three-pack.js';
@@ -114,12 +114,15 @@ export function createThreeRenderer(gl, canvas) {
   const dummyRgba = own(new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType)); dummyRgba.needsUpdate = true;
   const dummyRg = own(new THREE.DataTexture(new Uint8Array([0, 0]), 1, 1, THREE.RGFormat, THREE.UnsignedByteType)); dummyRg.unpackAlignment = 1; dummyRg.needsUpdate = true;
   const dummySoft = own(new THREE.DataTexture(new Uint16Array([0]), 1, 1, THREE.RedFormat, THREE.HalfFloatType)); dummySoft.unpackAlignment = 1; dummySoft.needsUpdate = true;
+  // Dev only: ?dens=off leaves the ground's powder at its flat density (and skips the bake), ?dens=view paints the field, ?dens=mask paints plain ground magenta (for measuring).
+  const densMode = import.meta.env.DEV ? new URLSearchParams(location.search).get('dens') : null;
+  const neutralDens = own(new THREE.DataTexture(new Uint8Array([128]), 1, 1, THREE.RedFormat, THREE.UnsignedByteType)); neutralDens.unpackAlignment = 1; neutralDens.needsUpdate = true;
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const stampTex = own(bakeStampTexture(doc, maxAniso));
   const trails = Array.from({length: 20}, () => new THREE.Vector3());
   const shared = {
     uState: {value: stateTexture}, uTilt: {value: new THREE.Matrix3()}, uOpening: {value: 0},
-    uSoft0: {value: dummySoft}, uIdent0: {value: dummyRg}, uFine0: {value: dummyRgba},
+    uSoft0: {value: dummySoft}, uIdent0: {value: dummyRg}, uFine0: {value: dummyRgba}, uDens: {value: neutralDens}, uDensMean: {value: .5}, uDensView: {value: densMode === 'view' ? 1 : densMode === 'mask' ? 2 : 0},
     uMistFine: {value: dummyRgba}, uMistIdent: {value: dummyRg}, uStamps: {value: stampTex},
     uView: {value: new THREE.Vector3(...VIEW)}, uKey: {value: new THREE.Vector3(...KEY)}, uLamp: {value: new THREE.Vector3(0, 70, 0)},
     uTime: {value: 0}, uNight: {value: 1}, uPresence: {value: 0}, uPx: {value: 1}, uTrails: {value: trails},
@@ -498,6 +501,20 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       yield;
 
       t = performance.now();
+      let densTex = neutralDens, densMean = .5;
+      if (densMode !== 'off') {
+        const dw = DENSITY.width, dh = Math.round(dw * PLATE.halfH / PLATE.halfW);
+        const field = bakeDensityField(doc, parts, dw, dh, DENSITY.falloff);
+        for (let i = 0; i < field.length; i++) densMean += field[i];
+        densMean = (densMean - .5) / field.length / 255 - DENSITY.refShift;
+        densTex = new THREE.DataTexture(field, dw, dh, THREE.RedFormat, THREE.UnsignedByteType);
+        densTex.minFilter = densTex.magFilter = THREE.LinearFilter; densTex.unpackAlignment = 1; densTex.needsUpdate = true;
+        textures.push(densTex);
+      }
+      buildMs += performance.now() - t;
+      yield;
+
+      t = performance.now();
       // Bare nashiji, for reference only (fillers.js): share farther than 12 units from any part / largest empty radius.
       const occupied = new Uint8Array(mw * mh);
       for (const map of maps) for (let i = 0; i < map.length; i++) if (map[i]) occupied[i] = 1;
@@ -547,7 +564,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       yield;
 
       t = performance.now();
-      const uniforms = {uFine0: fine0Tex, uSoft0: soft0Tex, uIdent0: ident0Tex};
+      const uniforms = {uFine0: fine0Tex, uSoft0: soft0Tex, uIdent0: ident0Tex, uDens: densTex};
       const mistParts = parts.filter(p => p.kind === KIND.mist);
       if (mistParts.length) {
         paintLayer(ctx, w, h, mistParts.map(p => ({...p, layer: 1})), 1);
@@ -582,6 +599,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
         group,
         textures,
         uniforms,
+        densMean,
         stats: {meshVertices, treeVertices, treeStamps, boxVertices, parts: parts.length, blank: blankStr},
         plate: {parts, maps, mw, mh, ward, soft, ident: packed[0]},
         buildMs,
@@ -618,7 +636,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     if (wardGroup) scene.remove(wardGroup);
     shared.uFine0.value = shared.uMistFine.value = dummyRgba;
     shared.uIdent0.value = shared.uMistIdent.value = dummyRg;
-    shared.uSoft0.value = dummySoft;
+    shared.uSoft0.value = dummySoft; shared.uDens.value = neutralDens; shared.uDensMean.value = .5;
     wardGroup = null; plate = null; life = null;
   }
 
@@ -627,6 +645,8 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     shared.uFine0.value = entry.uniforms.uFine0;
     shared.uSoft0.value = entry.uniforms.uSoft0;
     shared.uIdent0.value = entry.uniforms.uIdent0;
+    shared.uDens.value = entry.uniforms.uDens;
+    shared.uDensMean.value = entry.densMean;
     shared.uMistFine.value = entry.uniforms.uMistFine ?? dummyRgba;
     shared.uMistIdent.value = entry.uniforms.uMistIdent ?? dummyRg;
     scene.add(entry.group);
@@ -639,6 +659,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     canvas.dataset.boxVertices = String(entry.stats.boxVertices); canvas.dataset.blank = entry.stats.blank;
     canvas.dataset.bakeMs = (performance.now() - started).toFixed(0);
     canvas.dataset.prefetched = String(prefetched);
+    canvas.dataset.buildMs = entry.buildMs.toFixed(0);
   }
 
   /** Builds or activates a ward's plate. Returns false when the ward has not been redrawn as a plate. */

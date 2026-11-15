@@ -1,6 +1,6 @@
 // Rasterises a plate's parts with Canvas 2D. The GPU side (blur, upload) lives in three-renderer.js.
 // Channels of a painted layer:  R soft swell (blurred later)  G crisp relief  B line work  A coverage.
-import {PLATE} from './vocab.js';
+import {PLATE, KIND} from './vocab.js';
 
 const trace = (ctx, d, close) => {
   ctx.beginPath();
@@ -68,4 +68,76 @@ export function identMaps(doc, parts, w, h, layers, groundMat) {
     }
   }
   return {packed, maps};
+}
+
+/**
+ * How strongly each kind of part gathers dense nashiji around it (the Hatsune lids are thick near the mist, banks,
+ * rocks, buildings and water's edge, and thin in the open). Birds ride a pine and add nothing of their own.
+ */
+const DENSITY_WEIGHT = {[KIND.still]: .3, [KIND.tier]: 1, [KIND.pine]: .6, [KIND.rock]: 1, [KIND.hill]: .9, [KIND.water]: .8, [KIND.mist]: 1, [KIND.bird]: 0};
+
+/**
+ * One-channel density field of the powder (0..1): 1 on a part, falling away to 0 at `falloff` plate units from the
+ * heaviest one, then softened, so the ground goes from dense to sparse without an edge (maki-bokashi).
+ * Rasterised at w × h (small: it only needs to be smooth). Returns a Uint8Array of w × h.
+ */
+export function bakeDensityField(doc, parts, w, h, falloff) {
+  const scratch = doc.createElement('canvas'); scratch.width = w; scratch.height = h;
+  const ctx = scratch.getContext('2d', {willReadFrequently: true});
+  if (!ctx) return new Uint8Array(w * h);
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+  toUnits(ctx, w, h);
+  ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.globalCompositeOperation = 'lighten'; // the strongest part wins where footprints overlap
+  for (const p of parts) {
+    const weight = DENSITY_WEIGHT[p.kind] ?? .3;
+    if (weight <= 0) continue;
+    const g = Math.round(weight * 255), grey = `rgb(${g},${g},${g})`;
+    ctx.fillStyle = ctx.strokeStyle = grey;
+    if (!p.fills.length && !p.lines.length) {
+      // A tree is limbs and stamps, not polygons: its bounds stand in for it.
+      const [x0, z0, x1, z1] = p.bounds;
+      ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, (z0 + z1) / 2, Math.max((x1 - x0) / 2, 1), Math.max((z1 - z0) / 2, 1), 0, 0, 6.2832); ctx.fill();
+      continue;
+    }
+    for (const f of p.fills) { trace(ctx, f.d, true); ctx.fill(); }
+    for (const l of p.lines) { ctx.lineWidth = l.w + (p.reach ?? 0) * 2; trace(ctx, l.d, false); ctx.stroke(); }
+  }
+  const rgba = ctx.getImageData(0, 0, w, h).data, mask = new Float32Array(w * h);
+  for (let i = 0; i < mask.length; i++) mask[i] = rgba[i * 4] / 255;
+  return densityFromMask(mask, w, h, falloff);
+}
+
+/** The canvas-free half of bakeDensityField: spreads weights (0..1 per texel) into the 0..255 field. Pure, so node can test it. */
+export function densityFromMask(mask, w, h, falloff) {
+  const out = new Uint8Array(w * h), v = Float32Array.from(mask);
+  // Grey-scale dilation with a linear fall per unit of distance: two chamfer sweeps (8 neighbours).
+  const unit = PLATE.halfW * 2 / w, side = unit / falloff, diag = side * 1.4142;
+  const relax = (i, j, cost) => { const c = v[j] - cost; if (c > v[i]) v[i] = c; };
+  for (let z = 0; z < h; z++) for (let x = 0; x < w; x++) {
+    const i = z * w + x;
+    if (x > 0) relax(i, i - 1, side);
+    if (z > 0) { relax(i, i - w, side); if (x > 0) relax(i, i - w - 1, diag); if (x < w - 1) relax(i, i - w + 1, diag); }
+  }
+  for (let z = h - 1; z >= 0; z--) for (let x = w - 1; x >= 0; x--) {
+    const i = z * w + x;
+    if (x < w - 1) relax(i, i + 1, side);
+    if (z < h - 1) { relax(i, i + w, side); if (x < w - 1) relax(i, i + w + 1, diag); if (x > 0) relax(i, i + w - 1, diag); }
+  }
+  for (let i = 0; i < v.length; i++) { const t = Math.min(1, Math.max(0, v[i])); v[i] = t * t * (3 - 2 * t); }
+  // Three box passes per axis stand in for a gaussian, so the cone's tip and foot lose their creases.
+  const tmp = new Float32Array(w * h), R = 3;
+  const blur = (src, dst, n, stride, lines, lineStride) => {
+    for (let l = 0; l < lines; l++) {
+      let acc = 0; const base = l * lineStride;
+      for (let k = -R; k <= R; k++) acc += src[base + Math.min(n - 1, Math.max(0, k)) * stride];
+      for (let k = 0; k < n; k++) {
+        dst[base + k * stride] = acc / (2 * R + 1);
+        acc += src[base + Math.min(n - 1, k + R + 1) * stride] - src[base + Math.max(0, k - R) * stride];
+      }
+    }
+  };
+  for (let pass = 0; pass < 3; pass++) { blur(v, tmp, w, 1, h, w); blur(tmp, v, h, w, w, 1); }
+  for (let i = 0; i < v.length; i++) out[i] = Math.round(Math.min(1, Math.max(0, v[i])) * 255);
+  return out;
 }

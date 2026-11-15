@@ -18,8 +18,8 @@ import {meshRock} from './rock-mesh.js';
 import {meshFox, meshPhoenix, meshBird, meshSandCone, meshMoonBowl, meshWall, feetCentre} from './creature-mesh.js';
 
 export const PLATE = {halfW: 360, halfH: 230};
-export const MAT = {ground: 1, nashijiLight: 2, mura: 3, gyobu: 4, gold: 5, silver: 6, kirikane: 7, kirigin: 8, aogai: 9,
-  hyomonGold: 10, hyomonSilver: 11, water: 12, kasumi: 13, lacquer: 14, lamp: 15};
+import {MAT} from './mat.js';
+export {MAT};
 export const KIND = {still: 0, tier: 1, pine: 2, rock: 3, hill: 4, water: 5, mist: 6, bird: 7};
 
 /** Deterministic noise in 0..1 so a plate bakes the same on every device. */

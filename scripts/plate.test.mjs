@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {stepSpring, stepDamped, settled} from '../src/studies/toji/plate/spring.js';
 import {PLATES, hasPlate, preparePlate, createLife, partAt, MAX_PARTS, LAYERS, DWELL_MS, STAND_REST} from '../src/studies/toji/plate/parts.js';
 import {KIND, MAT, PLATE, roof, storey, kakezukuri, stoneSteps, stream, shell, steppingStones, corridor, romon, sanmon, karamon, rock} from '../src/studies/toji/plate/vocab.js';
-import {ROCK_BODY_SILVER} from '../src/studies/toji/plate/rock-mesh.js';
+import {densityFromMask} from '../src/studies/toji/plate/bake.js';
 import {buildBox} from '../src/studies/toji/plate/box.js';
 
 const p3bWards = ['W_KITA', 'W_UKYO', 'W_NISHIKYO', 'W_SAKYO', 'W_KAMIGYO', 'W_SHIMOGYO', 'W_NAKAGYO', 'W_YAMASHINA'];
@@ -1214,8 +1214,21 @@ function segIntersectXZ(a0, a1, b0, b1) {
   return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
 }
 
-test('silver rocks borrow the unused kasumi id for their body', () => {
-  assert.equal(ROCK_BODY_SILVER, MAT.kasumi);
+test('silver rocks have their own body material (muraSilver), distinct from mist', () => {
+  assert.notEqual(MAT.muraSilver, MAT.kasumi);
+  assert.equal(new Set(Object.values(MAT)).size, Object.keys(MAT).length, 'material ids are unique');
+  assert.equal(MATERIALS[MAT.muraSilver].rock, 'silver');
+});
+
+test('D3 density field falls from 1 on a part to 0 beyond the falloff, smoothly and in range', () => {
+  const w = 128, h = 80, mask = new Float32Array(w * h);
+  for (let z = 30; z < 50; z++) for (let x = 14; x < 26; x++) mask[z * w + x] = 1; // a heavy block; plate is 720 wide so a texel is 5.6 units
+  const f = densityFromMask(mask, w, h, 60);
+  const at = x => f[40 * w + x];
+  assert.ok(at(20) > 200 && at(20) <= 255, 'peak stays high');
+  for (let x = 20; x < 80; x++) assert.ok(at(x + 1) <= at(x), `monotone at ${x}`);
+  assert.equal(at(110), 0, 'far away is empty');
+  assert.ok(densityFromMask(new Float32Array(w * h), w, h, 60).every(v => v === 0), 'no parts, no density');
 });
 
 test('T4a rock() produces valid closed rock meshes and kirikane/kirigin foil chunks across all wards', () => {
@@ -1231,8 +1244,8 @@ test('T4a rock() produces valid closed rock meshes and kirikane/kirigin foil chu
       assert.equal(r.layer, 1, `${ward}/${r.id} layer preserved`);
       assert.ok(r.anchor.length === 2, `${ward}/${r.id} keeps anchor`);
       assertValidMeshChunks(r.mesh);
-      // Gold rocks keep the warm mura body; silver (kirigin) rocks use the body the shader lays silver foil on (rock-mesh ROCK_BODY_SILVER).
-      assert.equal(r.mesh[0].mat, r.mat === MAT.kirigin ? ROCK_BODY_SILVER : MAT.mura, `${ward}/${r.id} body uses warm mura lacquer relief`);
+      // Gold rocks keep the warm mura body; silver (kirigin) rocks use the body the shader lays silver foil on (rock-mesh MAT.muraSilver).
+      assert.equal(r.mesh[0].mat, r.mat === MAT.kirigin ? MAT.muraSilver : MAT.mura, `${ward}/${r.id} body uses warm mura lacquer relief`);
       assert.ok(r.mesh.length >= 2, `${ward}/${r.id} includes kirikane/kirigin tile chunk`);
       assert.equal(r.mesh[1].mat, r.mat, `${ward}/${r.id} tile chunk keeps part material`);
     }

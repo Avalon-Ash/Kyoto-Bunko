@@ -26,8 +26,9 @@ export const MATERIALS = {
   [MAT.hyomonGold]: {name: 'hyomonGold', color: '#e6b94e', paint: '#e2b24c', metalness: 1, roughness: .18, clearcoat: 0, clearcoatRoughness: 0, flake: .15},
   [MAT.hyomonSilver]: {name: 'hyomonSilver', color: '#e0e2de', paint: '#d8d9d4', metalness: 1, roughness: .15, clearcoat: 0, clearcoatRoughness: 0, flake: .15},
   [MAT.water]: {name: 'water', color: '#2c4256', paint: '#2a3d50', metalness: .6, roughness: .12, clearcoat: 1, clearcoatRoughness: .02, flake: 0},
-  // No mesh chunk uses kasumi (mist is baked), so rock-mesh.js borrows it as the body of silver rocks (ROCK_BODY_SILVER): the shader lays silver foil on it.
-  [MAT.kasumi]: {name: 'kasumi', rock: 'silver', color: '#d9b25a', paint: '#caa24a', metalness: .9, roughness: .3, clearcoat: 0, clearcoatRoughness: 0, flake: .2},
+  // Body of a silver (kirigin) rock: the shader lays silver foil on it. Mist (kasumi) is baked, so it has no mesh material of its own.
+  [MAT.muraSilver]: {name: 'muraSilver', rock: 'silver', color: '#d9b25a', paint: '#caa24a', metalness: .9, roughness: .3, clearcoat: 0, clearcoatRoughness: 0, flake: .2},
+  [MAT.kasumi]: {name: 'kasumi', color: '#d9b25a', paint: '#caa24a', metalness: .9, roughness: .3, clearcoat: 0, clearcoatRoughness: 0, flake: .2},
   [MAT.lacquer]: {name: 'lacquer', color: '#0b0807', paint: '#1a1310', metalness: 0, roughness: .12, clearcoat: 1, clearcoatRoughness: .03, flake: 0},
   // T3: a paper window lit from inside is warm amber, not saturated orange.
   [MAT.lamp]: {name: 'lamp', color: '#2a1a0a', paint: '#f0b46a', metalness: 0, roughness: .6, clearcoat: 0, clearcoatRoughness: 0, flake: 0, emissive: '#f0b46a', glow: true},
@@ -432,6 +433,20 @@ void kyotoGround(vec3 aPos, vec3 aNormal, out vec3 outPos, out vec3 outNormal){
   outPos=p; outNormal=uTilt*aNormal;
 }`;
 
+/**
+ * The powder-density field (docs/MAKIE_GROUND_PLAN.md D3): the ground's nashiji is denser near mist, banks, rocks,
+ * buildings and water and thinner in the open, and the two meet without an edge.
+ *   width     texels across the baked field (plate is 720 wide); small is enough, it is smooth
+ *   falloff   plate units from a heavy part at which the extra density has faded out
+ *   more      how much denser than the base right on a part (fraction of the base density)
+ *   less      how much thinner than the base in the open, far from everything
+ *   refShift  the reference sits this far below the mean: the powder loses more brightness when thinned than it gains
+ *             when thickened (the biggest layer is already full), so a ward's mean is kept up by this
+ * The base density is unchanged where the field equals the ward's own mean (uDensMean, measured when it is baked), so
+ * a ward with a lot of open ground is not dimmed overall and a crowded one is not brightened. Dev only: ?dens=off skips the bake, ?dens=view paints the field itself, ?dens=mask paints plain ground magenta.
+ */
+export const DENSITY = {width: 256, falloff: 80, more: .65, less: .22, refShift: .06};
+
 const MAKIE_COMMON_GLSL = `
 uniform vec3 uView, uKey, uLamp;
 uniform float uTime, uNight, uPresence, uPx, uOpening;
@@ -543,7 +558,9 @@ vec4 mFinish(vec3 c,float a){
 /** Fragment declarations injected into groundMaterial (MeshPhysicalMaterial). */
 export const MAKIE_GROUND_PARS_GLSL = `
 varying float vGlow; uniform float uGlowBase, uGlowGain;
-uniform sampler2D uState, uFine0;
+uniform sampler2D uState, uFine0, uDens;
+uniform float uDensView, uDensMean;
+const float M_DENS_MORE=${DENSITY.more.toFixed(3)}, M_DENS_LESS=${DENSITY.less.toFixed(3)};
 varying vec2 vKyotoPlate;
 varying vec3 vKyotoWorld, vKyotoNormal, vKyotoTanX, vKyotoTanZ;
 ${MAKIE_COMMON_GLSL}`;
@@ -588,7 +605,8 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   float w=smoothstep(.02,.34,hs);
   float dens=.82+.22*mVnoise(kp*.02),kAmt=0.,wN=0.,wM=0.,wS=0.,bigD=0.,bigCell=6.6,bigSq=0.;
   vec3 tint=M_GOLD,f0=M_GOLD,c=vec3(0.);
-  if(mat==1)wN=1.;
+  float dField=texture(uDens,mPuv(kp)).r;
+  if(mat==1){wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*(dField-uDensMean)/max(1.-uDensMean,.05):1.-M_DENS_LESS*(uDensMean-dField)/max(uDensMean,.05);}
   else if(mat==2||mat==3){
     float cloud=mat==3?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
     // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
@@ -653,6 +671,8 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,M_OXID,1.)*.85+M_SILVER*line*(.1+.3*L),shore*.7);
     c=mix(c,wtr,m);
   }
+  if(uDensView>1.5)c=mat==1?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
+  else if(uDensView>.5)c=vec3(dField*.8);
   outgoingLight=mFinish(c,1.).rgb;
   diffuseColor.a=1.;
 }`;
