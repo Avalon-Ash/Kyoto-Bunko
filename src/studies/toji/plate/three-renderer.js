@@ -136,31 +136,36 @@ export function createThreeRenderer(gl, canvas) {
   const patchMaterial = (material, spec, glsl, call) => {
     const isPart = call === 'kyotoMotion';
     // Only rock mounds (meshRock bodyMat) use MAT.mura among 3D part meshes; tiles use kirikane/kirigin.
-    const isRock = isPart && spec.name === 'mura';
+    const isRock = isPart && Boolean(spec.rock), isSilverRock = spec.rock === 'silver';
     // Black lacquer on the pieces (walls, plinths) is shin-nuri: polished to a dark mirror.
     const isLacq = isPart && spec.name === 'lacquer';
-    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? '-rock-kiri-v1' : ''}${isLacq ? '-shinnuri' : ''}`;
+    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v2${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', `#include <common>\n${glsl}`)
+        .replace('#include <common>', `#include <common>\n${isRock ? 'varying vec2 vRockUv;\n' : ''}${glsl}`)
         .replace('#include <beginnormal_vertex>', `vec3 kyotoP; vec3 objectNormal; ${call}(position, normal, kyotoP, objectNormal);`)
-        .replace('#include <begin_vertex>', 'vec3 transformed = kyotoP;');
+        .replace('#include <begin_vertex>', `vec3 transformed = kyotoP;${isRock ? ' vRockUv = uv;' : ''}`);
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', `#include <common>\nvarying float vGlow; uniform float uGlowBase, uGlowGain;${isPart ? `\n${PART_LIGHT_GLSL}` : ''}${isRock ? `\nuniform float uPx, uOpening;\n${PART_KIRIKANE_GLSL}` : ''}`)
+        .replace('#include <common>', `#include <common>\nvarying float vGlow; uniform float uGlowBase, uGlowGain;${isPart ? `\n${PART_LIGHT_GLSL}` : ''}${isRock ? `\nuniform float uPx;\nvarying vec2 vRockUv;\nconst bool kyotoRockSilver = ${isSilverRock};\n${PART_KIRIKANE_GLSL}` : ''}`)
         .replace('#include <normal_fragment_begin>', NORMAL_FIX)
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uGlowBase + vGlow * uGlowGain;');
       if (isRock) {
         shader.fragmentShader = shader.fragmentShader
           .replace('#include <color_fragment>', `#include <color_fragment>
-vec3 kyotoRockW = ((vec4(-vViewPosition, 1.) - viewMatrix[3]) * viewMatrix).xyz;
-vec2 kyotoRockXZ = kyotoRockW.xz + vec2(0., uOpening * 650.);
+vec2 kyotoRockXZ = vRockUv;
 vec3 kyotoRockNW = inverseTransformDirection(normalize(vNormal), viewMatrix);
-float kyotoRockLit = smoothstep(K_ROCK_LIT_LO, K_ROCK_LIT_HI, dot(kyotoRockNW, normalize(uKey)));
-vec2 kyotoRockTilt;
-float kyotoRockKiri = kyotoKiriPattern(kyotoRockXZ, K_ROCK_KIRI_CELL, kyotoRockLit, uPx, kyotoRockTilt);
-diffuseColor.rgb = mix(K_M_OXID * K_ROCK_OXID_SCALE, K_ROCK_GOLD, kyotoRockLit);
-diffuseColor.rgb = mix(diffuseColor.rgb, K_KIRI_GOLD, kyotoRockKiri * K_ROCK_KIRI_COVER);`)
+float kyotoRockNL = dot(kyotoRockNW, normalize(uKey));
+float kyotoRockLit = smoothstep(K_ROCK_LIT_LO, K_ROCK_LIT_HI, kyotoRockNL);
+// Foil grows with the light it faces, thins toward the foot, and swells along the outline.
+float kyotoRockRim = pow(1. - clamp(dot(normalize(vNormal), normalize(vViewPosition)), 0., 1.), K_ROCK_RIM_EXP);
+float kyotoRockAmt = smoothstep(K_ROCK_AMT_LO, K_ROCK_AMT_HI, kyotoRockNL) * mix(K_ROCK_LOW_AMT, 1., smoothstep(1.5, 12., vLift)) + kyotoRockRim * K_ROCK_RIM_AMT;
+vec2 kyotoRockTilt; float kyotoRockTone;
+float kyotoRockKiri = kyotoRockKiriPattern(kyotoRockXZ, kyotoRockAmt, uPx, kyotoRockTilt, kyotoRockTone);
+vec3 kyotoRockFoil = kyotoRockSilver ? mix(K_ROCK_FOIL_OXID, K_ROCK_FOIL_SILVER, smoothstep(.15, .6, kyotoRockAmt)) : mix(K_ROCK_FOIL_OXID, K_KIRI_GOLD, smoothstep(.15, .6, kyotoRockAmt));
+kyotoRockFoil *= .9 + .2 * kyotoRockTone;
+diffuseColor.rgb = mix(K_ROCK_BODY_SHADE, kyotoRockSilver ? K_ROCK_BODY_SILVER : K_ROCK_BODY_GOLD, kyotoRockLit);
+diffuseColor.rgb = mix(diffuseColor.rgb, kyotoRockFoil, kyotoRockKiri * K_ROCK_KIRI_COVER);`)
           .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = mix(K_OXID_ROUGH, roughnessFactor, kyotoRockLit);
 roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNight), kyotoRockKiri);`);
@@ -192,7 +197,7 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
   reflectedLight.indirectSpecular+=kyotoMirror*mix(K_LACQ_MIN,1.,kyotoFres)*K_LACQ_MIRROR*mix(1.,.45,uNight)*kyotoContact;` : ''}${isRock ? `
   float kyotoRockGlint=kyotoKiriGlint(kyotoNW,kyotoRockTilt,kyotoRockKiri,normalize(uKey),normalize(uView),uNight);
   reflectedLight.directSpecular*=mix(vec3(1.),K_KIRI_NIGHT_SPEC_TINT,uNight*kyotoRockKiri);
-  reflectedLight.directSpecular+=K_KIRI_GOLD*kyotoRockGlint*kyotoContact;` : ''}
+  reflectedLight.directSpecular+=kyotoRockFoil*kyotoRockGlint*kyotoContact;` : ''}
 }`);
       }
     };

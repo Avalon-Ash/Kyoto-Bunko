@@ -310,14 +310,50 @@ export function pond(id, cx, cz, rx, rz, seed, {reflection = null} = {}) {
   return [p, image];
 }
 
-/** A broad-winged phoenix crest. The wings and tail stay broad enough to survive swelling. */
+/**
+ * The phoenix (ho-o) of Kinkaku's roof, seen as the crest on a Hatsune lid: standing on a small pedestal (roban), breast to the
+ * viewer, a long neck bending to a crested head with the bill forward, both wings spread up and out in a V, three tail plumes
+ * streaming up and back. Drawn in plan, since the relief lies on the plate; the unit is 1 at s = 1 before the .88 shrink.
+ * fills, in order (creature-mesh.js meshPhoenix reads them by index): 0 pedestal, 1 tail centre, 2 tail right, 3 tail left,
+ * 4 wing right, 5 wing left, 6 body, 7 neck, 8 head, 9 bill, 10 crest right, 11 crest left.
+ * lines: 0..4 right wing feather lines, 5..9 left, 10..12 tail rachises, 13 right covert edge, 14 left covert edge.
+ */
 export function phoenix(id, x, z, s = 1, {group = id, order = 0} = {}) {
   const p = part(id, KIND.tier, 2, MAT.hyomonGold, [x, z], {group, order, thick: 10, bias: 8.5}); // 8.5: sits in the ridge of the roof it crowns
-  // Compact crest: 55.4 units across at scale 1, against the pavilion's 120-unit top roof.
   const P = (dx, dz) => [x + dx * s * .88, z + dz * s * .88];
-  p.fills.push({d: [[-4, 0], [-8, -13], [-28, -20], [-33, -33], [-18, -28], [-5, -21], [4, -23], [17, -32], [30, -36], [25, -22], [9, -13], [5, 0]].map(([a, b]) => P(a, b)), soft: .2, crisp: .9});
-  p.fills.push({d: [[-2, -19], [0, -34], [8, -38], [18, -32], [8, -29], [7, -16]].map(([a, b]) => P(a, b)), soft: .2, crisp: .9});
-  p.lines.push({d: [P(-24, -26), P(-4, -17), P(0, -5), P(20, -29)], w: .8, amp: 1});
+  const poly = pts => pts.map(([a, b]) => P(a, b));
+  const mirror = pts => pts.map(([a, b]) => [-a, b]).reverse();
+  // A plume: a leaf along a quadratic centre line from a to b bent through c, widest a third of the way along.
+  const plume = (a, c, b, w, n = 8, band = false) => {
+    const at = t => [(1 - t) ** 2 * a[0] + 2 * t * (1 - t) * c[0] + t * t * b[0], (1 - t) ** 2 * a[1] + 2 * t * (1 - t) * c[1] + t * t * b[1]];
+    const wid = t => band ? w * (1 - .3 * t) * Math.min(1, .55 + t * 3) : w * Math.pow(Math.sin(Math.PI * Math.pow(t, .75)), .8);
+    const left = [], right = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, q = at(t), r = at(Math.min(1, t + .01)), o = at(Math.max(0, t - .01)), dx = r[0] - o[0], dz = r[1] - o[1], l = Math.hypot(dx, dz) || 1;
+      left.push([q[0] - dz / l * wid(t) / 2, q[1] + dx / l * wid(t) / 2]); right.push([q[0] + dz / l * wid(t) / 2, q[1] - dx / l * wid(t) / 2]);
+    }
+    return {pts: [...left, ...right.reverse().slice(1)], axis: Array.from({length: n + 1}, (_, i) => at(i / n))};
+  };
+  const tailC = plume([0, -12], [-3, -28], [0, -42], 7.5), tailR = plume([3, -12], [12, -24], [22, -37], 6.5), tailL = plume([-3, -12], [-12, -24], [-22, -37], 6.5);
+  // The right wing: a leading edge out to the wrist, then five long flight feathers fanning back, each ending in a point.
+  const wingR = [[5, -4], [11, -8], [19, -12], [27, -16], [33, -20], [35, -26], [31, -25], [31, -31], [26, -28], [25, -37], [21, -31], [19, -41], [15, -33], [12, -41], [9, -30], [6, -20]];
+  const wingL = mirror(wingR);
+  const body = Array.from({length: 18}, (_, i) => [Math.cos(i / 18 * 6.2832) * 8.2, -4 + Math.sin(i / 18 * 6.2832) * 11.5]);
+  const f = pts => ({d: poly(pts), soft: .1, crisp: .9});
+  p.fills.push(
+    f([[-11, -12], [11, -12], [13, -9], [13, 8], [10, 11], [-10, 11], [-13, 8], [-13, -9]]),
+    f(tailC.pts), f(tailR.pts), f(tailL.pts), f(wingR), f(wingL), f(body),
+    f(plume([3, 1], [-9, -3], [-4, -11], 5.6, 8, true).pts),
+    f([[-6, -13], [-2, -15.5], [3, -15.5], [7, -14], [10.5, -12.3], [6.5, -11.2], [2, -9.5], [-3, -9], [-6, -10]]),
+    f([[6, -14.2], [10.7, -12.3], [6.2, -11.3]]),
+    f(plume([-3, -14], [-8, -19], [-9, -25], 3.8).pts),
+    f(plume([-4.5, -12.5], [-11, -14], [-17, -19], 3.6).pts),
+  );
+  // Feather lines run from the shoulder to each flight feather's tip; a covert line follows the leading edge.
+  const tips = [[34, -23], [29, -31], [23, -37], [17, -38], [11, -36]];
+  for (const sign of [1, -1]) for (const [tx, tz] of tips) p.lines.push({d: [P(sign * 8, -10), P(sign * (8 + (tx - 8) * .55), -10 + (tz + 10) * .55), P(sign * tx * .97, tz * .96)], w: .75, amp: 1});
+  for (const t of [tailC, tailR, tailL]) p.lines.push({d: t.axis.slice(1, -2).map(([a, b]) => P(a, b)), w: .75, amp: 1});
+  for (const sign of [1, -1]) p.lines.push({d: [P(sign * 7, -6), P(sign * 15, -10), P(sign * 24, -14), P(sign * 31, -18)], w: .75, amp: 1});
   meshPhoenix(p, P);
   return [p];
 }

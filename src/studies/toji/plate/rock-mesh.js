@@ -2,6 +2,9 @@
 // Pure geometry returning a plate part with `mesh` + original `fills`/`lines` for picking and bounds, zero `thick`.
 import {MAT, KIND, rand} from './vocab.js';
 
+/** The body material of a silver (kirigin) rock: three-pack.js gives it the silver foil, MAT.mura the gold. */
+export const ROCK_BODY_SILVER = 13; // = MAT.kasumi (vocab.js imports this file, so MAT is not ready here; a test pins them equal); an id no other mesh chunk uses; three-pack.js MATERIALS marks it as a silver rock body
+
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const smoothstep = (e0, e1, x) => {
@@ -18,16 +21,16 @@ const unit = (v, fallback = [0, 1, 0]) => {
   return l > 1e-12 ? [v[0] / l, v[1] / l, v[2] / l] : fallback;
 };
 
-function pushTri(out, a, b, c, hint, na, nb, nc) {
+function pushTri(out, a, b, c, hint, na, nb, nc, ua, ub, uc) {
   const n = cross(sub(b, a), sub(c, a)), area = .5 * Math.hypot(n[0], n[1], n[2]);
   if (!(area > 1e-7)) return;
   let f = unit(n);
   if (dot(f, hint) < 0) {
     f = scale(f, -1);
-    [b, c, nb, nc] = [c, b, nc, nb];
+    [b, c, nb, nc, ub, uc] = [c, b, nc, nb, uc, ub];
   }
-  for (const [p, q] of [[a, na], [b, nb], [c, nc]]) {
-    out.push(p[0], p[1], p[2], ...(q || f), p[0], p[2]);
+  for (const [p, q, uv] of [[a, na, ua], [b, nb, ub], [c, nc, uc]]) {
+    out.push(p[0], p[1], p[2], ...(q || f), ...(uv || [p[0], p[2]]));
   }
 }
 
@@ -196,10 +199,19 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1}
   }
 
   // Warm bronze-amber mura-nashiji mound body so kirikane (gold) and kirigin (silver) tiles read with crisp contrast.
-  const bodyMat = MAT.mura;
+  // The foil's map is the mound unrolled flat: each vertex sits at its distance along the surface from the crown, in its own
+  // direction, so a diamond keeps its shape on a steep flank instead of stretching as it would if laid by plan position.
+  const foilUv = pos.map((row, j) => row.map((q, i) => {
+    let along = 0;
+    for (let k = 1; k <= j; k++) along += Math.hypot(...sub(pos[k][i], pos[k - 1][i]));
+    const dx = q[0] - cx, dz = q[2] - cz, r = Math.hypot(dx, dz);
+    return r > 1e-9 ? [cx + dx / r * along, cz + dz / r * along] : [cx, cz];
+  }));
+
+  const bodyMat = mat === MAT.kirigin ? ROCK_BODY_SILVER : MAT.mura;
   const bodyVerts = [];
   for (const [[j0, i0], [j1, i1], [j2, i2]] of topTris) {
-    pushTri(bodyVerts, pos[j0][i0], pos[j1][i1], pos[j2][i2], [0, 1, 0], norm[j0][i0], norm[j1][i1], norm[j2][i2]);
+    pushTri(bodyVerts, pos[j0][i0], pos[j1][i1], pos[j2][i2], [0, 1, 0], norm[j0][i0], norm[j1][i1], norm[j2][i2], foilUv[j0][i0], foilUv[j1][i1], foilUv[j2][i2]);
   }
   const botC = [cx, 0, cz];
   for (let i = 0; i < N_ANG; i++) {

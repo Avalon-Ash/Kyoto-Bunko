@@ -282,19 +282,31 @@ export function meshFox(stone, body, s) {
   body.mesh = mergeChunks(chunks);
 }
 
-/** The phoenix crest on the roof ridge: a gold boss of wing and tail, a raised head, silver feathering and a lacquer eye. */
+/**
+ * The phoenix on Kinkaku's roof ridge (vocab.js phoenix lists the fills and lines by index): a silver pedestal, then gold relief
+ * in three heights (low tail, wings, the body with a neck and head rising above them), the bill in cut gold, silver feather
+ * lines, crest tips in cut gold and a lacquer eye on each side of the head.
+ */
 export function meshPhoenix(p, P) {
-  const [mass, head] = p.fills;
-  const wing = makePillow(mass.d, {h: 6.5, round: 3.6, dome: .1}), crest = makePillow(head.d, {h: 8.6, round: 3.2, dome: .1});
-  const surface = surfaceOf([wing, crest]);
-  const chunks = [pillowChunk(wing, MAT.hyomonGold), pillowChunk(crest, MAT.hyomonGold)];
-  chunks.push(strip(p.lines[0].d, .9, surface, MAT.kirigin, {lift: .2}));
-  // Feathering, laid from the body out to the tips of the wing and tail.
-  for (const [a, b, c] of [[[-6, -15], [-17, -22], [-29, -26]], [[-5, -18], [-14, -27], [-25, -31]], [[-5, -13], [-15, -16], [-28, -19]],
-    [[5, -16], [15, -22], [26, -27]], [[5, -19], [14, -26], [25, -33]], [[6, -14], [14, -17], [24, -21]]]) {
-    chunks.push(strip([P(...a), P(...b), P(...c)], .75, surface, MAT.kirigin, {lift: .18}));
+  const [pedestal, tailC, tailR, tailL, wingR, wingL, body, neck, head, bill, crestR, crestL] = p.fills.map(f => f.d);
+  const base = makePillow(pedestal, {h: 4, round: 2.2, dome: .05});
+  const tails = [tailC, tailR, tailL].map(d => makePillow(d, {h: 4.6, round: 2.2, dome: .1}));
+  const wings = [wingR, wingL].map(d => makePillow(d, {h: 8, round: 3, dome: .1}));
+  const trunk = makePillow(body, {h: 9, round: 4, dome: .12}), throat = makePillow(neck, {h: 15, round: 2.6, dome: .08});
+  const skull = makePillow(head, {h: 19, round: 3, dome: .08}), beak = makePillow(bill, {h: 16, round: 1.6, dome: 0});
+  const crests = [crestR, crestL].map(d => makePillow(d, {h: 20, round: 1.6, dome: .05}));
+  const all = [base, ...tails, ...wings, trunk, throat, skull, beak, ...crests];
+  const surface = surfaceOf(all);
+  const chunks = [pillowChunk(base, MAT.kirigin), ...[...tails, ...wings, trunk, throat, skull, ...crests].map(q => pillowChunk(q, MAT.hyomonGold)), pillowChunk(beak, MAT.kirikane)];
+  for (const l of p.lines) chunks.push(strip(l.d, l.w, surface, MAT.kirigin, {lift: .2}));
+  for (const c of [crestR, crestL]) chunks.push(sheet(inset(c, .6), surface, MAT.kirikane, {lift: .2, target: 1.6}));
+  // Breast feathering: three scallops on the body.
+  for (const [dz, half] of [[-3, 4.2], [1, 4.8], [5, 4]]) {
+    const d = Array.from({length: 9}, (_, i) => { const u = i / 8 * 2 - 1; return P(u * half, dz + (1 - u * u) * 1.5); });
+    chunks.push(strip(d, .7, surface, MAT.kirigin, {lift: .2}));
   }
-  chunks.push(dot(...P(9, -34), .95, surface, MAT.lacquer, {lift: .2}));
+  for (const dx of [-6, 6]) chunks.push(strip([P(dx, 4), P(dx * 1.1, 8.5)], 1.1, surface, MAT.kirikane, {lift: .2}));
+  chunks.push(dot(...P(4.6, -13.4), .95, surface, MAT.lacquer, {lift: .22}));
   p.mesh = mergeChunks(chunks);
 }
 

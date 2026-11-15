@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {stepSpring, stepDamped, settled} from '../src/studies/toji/plate/spring.js';
 import {PLATES, hasPlate, preparePlate, createLife, partAt, MAX_PARTS, LAYERS, DWELL_MS, STAND_REST} from '../src/studies/toji/plate/parts.js';
 import {KIND, MAT, PLATE, roof, storey, kakezukuri, stoneSteps, stream, shell, steppingStones, corridor, romon, sanmon, karamon, rock} from '../src/studies/toji/plate/vocab.js';
+import {ROCK_BODY_SILVER} from '../src/studies/toji/plate/rock-mesh.js';
 import {buildBox} from '../src/studies/toji/plate/box.js';
 
 const p3bWards = ['W_KITA', 'W_UKYO', 'W_NISHIKYO', 'W_SAKYO', 'W_KAMIGYO', 'W_SHIMOGYO', 'W_NAKAGYO', 'W_YAMASHINA'];
@@ -1209,6 +1210,10 @@ function segIntersectXZ(a0, a1, b0, b1) {
   return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
 }
 
+test('silver rocks borrow the unused kasumi id for their body', () => {
+  assert.equal(ROCK_BODY_SILVER, MAT.kasumi);
+});
+
 test('T4a rock() produces valid closed rock meshes and kirikane/kirigin foil chunks across all wards', () => {
   let rockCount = 0;
   for (const [ward, build] of Object.entries(PLATES)) {
@@ -1222,7 +1227,8 @@ test('T4a rock() produces valid closed rock meshes and kirikane/kirigin foil chu
       assert.equal(r.layer, 1, `${ward}/${r.id} layer preserved`);
       assert.ok(r.anchor.length === 2, `${ward}/${r.id} keeps anchor`);
       assertValidMeshChunks(r.mesh);
-      assert.equal(r.mesh[0].mat, MAT.mura, `${ward}/${r.id} body uses warm mura lacquer relief`);
+      // Gold rocks keep the warm mura body; silver (kirigin) rocks use the body the shader lays silver foil on (rock-mesh ROCK_BODY_SILVER).
+      assert.equal(r.mesh[0].mat, r.mat === MAT.kirigin ? ROCK_BODY_SILVER : MAT.mura, `${ward}/${r.id} body uses warm mura lacquer relief`);
       assert.ok(r.mesh.length >= 2, `${ward}/${r.id} includes kirikane/kirigin tile chunk`);
       assert.equal(r.mesh[1].mat, r.mat, `${ward}/${r.id} tile chunk keeps part material`);
     }

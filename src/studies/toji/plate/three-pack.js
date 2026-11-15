@@ -14,7 +14,7 @@ import {shiftChunks, feetCentre} from './creature-mesh.js';
 export const MATERIALS = {
   [MAT.ground]: {name: 'ground', color: '#a8742e', paint: '#9a6c2c', metalness: .75, roughness: .45, clearcoat: 1, clearcoatRoughness: .08, flake: .35},
   [MAT.nashijiLight]: {name: 'nashijiLight', color: '#b88a3c', paint: '#a8823a', metalness: .85, roughness: .5, clearcoat: .6, clearcoatRoughness: .1, flake: .5},
-  [MAT.mura]: {name: 'mura', color: '#9c7430', paint: '#6e5222', metalness: .8, roughness: .55, clearcoat: .6, clearcoatRoughness: .1, flake: .45},
+  [MAT.mura]: {name: 'mura', rock: 'gold', color: '#9c7430', paint: '#6e5222', metalness: .8, roughness: .55, clearcoat: .6, clearcoatRoughness: .1, flake: .45},
   [MAT.gyobu]: {name: 'gyobu', color: '#c29a46', paint: '#8a6a2c', metalness: .85, roughness: .45, clearcoat: .5, clearcoatRoughness: .1, flake: .7},
   [MAT.gold]: {name: 'gold', color: '#cf9e48', paint: '#d6a640', metalness: 1, roughness: .38, clearcoat: .3, clearcoatRoughness: .1, flake: .22},
   // T3: railings read dull grey under the grey room; a whiter, smoother silver with a thin coat keeps them silver.
@@ -26,7 +26,8 @@ export const MATERIALS = {
   [MAT.hyomonGold]: {name: 'hyomonGold', color: '#e6b94e', paint: '#e2b24c', metalness: 1, roughness: .18, clearcoat: 0, clearcoatRoughness: 0, flake: .15},
   [MAT.hyomonSilver]: {name: 'hyomonSilver', color: '#e0e2de', paint: '#d8d9d4', metalness: 1, roughness: .15, clearcoat: 0, clearcoatRoughness: 0, flake: .15},
   [MAT.water]: {name: 'water', color: '#2c4256', paint: '#2a3d50', metalness: .6, roughness: .12, clearcoat: 1, clearcoatRoughness: .02, flake: 0},
-  [MAT.kasumi]: {name: 'kasumi', color: '#d9b25a', paint: '#caa24a', metalness: .9, roughness: .3, clearcoat: 0, clearcoatRoughness: 0, flake: .2},
+  // No mesh chunk uses kasumi (mist is baked), so rock-mesh.js borrows it as the body of silver rocks (ROCK_BODY_SILVER): the shader lays silver foil on it.
+  [MAT.kasumi]: {name: 'kasumi', rock: 'silver', color: '#d9b25a', paint: '#caa24a', metalness: .9, roughness: .3, clearcoat: 0, clearcoatRoughness: 0, flake: .2},
   [MAT.lacquer]: {name: 'lacquer', color: '#0b0807', paint: '#1a1310', metalness: 0, roughness: .12, clearcoat: 1, clearcoatRoughness: .03, flake: 0},
   // T3: a paper window lit from inside is warm amber, not saturated orange.
   [MAT.lamp]: {name: 'lamp', color: '#2a1a0a', paint: '#f0b46a', metalness: 0, roughness: .6, clearcoat: 0, clearcoatRoughness: 0, flake: 0, emissive: '#f0b46a', glow: true},
@@ -277,8 +278,11 @@ varying float vLift;`;
 export const PART_KIRIKANE_GLSL = `
 const vec3 K_M_OXID=vec3(.66,.66,.64); // oxidized silver-grey on shaded faces (matches M_OXID)
 const vec3 K_KIRI_GOLD=vec3(.92,.62,.14); // bright cut-gold foil color for halftone kirikane pieces
-const vec3 K_ROCK_GOLD=vec3(.76,.46,.09); // warm gold on the lit face of rock mounds
-const float K_ROCK_OXID_SCALE=.62; // oxidized silver brightness on shaded rock body relative to K_M_OXID
+const vec3 K_ROCK_BODY_GOLD=vec3(.36,.22,.06); // dark bronze ground between the gold foil on the lit face of a rock
+const vec3 K_ROCK_BODY_SHADE=vec3(.27,.27,.26); // the ground where the rock turns away from the light: oxidized silver, dark
+const vec3 K_ROCK_BODY_SILVER=vec3(.40,.41,.41); // the ground of a silver rock, lit
+const vec3 K_ROCK_FOIL_SILVER=vec3(.90,.91,.88); // kirigin foil on the lit face
+const vec3 K_ROCK_FOIL_OXID=vec3(.60,.60,.57); // foil where it turns from the light: oxidized silver
 const float K_TRUNK_OXID_SCALE=.76; // oxidized silver brightness on shaded tree trunks relative to K_M_OXID
 const float K_TRUNK_OXID_STRENGTH=.4; // blend weight toward oxidized silver on shaded trunk faces
 const float K_TRUNK_BARK_MASK=.55; // suppress kirikane pieces inside deep bark seams so grain stays readable
@@ -288,13 +292,20 @@ const float K_TRUNK_LIT_LO=-.30; // trunk N.L threshold where shaded M_OXID begi
 const float K_TRUNK_LIT_HI=.55; // trunk N.L threshold where lit gold and dense kirikane reach full strength
 const float K_TRUNK_KIRI_CELL=2.8; // trunk kirikane diagonal lattice spacing in plate units
 const float K_ROCK_KIRI_CELL=3.0; // rock kirikane diagonal lattice spacing in plate units
+const float K_ROCK_SZ_MIN=.08, K_ROCK_SZ_MAX=.37; // half-width of a rock foil diamond in cell units: smallest in the dark, largest in the light
+const float K_ROCK_DENS_MIN=.22; // share of cells that carry foil where the rock is darkest (1 where it is lit)
+const float K_ROCK_KIRI_JITTER=.10; // rock foil position jitter in cell units
+const float K_ROCK_AMT_LO=-.1, K_ROCK_AMT_HI=.62; // N.L range over which foil grows from small and sparse to large and dense
+const float K_ROCK_LOW_AMT=.62; // foil amount at the foot of the rock, relative to its shoulders
+const float K_ROCK_RIM_AMT=.30; // foil amount added along the outline, where the surface turns edge-on
+const float K_ROCK_RIM_EXP=2.; // how tightly that outline boost hugs the edge
 const float K_KIRI_SZ=.26; // base half-width of a kirikane square in cell units (<= 3 px at 1440px)
 const float K_KIRI_JITTER=.18; // per-cell position jitter in cell units (keeps squares inside cell bounds)
 const float K_KIRI_DENS_BASE=.12; // minimum cell occupancy fraction at low litness
 const float K_KIRI_DENS_GAIN=1.15; // litness multiplier controlling cell occupancy ramp
 const float K_KIRI_AA=.55; // anti-aliasing filter width in pixels for kirikane edges
 const float K_TRUNK_KIRI_COVER=.88; // color blend strength of kirikane foil over trunk bark
-const float K_ROCK_KIRI_COVER=.82; // color blend strength of kirikane foil over rock body
+const float K_ROCK_KIRI_COVER=.96; // color blend strength of kirikane foil over rock body
 const float K_OXID_ROUGH=.56; // slightly matte roughness on oxidized silver shaded faces
 const float K_KIRI_ROUGH=.36; // daytime metallic roughness on cut-gold kirikane pieces
 const float K_KIRI_ROUGH_NIGHT=.46; // calmer nighttime roughness on kirikane pieces to prevent glare
@@ -315,6 +326,17 @@ float kyotoKiriPattern(vec2 p,float cell,float amount,float px,out vec2 tilt){
   float cov=(1.-smoothstep(sz-aa,sz+aa,max(abs(f.x),abs(f.y))))*step(.02,sz);
   float vis=smoothstep(1.3,3.2,cell/pxSafe);
   return mix(3.8*baseSz*baseSz*dens,cov,vis);
+}
+float kyotoRockKiriPattern(vec2 p,float amt,float px,out vec2 tilt,out float tone){
+  float cell=K_ROCK_KIRI_CELL;
+  vec2 q=mat2(.7071,-.7071,.7071,.7071)*p/cell,id=floor(q),j=kyotoHash2(id)-.5,f=fract(q)-.5-j*K_ROCK_KIRI_JITTER;
+  tilt=j; tone=kyotoHash(id+2.3);
+  float a=clamp(amt,0.,1.),base=mix(K_ROCK_SZ_MIN,K_ROCK_SZ_MAX,a),dens=mix(K_ROCK_DENS_MIN,1.,a);
+  float hw=base*(.86+.28*kyotoHash(id+5.1))*step(kyotoHash(id+9.7),dens);
+  float pxSafe=max(px,.05),aa=pxSafe/cell*K_KIRI_AA;
+  float cov=(1.-smoothstep(hw-aa,hw+aa,max(abs(f.x),abs(f.y))))*step(.02,hw);
+  float vis=smoothstep(1.3,3.2,cell/pxSafe);
+  return mix(4.*base*base*dens,cov,vis);
 }
 float kyotoKiriGlint(vec3 nw,vec2 tilt,float cov,vec3 keyDir,vec3 viewDir,float night){
   vec3 nf=normalize(nw+vec3(tilt.x,0.,tilt.y)*K_KIRI_TILT);
