@@ -4,7 +4,9 @@
 
 逐輪紀錄（由舊到新）：[雲端 P0–P1](agent-runs/2026-11-12-makie-plate-p0-p1.md)、[本機接續](agent-runs/2026-11-12-makie-plate-p1-local.md)、[P2](agent-runs/2026-11-13-makie-plate-p2a.md)、[P3 前半](agent-runs/2026-11-13-makie-plate-p3a.md)、[P3 後半（Codex 八區）](agent-runs/2026-11-13-makie-plate-p3b-astra.md)、[P3 收尾](agent-runs/2026-11-13-makie-plate-p3c.md)、[驗收與程式審閱（Codex）](agent-runs/2026-11-13-makie-plate-verify-astra.md)、[P3 晚間（造形修整與修正）](agent-runs/2026-11-13-makie-plate-p3d.md)、[W2（Codex）](agent-runs/2026-11-13-makie-plate-w2-astra.md)、[W2 第二輪（Codex）](agent-runs/2026-11-13-makie-plate-w2b-astra.md)、[W3（agy）](agent-runs/2026-11-13-makie-plate-w3-agy.md)、[W4 補驗（agy）](agent-runs/2026-11-13-makie-plate-w4-agy.md)、[W2 第三輪（Codex，中途額度用盡）](agent-runs/2026-11-14-makie-plate-w2c-astra.md)。
 
-> **2026-11-14 起改走 three.js**：目前狀態、設計語言（初音調度）、工作包與待辦都在 [`MAKIE_THREE_PLAN.md`](MAKIE_THREE_PLAN.md)（§2a 設計語言、§7 進度）。網址加 `?three=1` 用新渲染器，舊管線仍是預設。其他物件的網格重構（p1 鳥居與柱網、p2 屋宇與塔、p3 燈籠）的設計在 [`MAKIE_REBUILD_PLAN.md`](MAKIE_REBUILD_PLAN.md)。流水線檢討在 [`agent-runs/2026-11-14/pipeline-retro.md`](agent-runs/2026-11-14/pipeline-retro.md)。本檔以下是 11/13 以前的紀錄。
+> **2026-11-16：本檔是舊管線時期的紀錄，只供回溯。** three.js 已是預設，舊管線排定刪除；目前的待辦與派工在 [`plans/2026-11-16-roadmap.md`](plans/2026-11-16-roadmap.md)，本檔 §8 的接手清單不再有效。§3 的使用者定案（設計語言）仍然有效。
+>
+> **2026-11-14 起改走 three.js**（當時的註記，「舊管線仍是預設」已過期）：目前狀態、設計語言（初音調度）、工作包與待辦都在 [`MAKIE_THREE_PLAN.md`](MAKIE_THREE_PLAN.md)（§2a 設計語言、§7 進度）。網址加 `?three=1` 用新渲染器，舊管線仍是預設。其他物件的網格重構（p1 鳥居與柱網、p2 屋宇與塔、p3 燈籠）的設計在 [`MAKIE_REBUILD_PLAN.md`](MAKIE_REBUILD_PLAN.md)。流水線檢討在 [`agent-runs/2026-11-14/pipeline-retro.md`](agent-runs/2026-11-14/pipeline-retro.md)。本檔以下是 11/13 以前的紀錄。
 
 ## 1. 現況一句話
 

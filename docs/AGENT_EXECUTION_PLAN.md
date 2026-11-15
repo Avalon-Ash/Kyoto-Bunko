@@ -4,6 +4,8 @@
 >
 > **派工以使用者全域合約為準**（2026-11-14 重訂，各模型擅長見 `~/.claude/skills/agy-call/MODELS.md`）：主代理做架構、整合、研究與視覺；Astra 或 Fable 5.2 可派整包設計＋實作；Hydrogen 派小而具體的包。下方舊表的「Codex 只派美術判讀」「Flash 為實作主力」已失效。
 
+> **2026-11-16**：使用者升級 Claude Max 5x。主席是 Fable 5.2（開案、派工、終審、整合），實作與資料查核派 Sonnet 5.5 子代理；目前的拆包與派工在 [`plans/2026-11-16-roadmap.md`](plans/2026-11-16-roadmap.md)。下方各表是 Phase 0–3 的歷史。
+
 入口合約：`../AGENTS.md`；功能與驗收清單：`PLAN.md`。
 
 ## 1. 參考 FFT 的部分與本專案差異

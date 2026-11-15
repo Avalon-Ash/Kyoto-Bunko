@@ -135,7 +135,9 @@
 | T2 樹 | 完成（Hydrogen） | 9748ea4 |
 | T4a 高蒔繪岩加切金 | 完成（Hydrogen 加主代理調整） | 見 git log |
 
-待辦：
+> **2026-11-16 更新**：T3 材質（`7c3f8e6`）與「three 設為預設」（`2ed9e25`）已完成；地、部件光照、岩與樹幹切金也已完成。剩下的（狐／鳳凰／鶯、刪舊管線與靜態圖降級、手機幀時間、岩頂切金、疏密場、逐區小景）都收進 [`plans/2026-11-16-roadmap.md`](plans/2026-11-16-roadmap.md)，**以開案書為準**；下面的清單與派工說明是 11/14 的紀錄。
+
+待辦（11/14 紀錄）：
 - **地（2026-11-14 使用者回饋）**：對標初音調度文箱本體的地，企劃與進度見 [`MAKIE_GROUND_PLAN.md`](MAKIE_GROUND_PLAN.md)（D0–D2、D4–D6 第一版完成，D3 未做）。肉合蒔繪部件等地定稿後再改。
 - **ThreeRT 參考圖（2026-11-14）**：不接進網站，當參考渲染器用；匯出與渲染步驟見 [`MAKIE_THREERT_REFERENCE.md`](MAKIE_THREERT_REFERENCE.md)。
 - **構圖（2026-11-14 使用者回饋）**：平面上的深度與資訊密度，企劃見 [`MAKIE_COMPOSITION_PLAN.md`](MAKIE_COMPOSITION_PLAN.md)（C1–C6）。
