@@ -1,6 +1,6 @@
 // 東山区・清水. One mass held in the air: the hall and its stage on a lattice over the drop, Otowa behind it,
 // maples in the valley. The left third is the drop itself: empty ground, a far ridge and a thread of water.
-import {MAT, hill, hillCrest, stream, suyari, rock, hall, bird, shell, kakezukuri, stampedMaple as maple, fallenLeaves, cascade, farPagoda} from './vocab.js';
+import {MAT, hill, hillCrest, stream, suyari, rock, hall, bird, shell, kakezukuri, stampedMaple as maple, fallenLeaves, farPagoda} from './vocab.js';
 
 export function higashiyama() {
   return [
@@ -10,8 +10,6 @@ export function higashiyama() {
     ...hill('ridge-west', -372, -176, -150, -108, 35, {amp: .32, mat: MAT.nashijiLight, humps: 3}),
     ...stream('otowa-water', [[-80, 138], [-150, 156], [-222, 176], [-284, 204], [-330, 238]], [5, 8, 12, 17, 24]),
     ...shell('shell', [[-118, 146, 4, 2], [-196, 166, 4.8, 5], [-262, 192, 5.4, 8]]),
-    // Otowa: three threads of silver fall from under the stage's west foot into the head of the stream. The name Kiyomizu.
-    ...cascade('otowa-fall', [[-46, 102, -70, 136], [-56, 102, -76, 137], [-66, 104, -82, 138]], {on: 'otowa-water'}),
     // Yasaka's pagoda on the west ridge, very small and pale: its height is under a quarter of the hall's.
     ...farPagoda('yasaka-tower', -262, hillCrest(-372, -176, -150, -108, 35, {humps: 3})(-262) + 1, 20, {on: 'ridge-west'}),
     // Fallen leaves of cut gold and silver drift from the maples down the valley toward the water.

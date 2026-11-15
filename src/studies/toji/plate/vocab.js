@@ -511,11 +511,6 @@ export function streamEdge(points, widths, t, side) {
   const tx = (b[0] - a[0]) / l, tz = (b[1] - a[1]) / l;
   return [q[0] - tz * q[2] * side, q[1] + tx * q[2] * side, tx, tz];
 }
-/** A distant ridge behind a nearer bank (`on`): the swell of hill(), drawn before the bank so the bank covers its foot. */
-export function distantHill(id, x0, x1, crown, foot, seed, {on, amp = .3, mat = MAT.nashijiLight, humps = 1} = {}) {
-  need('distantHill', id, on);
-  return hill(id, x0, x1, crown, foot, seed, {amp, mat, humps}).map(p => ({...p, on}));
-}
 const five = (cx, cz, r, turn) => Array.from({length: 5}, (_, i) => blob(cx + Math.cos(turn + i * 1.2566) * r * .95, cz + Math.sin(turn + i * 1.2566) * r * .95, r * .8, r * .8, 1, 0, 9));
 /**
  * Tufts of grass or reed at the places given: [x, z, height, blades, lean?, flower?]. Blades fan from one root and curve
@@ -539,19 +534,6 @@ export function grassTufts(id, spots, {on, mat = MAT.gold, seed = 1, w = 2.6, sp
   const flowers = part(`${id}-flower`, KIND.still, 0, MAT.hyomonSilver, bloom[0], {reach: .5, on});
   for (const [x, z] of bloom) for (const d of five(x, z - 1.2, 2.6, -1.57)) flowers.fills.push({d, soft: 0, crisp: 1});
   return [grass, flowers];
-}
-/**
- * A fall of water as broken streaks of cut silver: each line is [x0, z0, x1, z1] from lip to pool, widening as it falls and
- * parted into three runs by gaps. Hangs on the stream (`on`) whose head it feeds.
- */
-export function cascade(id, lines, {on, w = 3} = {}) {
-  need('cascade', id, on);
-  const p = part(id, KIND.still, 0, MAT.hyomonSilver, lines[0].slice(0, 2), {reach: .5, on});
-  for (const [x0, z0, x1, z1] of lines) for (const [a, b] of [[0, .56], [.66, 1]]) {
-    const at = t => [lerp(x0, x1, t) + Math.sin(t * 5) * .5, lerp(z0, z1, t)];
-    p.fills.push({d: ribbon([at(a), at((a + b) / 2), at(b)], w * (.7 + .5 * a), w * (.7 + .5 * b)), soft: 0, crisp: 1});
-  }
-  return [p];
 }
 /**
  * A pagoda at a great distance, a flat silhouette of pale gold standing on a ridge (`on`): five stacked eaves and a mast.
@@ -584,21 +566,6 @@ export function daimonji(id, cx, cz, size, {on, tile = 3.8} = {}) {
   put([cx, cz + h * .05], [cx + h * .95, cz + h]);    // the right-falling leg
   return [p];
 }
-/** A narrow dark band (the unlit brown of MAT.lamp) along an edge (`on`) with a wavering width: the moss line where sand meets ground. */
-export function mossLine(id, pts, {on, w = 3.6, seed = 1} = {}) {
-  need('mossLine', id, on);
-  const r = rand(seed), dense = [];
-  for (let i = 0; i < pts.length - 1; i++) for (let k = 0; k < 4; k++) dense.push([lerp(pts[i][0], pts[i + 1][0], k / 4), lerp(pts[i][1], pts[i + 1][1], k / 4)]);
-  dense.push(pts.at(-1));
-  const a = [], b = [], n = dense.length - 1;
-  dense.forEach(([x, z], i) => {
-    const u = dense[Math.max(0, i - 1)], v = dense[Math.min(n, i + 1)], l = Math.hypot(v[0] - u[0], v[1] - u[1]) || 1, q = w * (.65 + r() * .7) / 2;
-    a.push([x - (v[1] - u[1]) / l * q, z + (v[0] - u[0]) / l * q]); b.push([x + (v[1] - u[1]) / l * q, z - (v[0] - u[0]) / l * q]);
-  });
-  const p = part(id, KIND.still, 0, MAT.lamp, pts[0], {reach: .5, on});
-  p.fills.push({d: [...a, ...b.reverse()], soft: 0, crisp: .5});
-  return [p];
-}
 /**
  * A plum beside a roof (`on`): a bare branch of dark line work rising from its foot, and on it blossoms of five
  * silver petals, each with a small round heart (a gold chip until a coral material exists). x, z is the foot; s scales it
@@ -608,7 +575,7 @@ export function silverPlum(id, x, z, s, {on, lean = 1} = {}) {
   need('silverPlum', id, on);
   const P = (dx, dz) => [x + dx * lean * s, z - dz * s];
   const limb = (pts, w0, w1) => ribbon(pts.map(([a, b]) => P(a, b)), w0 * s, w1 * s);
-  const wood = part(id, KIND.still, 0, MAT.lamp, [x, z], {reach: .5, on}), petals = part(`${id}-blossom`, KIND.still, 0, MAT.hyomonSilver, [x, z], {reach: .5, on});
+  const wood = part(id, KIND.still, 0, MAT.lacquer, [x, z], {reach: .5, on}), petals = part(`${id}-blossom`, KIND.still, 0, MAT.hyomonSilver, [x, z], {reach: .5, on});
   const heart = part(`${id}-heart`, KIND.still, 0, MAT.kirikane, [x, z], {reach: .5, on});
   wood.fills.push({d: limb([[0, 0], [-1.5, 6], [1, 12], [4.5, 17], [8, 21]], 2.4, 1), soft: 0, crisp: .8},
     {d: limb([[1, 12], [-3, 17], [-8, 20]], 1.5, .8), soft: 0, crisp: .8},
@@ -619,4 +586,20 @@ export function silverPlum(id, x, z, s, {on, lean = 1} = {}) {
     heart.fills.push({d: blob(cx, cz, r * s * .42, r * s * .42, 2, 0, 10), soft: 0, crisp: 1});
   }
   return [wood, petals, heart];
+}
+
+/**
+ * A bamboo fence (`on`) along the line a to b: a horizontal band of silver and upright poles at an even step along it,
+ * rising `rise` into the garden. Flat inlay.
+ */
+export function bambooFence(id, a, b, {on, rise = 12, step = 7, band = 3.4, pole = 2.6} = {}) {
+  need('bambooFence', id, on);
+  const p = part(id, KIND.still, 0, MAT.silver, a, {reach: .5, on}), len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  p.fills.push({d: ribbon([a, [lerp(a[0], b[0], .5), lerp(a[1], b[1], .5)], b], band, band), soft: 0, crisp: 1});
+  const n = Math.floor(len / step);
+  for (let i = 0; i <= n; i++) {
+    const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n);
+    p.fills.push({d: [[x - pole / 2, z], [x + pole / 2, z], [x + pole / 2, z - rise], [x - pole / 2, z - rise]], soft: 0, crisp: 1});
+  }
+  return [p];
 }

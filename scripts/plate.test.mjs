@@ -465,8 +465,8 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
   assert.match(preparePlate([basePart, {...basePart, id: 'b', kind: KIND.bird}, {...basePart, id: 'c', motionWith: 'b'}]).errors.join(), /motionWith bird/);
   assert.match(preparePlate([{...basePart, rigidGroup: true}, {...basePart, id: 'b', rigidGroup: true}]).errors.join(), /multiple rigidGroup/);
 
-  // Scope fence: part counts per ward. R5a added the attached scenes to Minami, Fushimi, Kita, Sakyo and Higashiyama.
-  const expectedCounts = {W_MINAMI: 53, W_UKYO: 25, W_NISHIKYO: 33, W_YAMASHINA: 34, W_FUSHIMI: 40, W_KITA: 31, W_KAMIGYO: 39, W_SAKYO: 35, W_NAKAGYO: 42, W_HIGASHIYAMA: 28, W_SHIMOGYO: 28};
+  // Scope fence: part counts per ward. R5a/R5b added the attached scenes to every ward.
+  const expectedCounts = {W_MINAMI: 53, W_UKYO: 25, W_NISHIKYO: 34, W_YAMASHINA: 36, W_FUSHIMI: 40, W_KITA: 30, W_KAMIGYO: 41, W_SAKYO: 34, W_NAKAGYO: 42, W_HIGASHIYAMA: 27, W_SHIMOGYO: 36};
   for (const [ward, build] of Object.entries(PLATES)) {
     const {parts, errors} = preparePlate(build());
     assert.deepEqual(errors, [], ward);
@@ -867,8 +867,8 @@ test('all three ward lanterns migrate to rigidGroup mesh while keeping part coun
   const {lantern, rand} = await import('../src/studies/toji/plate/vocab.js');
 
   const wardLanterns = [
-    ['W_NISHIKYO', 33, ['shore-lantern']],
-    ['W_YAMASHINA', 34, ['west-lantern', 'east-lantern']],
+    ['W_NISHIKYO', 34, ['shore-lantern']], // 34: R5b added the Katsura fence
+    ['W_YAMASHINA', 36, ['west-lantern', 'east-lantern']], // 36: R5b added the stair-foot grass
   ];
   for (const [ward, count, ids] of wardLanterns) {
     const {parts, errors} = preparePlate(PLATES[ward]());
@@ -1388,9 +1388,9 @@ test('R2: a bird rider is built at its drawn perch and slid with its fills to th
 
 // R5a: attached scenes. Each is flat inlay (layer 0) that names the part it hangs on and keeps off every standing solid.
 test('attached scenes name an existing part and stay off the solids', async () => {
-  const {grassTufts, cascade, farPagoda, daimonji, mossLine, silverPlum, distantHill} = await import('../src/studies/toji/plate/vocab.js');
-  for (const make of [() => grassTufts('x', [[0, 0, 8, 3]], {}), () => cascade('x', [[0, 0, 0, 20]], {}), () => farPagoda('x', 0, 0, 20, {}),
-    () => daimonji('x', 0, 0, 30, {}), () => mossLine('x', [[0, 0], [30, 0]], {}), () => silverPlum('x', 0, 0, 1, {}), () => distantHill('x', 0, 100, 0, 20, 1, {})]) {
+  const {grassTufts, farPagoda, daimonji, silverPlum} = await import('../src/studies/toji/plate/vocab.js');
+  for (const make of [() => grassTufts('x', [[0, 0, 8, 3]], {}), () => farPagoda('x', 0, 0, 20, {}),
+    () => daimonji('x', 0, 0, 30, {}), () => silverPlum('x', 0, 0, 1, {})]) {
     assert.throws(make, /"on" must name/, 'a scene without a host is refused');
   }
   const inside = (pt, poly) => {
@@ -1401,13 +1401,13 @@ test('attached scenes name an existing part and stay off the solids', async () =
     }
     return c;
   };
-  const wards = ['W_HIGASHIYAMA', 'W_SAKYO', 'W_KITA', 'W_MINAMI', 'W_FUSHIMI'];
+  const wards = Object.keys(PLATES);
   let seen = 0;
   for (const ward of wards) {
     const {parts} = preparePlate(PLATES[ward]());
     const hosts = new Set(parts.flatMap(p => [p.id, p.group]));
     const scenes = parts.filter(p => p.on);
-    assert.ok(scenes.length, `${ward} has attached scenes`);
+    if (!scenes.length) continue; // the wards that carry none
     // Standing solids: drawn polygons of every part above the ground that is not mist.
     const solids = parts.filter(p => p.layer > 0 && p.kind !== KIND.mist && p.fills.length);
     for (const s of scenes) {
@@ -1415,7 +1415,7 @@ test('attached scenes name an existing part and stay off the solids', async () =
       assert.ok(hosts.has(s.on), `${ward}/${s.id} hangs on ${s.on}, which exists`);
       assert.ok(s.layer === 0 || s.mesh, `${s.id} is inlay in the ground, or a mesh solid (a lantern)`);
       assert.notEqual(s.on, s.id, `${s.id} does not hang on itself`);
-      if (s.kind === KIND.hill || s.layer > 0) continue; // a distant ridge lies behind the solids by design; solids are kept apart by the test above
+      if (s.layer > 0) continue; // solids (a lantern) are kept apart by the test above
       for (const f of s.fills) for (const pt of f.d) for (const solid of solids) for (const sf of solid.fills) {
         assert.ok(!inside(pt, sf.d), `${ward}/${s.id} lies under the solid ${solid.id} at ${pt.map(Math.round)}`);
       }

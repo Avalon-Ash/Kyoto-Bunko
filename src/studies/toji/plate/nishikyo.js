@@ -1,10 +1,12 @@
 // A low shoreline of separate rooms, with an open bamboo deck reaching into the pond like a comma.
 // A loose arc of inlaid stones approaches from the left; the upper-right sky and near centre remain empty.
-import {MAT, gardenGround, pond, hall, moonDeck, moon, steppingStones, lantern, branchPine as pine, bird, rock, suyari} from './vocab.js';
+import {MAT, gardenGround, pond, hall, moonDeck, moon, steppingStones, lantern, branchPine as pine, bird, rock, suyari, bambooFence} from './vocab.js';
 
 export function nishikyo() {
   return [
     ...gardenGround('garden-bank', [[-340, -195], [35, -195], [222, -75], [328, -126], [342, -10], [220, 126], [-215, 172], [-340, 120]], {mat: MAT.gyobu, amp: .18}),
+    // Katsura fence: a run of bamboo along the bank's lower-left edge, a third of the way to the corner: this is an enclosed garden.
+    ...bambooFence('katsura-fence', [-205, 170], [-90, 159], {on: 'garden-bank'}),
     ...pond('garden-pond', 15, 81, 217, 71, 7),
     ...suyari('mist-sky', -300, -72, -201, 13, 9),
     ...suyari('mist-bank', 102, 321, 24, 12, 3),

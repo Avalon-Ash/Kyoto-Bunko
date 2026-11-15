@@ -1,6 +1,6 @@
 // Unequal twin roofs share a long baseline and a small connecting gallery, answered by a great fan-leaved tree.
 // The foreground between ginkgo and pine is an unpainted court; the back wall supplies a quiet horizontal limit.
-import {MAT, gardenGround, hall, corridor, branchGinkgo as ginkgo, fallenFans, branchPine as pine, bird, rock, suyari} from './vocab.js';
+import {MAT, gardenGround, hall, corridor, branchGinkgo as ginkgo, fallenFans, branchPine as pine, bird, rock, suyari, lantern} from './vocab.js';
 
 export function shimogyo() {
   return [
@@ -11,6 +11,9 @@ export function shimogyo() {
     ...hall('amidado', -154, -65, 101, 43, {wallH: 26, group: 'twin-halls'}),
     ...hall('goeido', 128, -80, 135, 59, {wallH: 41, bays: 9, group: 'twin-halls'}),
     ...corridor('watari', -62, 32, -39, {height: 17, group: 'twin-halls'}),
+    // Stone lanterns before the Goei-do's steps, a pair: only the great hall has them, the smaller one beside it has none.
+    ...lantern('goeido-lantern-west', 88, 46, .8).map(p => ({...p, on: 'goeido-wall'})),
+    ...lantern('goeido-lantern-east', 168, 46, .8).map(p => ({...p, on: 'goeido-wall'})),
     ...fallenFans('ginkgo-fall', -170, 190, 150, 32, 42, 6, {size: 12}),
     ...ginkgo('great-ginkgo', -224, 198, 139),
     ...pine('east-pine', 284, 201, 112, -12, 6, {clusters: 3}),
