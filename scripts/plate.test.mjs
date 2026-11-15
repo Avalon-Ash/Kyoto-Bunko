@@ -465,7 +465,8 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
   assert.match(preparePlate([basePart, {...basePart, id: 'b', kind: KIND.bird}, {...basePart, id: 'c', motionWith: 'b'}]).errors.join(), /motionWith bird/);
   assert.match(preparePlate([{...basePart, rigidGroup: true}, {...basePart, id: 'b', rigidGroup: true}]).errors.join(), /multiple rigidGroup/);
 
-  const expectedCounts = {W_MINAMI: 48, W_UKYO: 25, W_NISHIKYO: 33, W_YAMASHINA: 34, W_FUSHIMI: 36, W_KITA: 29, W_KAMIGYO: 39, W_SAKYO: 31, W_NAKAGYO: 42, W_HIGASHIYAMA: 26, W_SHIMOGYO: 28};
+  // Scope fence: part counts per ward. R5a added the attached scenes to Minami, Fushimi, Kita, Sakyo and Higashiyama.
+  const expectedCounts = {W_MINAMI: 53, W_UKYO: 25, W_NISHIKYO: 33, W_YAMASHINA: 34, W_FUSHIMI: 40, W_KITA: 31, W_KAMIGYO: 39, W_SAKYO: 35, W_NAKAGYO: 42, W_HIGASHIYAMA: 28, W_SHIMOGYO: 28};
   for (const [ward, build] of Object.entries(PLATES)) {
     const {parts, errors} = preparePlate(build());
     assert.deepEqual(errors, [], ward);
@@ -481,6 +482,9 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
       assert.equal(p.thick, 0, `${p.id} thick is 0`);
     } else if (/^(kitsune-(stone|body)|uguisu-)/.test(p.id)) {
       // Scope fence widened by R2: the fox and the uguisu are low-relief meshes.
+      assert.ok(Array.isArray(p.mesh) && p.mesh.length > 0, `${p.id} has mesh`);
+    } else if (/^torii-lantern-/.test(p.id) && !p.id.includes('-glow')) {
+      // Scope fence widened by R5a: the stone lantern at the great torii is a mesh (their glow chips stay ground).
       assert.ok(Array.isArray(p.mesh) && p.mesh.length > 0, `${p.id} has mesh`);
     } else {
       assert.equal(p.mesh, undefined, `${p.id} is not migrated`);
@@ -1380,4 +1384,42 @@ test('R2: a bird rider is built at its drawn perch and slid with its fills to th
     assert.equal(flagged, expected, `${ward}: only the uguisu vertices are flagged`);
   }
   assert.ok(PART_MOTION_GLSL.includes('aStyle.z>.5') && PART_MOTION_GLSL.includes('A.z'), 'the hinge shrinks a bird by its rise');
+});
+
+// R5a: attached scenes. Each is flat inlay (layer 0) that names the part it hangs on and keeps off every standing solid.
+test('attached scenes name an existing part and stay off the solids', async () => {
+  const {grassTufts, cascade, farPagoda, daimonji, mossLine, silverPlum, distantHill} = await import('../src/studies/toji/plate/vocab.js');
+  for (const make of [() => grassTufts('x', [[0, 0, 8, 3]], {}), () => cascade('x', [[0, 0, 0, 20]], {}), () => farPagoda('x', 0, 0, 20, {}),
+    () => daimonji('x', 0, 0, 30, {}), () => mossLine('x', [[0, 0], [30, 0]], {}), () => silverPlum('x', 0, 0, 1, {}), () => distantHill('x', 0, 100, 0, 20, 1, {})]) {
+    assert.throws(make, /"on" must name/, 'a scene without a host is refused');
+  }
+  const inside = (pt, poly) => {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, zi] = poly[i], [xj, zj] = poly[j];
+      if ((zi > pt[1]) !== (zj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - zi) / (zj - zi) + xi) c = !c;
+    }
+    return c;
+  };
+  const wards = ['W_HIGASHIYAMA', 'W_SAKYO', 'W_KITA', 'W_MINAMI', 'W_FUSHIMI'];
+  let seen = 0;
+  for (const ward of wards) {
+    const {parts} = preparePlate(PLATES[ward]());
+    const hosts = new Set(parts.flatMap(p => [p.id, p.group]));
+    const scenes = parts.filter(p => p.on);
+    assert.ok(scenes.length, `${ward} has attached scenes`);
+    // Standing solids: drawn polygons of every part above the ground that is not mist.
+    const solids = parts.filter(p => p.layer > 0 && p.kind !== KIND.mist && p.fills.length);
+    for (const s of scenes) {
+      seen++;
+      assert.ok(hosts.has(s.on), `${ward}/${s.id} hangs on ${s.on}, which exists`);
+      assert.ok(s.layer === 0 || s.mesh, `${s.id} is inlay in the ground, or a mesh solid (a lantern)`);
+      assert.notEqual(s.on, s.id, `${s.id} does not hang on itself`);
+      if (s.kind === KIND.hill || s.layer > 0) continue; // a distant ridge lies behind the solids by design; solids are kept apart by the test above
+      for (const f of s.fills) for (const pt of f.d) for (const solid of solids) for (const sf of solid.fills) {
+        assert.ok(!inside(pt, sf.d), `${ward}/${s.id} lies under the solid ${solid.id} at ${pt.map(Math.round)}`);
+      }
+    }
+  }
+  assert.ok(seen >= 10, 'the five wards carry their scenes');
 });

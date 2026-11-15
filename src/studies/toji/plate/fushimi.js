@@ -1,7 +1,7 @@
 // 伏見区・稲荷. A diagonal, not a centre: the great torii in the near corner, the two-storey gate behind it, and
 // a line of gates climbing the mountain to the far corner. The fox keeps the other near corner.
 // The sky above the gate and the ground between the fox and the climb stay empty nashiji.
-import {MAT, hill, suyari, rock, branchPine as pine, bird, shell, torii, romon, fox, pawPrints, steppingStones} from './vocab.js';
+import {MAT, hill, suyari, rock, branchPine as pine, bird, shell, torii, romon, fox, pawPrints, steppingStones, lantern} from './vocab.js';
 
 /** Five gates up the slope, each smaller than the one before and clear of its neighbours. */
 function climb() {
@@ -29,6 +29,9 @@ export function fushimi() {
     ...rock('rock-b', 10, 174, 24, 16, 9, {mat: MAT.kirigin}),
     // Slot 2: the gates, the fox and the trunks. These stand up from the lid.
     ...torii('torii', -232, 204, 1.22, {cap: true}),
+    // A stone lantern at the great torii's west foot, outside the post: the way in. Only this side has room: between the
+    // torii (to x -161) and the pine's crown (from x -135) there are 26 units, and a lantern at this scale is 56 wide.
+    ...lantern('torii-lantern', -334, 212, .8).map(p => ({...p, on: 'torii'})),
     ...romon('romon', -250, 40, 62),
     ...climb(),
     ...fox('kitsune', 176, 200, -1, 1.5),

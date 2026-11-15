@@ -1,13 +1,28 @@
 // Two textures face each other: dark timber over a small pond, silver raked sand with a single level-topped cone.
 // The pavilion stays at the far left, the cone at the near right; an open lower-left wedge separates them.
-import {MAT, gardenGround, hill, pond, sandGarden, sandCone, moonBowl, storey, roof, hall, branchPine as pine, bird, rock, suyari} from './vocab.js';
+import {MAT, blob, gardenGround, hill, pond, sandGarden, sandCone, moonBowl, storey, roof, hall, branchPine as pine, bird, rock, suyari, grassTufts, mossLine, daimonji} from './vocab.js';
+
+// The outline pond() draws for 'kinkyo' (same arguments): the grass is set on it.
+const POND = [-182, 36, 112, 67, 5];
+const shore = blob(...POND, .055, 80);
+/** A tuft just outside the pond's shore at index i, leaning away from the water. */
+function bank(i, h, n, flower = false) {
+  const [x, z] = shore[i], dx = x - POND[0], dz = z - POND[1], l = Math.hypot(dx, dz);
+  return [x + dx / l * 2.2, z + dz / l * 2.2, h, n, Math.sign(dx) * .22, flower];
+}
 
 export function sakyo() {
   return [
     ...gardenGround('garden-floor', [[-343, -210], [141, -210], [330, -176], [341, -34], [263, 176], [5, 178], [-72, 55], [-338, 80]]),
     ...hill('higashiyama', -345, 85, -216, -169, 4, {amp: .35}),
+    // Daimonji: the character 大 in cut gold on the mountain's face, small beside the pavilion.
+    ...daimonji('daimonji', -16, -190, 34, {on: 'higashiyama', tile: 4.2}),
     ...pond('kinkyo', -182, 36, 112, 67, 5),
     ...sandGarden('ginshadan', 14, 249, 0, 102),
+    // Where sand meets ground: a dark moss line along the sand's west and south edge, as far as the cone's foot.
+    ...mossLine('ginshadan-moss', [[24, 2], [19, 50], [13, 104], [60, 105.5], [105, 104.5], [140, 105]], {on: 'ginshadan'}),
+    // Grass at the pond's edge: a few tufts of gold line work on the west, south and east banks, none on the pavilion's side.
+    ...grassTufts('kinkyo-grass', [bank(3, 11, 4), bank(15, 12, 4), bank(25, 11, 4), bank(28, 12, 4, true), bank(40, 12, 4), bank(47, 11, 4)], {on: 'kinkyo', seed: 3}),
     ...sandCone('kogetsudai', 190, 160, 50, 62),
     ...moonBowl('moon', 190, 98, 'kogetsudai'),
     ...suyari('mist-west', -336, -213, -37, 12, 6),

@@ -1,6 +1,14 @@
 // 南区・東寺. A composition, not a survey: the pagoda on its bank, the hall half lost in mist,
 // a stream between two banks, pines in the foreground. A third of the ground stays empty nashiji.
-import {MAT, hill, stream, suyari, rock, pagoda, hall, stampedPine as pine, bird, shell} from './vocab.js';
+import {MAT, hill, stream, streamEdge, suyari, rock, pagoda, hall, stampedPine as pine, bird, shell, grassTufts, silverPlum} from './vocab.js';
+
+// The stream's own points and widths, kept here so its banks can be found again for the grass.
+const STREAM = [[[-8, -150], [22, -70], [-30, 20], [14, 110], [-26, 232]], [7, 11, 17, 25, 36]];
+/** A tuft on the bank of the stream at t (0 head, 1 foot), side -1 east or 1 west, set 2.5 units out from the water. */
+function bankTuft(t, side, h, n, flower = false) {
+  const [x, z] = streamEdge(...STREAM, t, side);
+  return [x - side * 2.5, z, h, n, -side * .2, flower];
+}
 
 export function minami() {
   return [
@@ -8,8 +16,12 @@ export function minami() {
     ...hill('bank-far', -360, -70, -168, -112, 11, {amp: .34, mat: MAT.nashijiLight, humps: 3}),
     ...hill('bank-left', -372, -52, 92, 214, 23, {amp: .8}),
     ...hill('bank-right', 44, 372, 118, 214, 31, {amp: .7, mat: MAT.gyobu, humps: 1}),
-    ...stream('stream', [[-8, -150], [22, -70], [-30, 20], [14, 110], [-26, 232]], [7, 11, 17, 25, 36]),
+    ...stream('stream', ...STREAM),
     ...shell('shell', [[14, -44, 4.2, 2], [-22, 34, 5, 5], [6, 96, 4.4, 8], [-12, 168, 5.6, 3]]),
+    // Grass on both banks: gold line work, two tufts carrying a small silver flower.
+    ...grassTufts('stream-grass', [bankTuft(.38, -1, 12, 4), bankTuft(.58, -1, 11, 4, true), bankTuft(.78, -1, 12, 4), bankTuft(.5, 1, 12, 4), bankTuft(.68, 1, 11, 4, true)], {on: 'stream', seed: 4}),
+    // A silver plum by the hall's west roof corner.
+    ...silverPlum('plum', -222, 4, 1.4, {on: 'kondo'}),
     // Slot 1: mist and stones.
     ...suyari('mist-hall', -360, -18, -34, 17, 5),
     ...suyari('mist-sky', 196, 372, -186, 15, 9),

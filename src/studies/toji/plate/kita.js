@@ -1,6 +1,15 @@
 // A horizontal mirror: three gold storeys rise from the far bank, their broken image lies in still water.
 // The island pine balances the pavilion; the entire lower-left quarter stays bare lacquer and nashiji.
-import {MAT, gardenGround, hill, pond, phoenix, storey, roof, branchPine as pine, bird, rock, suyari} from './vocab.js';
+import {MAT, blob, gardenGround, hill, distantHill, pond, phoenix, storey, roof, branchPine as pine, bird, rock, suyari, grassTufts} from './vocab.js';
+
+// The outline pond() draws for 'kyoko' (same arguments): the reeds are set on its north-west bank.
+const POND = [-5, 68, 244, 82, 3];
+const shore = blob(...POND, .055, 80);
+/** A reed clump on the shore at index i, rooted a little inland, leaning out over the water. */
+function reed(i, h, n) {
+  const [x, z] = shore[i];
+  return [x, z - 1.2, h, n, .16];
+}
 
 export function kita() {
   const pavilion = [];
@@ -13,8 +22,12 @@ export function kita() {
   }
   return [
     ...gardenGround('shore-ground', [[-345, -210], [165, -210], [244, -122], [222, -35], [320, 100], [295, 173], [-43, 185], [-155, 145], [-300, 88]]),
+    // Kinugasa-yama: a low round ridge far behind the bank, pale as a sedge hat. The bank is drawn next and hides its foot.
+    ...distantHill('kinugasa', -250, 90, -228, -200, 21, {on: 'far-bank', amp: .9, mat: MAT.gyobu}),
     ...hill('far-bank', -270, 115, -213, -164, 12, {amp: .3, mat: MAT.mura}),
     ...pond('kyoko', -5, 68, 244, 82, 3, {reflection: {x: -85, z: 9, width: 78, height: 90}}),
+    // Reeds of silver line work on the north-west bank, from the pavilion's west foot toward the shore stone.
+    ...grassTufts('kyoko-reeds', [reed(45, 21, 5), reed(47, 25, 5), reed(49, 21, 5), reed(51, 18, 4)], {on: 'kyoko', mat: MAT.silver, seed: 5, w: 2.4, spread: .12}),
     ...suyari('mist-west', -342, -202, -102, 13, 2),
     ...suyari('mist-east', 105, 342, -195, 14, 7),
     ...rock('shore-stone', -246, 18, 29, 20, 5),

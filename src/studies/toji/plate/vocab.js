@@ -479,3 +479,144 @@ export {stampedPine, stampedPine as pine, stampedPine as branchPine,
   stampedMaple, stampedMaple as maple, stampedMaple as branchMaple,
   stampedGinkgo as ginkgo, stampedGinkgo as branchGinkgo,
   stampedCourtTree as courtTree, stampedCourtTree as branchCourtTree} from './trees.js';
+
+// ---- Attached scenes (R5a). Each hangs on a named part (`on`), is flat inlay in the ground, and sits at a place written
+// out in its ward's own file. `rand` only jitters a stroke, with fixed seeds.
+// Their reach is .5, never 0: bake.js repaints every part with reach > 0 over the margins, in order, so a reach-0 part
+// under one of the big ground parts (a garden floor, a hill) would be painted out of the material map.
+const need = (fn, id, on) => { if (typeof on !== 'string' || !on) throw new Error(`${fn}(${id}): "on" must name the part it hangs on`); };
+/** A band along a polyline, w0 wide at its first point and w1 at its last (closed outline). */
+function ribbon(pts, w0, w1) {
+  const left = [], right = [], n = pts.length - 1;
+  pts.forEach(([x, z], i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, w = lerp(w0, w1, i / n) / 2;
+    left.push([x - (b[1] - a[1]) / l * w, z + (b[0] - a[0]) / l * w]); right.push([x + (b[1] - a[1]) / l * w, z - (b[0] - a[0]) / l * w]);
+  });
+  return [...left, ...right.reverse()];
+}
+/** Where a hill's crest runs at x: the same curve hill() draws, so a small figure can stand on a ridge. */
+export function hillCrest(x0, x1, crown, foot, seed, {humps = 2} = {}) {
+  const ph = rand(seed)() * 6.283;
+  return x => { const t = (x - x0) / (x1 - x0); return foot - (foot - crown) * Math.pow(Math.sin(Math.PI * t), .6) * (.78 + .22 * Math.sin(t * Math.PI * humps * 2 + ph)); };
+}
+/** A point on one bank of a stream() (same Catmull-Rom as stream) with its tangent: [x, z, tx, tz]. side is -1 or 1. */
+export function streamEdge(points, widths, t, side) {
+  const at = u => {
+    const f = u * (points.length - 1), i = Math.min(points.length - 2, Math.floor(f)), v = f - i;
+    const p0 = points[Math.max(0, i - 1)], p1 = points[i], p2 = points[i + 1], p3 = points[Math.min(points.length - 1, i + 2)];
+    const c = k => .5 * (2 * p1[k] + (p2[k] - p0[k]) * v + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * v * v + (3 * p1[k] - p0[k] - 3 * p2[k] + p3[k]) * v * v * v);
+    return [c(0), c(1), lerp(widths[i], widths[i + 1], v)];
+  };
+  const a = at(Math.max(0, t - .01)), b = at(Math.min(1, t + .01)), q = at(t), l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  const tx = (b[0] - a[0]) / l, tz = (b[1] - a[1]) / l;
+  return [q[0] - tz * q[2] * side, q[1] + tx * q[2] * side, tx, tz];
+}
+/** A distant ridge behind a nearer bank (`on`): the swell of hill(), drawn before the bank so the bank covers its foot. */
+export function distantHill(id, x0, x1, crown, foot, seed, {on, amp = .3, mat = MAT.nashijiLight, humps = 1} = {}) {
+  need('distantHill', id, on);
+  return hill(id, x0, x1, crown, foot, seed, {amp, mat, humps}).map(p => ({...p, on}));
+}
+const five = (cx, cz, r, turn) => Array.from({length: 5}, (_, i) => blob(cx + Math.cos(turn + i * 1.2566) * r * .95, cz + Math.sin(turn + i * 1.2566) * r * .95, r * .8, r * .8, 1, 0, 9));
+/**
+ * Tufts of grass or reed at the places given: [x, z, height, blades, lean?, flower?]. Blades fan from one root and curve
+ * with the lean; a tuft with a flower carries one five-petalled silver blossom on its middle blade.
+ * Gold mat = grass, silver mat = reed (narrow spread).  Each blade is a thin leaf inlaid flat, not a raised stalk.
+ */
+export function grassTufts(id, spots, {on, mat = MAT.gold, seed = 1, w = 2.6, spread = .42} = {}) {
+  need('grassTufts', id, on);
+  if (!spots.length) throw new Error(`grassTufts(${id}): spots must not be empty`);
+  const r = rand(seed), grass = part(id, KIND.still, 0, mat, spots[0].slice(0, 2), {reach: .5, on}), bloom = [];
+  for (const [x, z, h, n, lean = 0, flower = false] of spots) {
+    for (let k = 0; k < n; k++) {
+      const u = n === 1 ? 0 : k / (n - 1) * 2 - 1, hh = h * (.62 + .38 * (1 - Math.abs(u)) + (r() - .5) * .16);
+      const tip = [x + u * h * spread + lean * h * (.6 + .4 * Math.abs(u)), z - hh], mid = [x + u * h * .14 + lean * h * .15, z - hh * .55];
+      const left = quad([x + u * 1.4 - w / 2, z], [mid[0] - w * .46, mid[1]], tip, 8), right = quad(tip, [mid[0] + w * .46, mid[1]], [x + u * 1.4 + w / 2, z], 8);
+      grass.fills.push({d: [...left, ...right.slice(1)], soft: 0, crisp: 1});
+      if (flower && k === Math.floor(n / 2)) bloom.push(tip);
+    }
+  }
+  if (!bloom.length) return [grass];
+  const flowers = part(`${id}-flower`, KIND.still, 0, MAT.hyomonSilver, bloom[0], {reach: .5, on});
+  for (const [x, z] of bloom) for (const d of five(x, z - 1.2, 2.6, -1.57)) flowers.fills.push({d, soft: 0, crisp: 1});
+  return [grass, flowers];
+}
+/**
+ * A fall of water as broken streaks of cut silver: each line is [x0, z0, x1, z1] from lip to pool, widening as it falls and
+ * parted into three runs by gaps. Hangs on the stream (`on`) whose head it feeds.
+ */
+export function cascade(id, lines, {on, w = 3} = {}) {
+  need('cascade', id, on);
+  const p = part(id, KIND.still, 0, MAT.hyomonSilver, lines[0].slice(0, 2), {reach: .5, on});
+  for (const [x0, z0, x1, z1] of lines) for (const [a, b] of [[0, .56], [.66, 1]]) {
+    const at = t => [lerp(x0, x1, t) + Math.sin(t * 5) * .5, lerp(z0, z1, t)];
+    p.fills.push({d: ribbon([at(a), at((a + b) / 2), at(b)], w * (.7 + .5 * a), w * (.7 + .5 * b)), soft: 0, crisp: 1});
+  }
+  return [p];
+}
+/**
+ * A pagoda at a great distance, a flat silhouette of pale gold standing on a ridge (`on`): five stacked eaves and a mast.
+ * h is its whole height; zBase is the ridge line under it.
+ */
+export function farPagoda(id, x, zBase, h, {on} = {}) {
+  need('farPagoda', id, on);
+  const p = part(id, KIND.still, 0, MAT.kirikane, [x, zBase], {reach: .5, on}), tier = h * .17;
+  for (let i = 0; i < 5; i++) {
+    const w = h * (.21 - i * .02) * .9, z1 = zBase - i * tier, z0 = z1 - tier * .78;
+    p.fills.push({d: [[x - w * 1.15, z1], [x + w * 1.15, z1], [x + w * .62, z0], [x - w * .62, z0]], soft: 0, crisp: 1});
+    p.fills.push({d: [[x - w * .5, z0], [x + w * .5, z0], [x + w * .5, z0 - tier * .22], [x - w * .5, z0 - tier * .22]], soft: 0, crisp: 1});
+  }
+  p.fills.push({d: [[x - h * .02, zBase - 5 * tier], [x + h * .02, zBase - 5 * tier], [x, zBase - h]], soft: 0, crisp: 1});
+  return [p];
+}
+/**
+ * The character 大 laid out in small squares of cut gold on a slope (`on`), as the bonfire on the mountain is: a bar and
+ * two legs. cx, cz is the middle of the bar; size is the bar's full width.
+ */
+export function daimonji(id, cx, cz, size, {on, tile = 3.8} = {}) {
+  need('daimonji', id, on);
+  const p = part(id, KIND.still, 0, MAT.kirikane, [cx, cz], {reach: .5, on}), h = size * .5, s = tile / 2;
+  const put = (a, b) => {
+    const n = Math.max(2, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / (tile * 1.5)));
+    for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); p.fills.push({d: [[x - s, z - s], [x + s, z - s], [x + s, z + s], [x - s, z + s]], soft: 0, crisp: 1}); }
+  };
+  put([cx - h, cz], [cx + h, cz]);                    // the bar
+  put([cx, cz - h * .55], [cx - h * .95, cz + h]);    // the left-falling leg, begun above the bar
+  put([cx, cz + h * .05], [cx + h * .95, cz + h]);    // the right-falling leg
+  return [p];
+}
+/** A narrow dark band (the unlit brown of MAT.lamp) along an edge (`on`) with a wavering width: the moss line where sand meets ground. */
+export function mossLine(id, pts, {on, w = 3.6, seed = 1} = {}) {
+  need('mossLine', id, on);
+  const r = rand(seed), dense = [];
+  for (let i = 0; i < pts.length - 1; i++) for (let k = 0; k < 4; k++) dense.push([lerp(pts[i][0], pts[i + 1][0], k / 4), lerp(pts[i][1], pts[i + 1][1], k / 4)]);
+  dense.push(pts.at(-1));
+  const a = [], b = [], n = dense.length - 1;
+  dense.forEach(([x, z], i) => {
+    const u = dense[Math.max(0, i - 1)], v = dense[Math.min(n, i + 1)], l = Math.hypot(v[0] - u[0], v[1] - u[1]) || 1, q = w * (.65 + r() * .7) / 2;
+    a.push([x - (v[1] - u[1]) / l * q, z + (v[0] - u[0]) / l * q]); b.push([x + (v[1] - u[1]) / l * q, z - (v[0] - u[0]) / l * q]);
+  });
+  const p = part(id, KIND.still, 0, MAT.lamp, pts[0], {reach: .5, on});
+  p.fills.push({d: [...a, ...b.reverse()], soft: 0, crisp: .5});
+  return [p];
+}
+/**
+ * A plum beside a roof (`on`): a bare branch of dark line work rising from its foot, and on it blossoms of five
+ * silver petals, each with a small round heart (a gold chip until a coral material exists). x, z is the foot; s scales it
+ * (1 is about 26 tall); lean -1 mirrors it.
+ */
+export function silverPlum(id, x, z, s, {on, lean = 1} = {}) {
+  need('silverPlum', id, on);
+  const P = (dx, dz) => [x + dx * lean * s, z - dz * s];
+  const limb = (pts, w0, w1) => ribbon(pts.map(([a, b]) => P(a, b)), w0 * s, w1 * s);
+  const wood = part(id, KIND.still, 0, MAT.lamp, [x, z], {reach: .5, on}), petals = part(`${id}-blossom`, KIND.still, 0, MAT.hyomonSilver, [x, z], {reach: .5, on});
+  const heart = part(`${id}-heart`, KIND.still, 0, MAT.kirikane, [x, z], {reach: .5, on});
+  wood.fills.push({d: limb([[0, 0], [-1.5, 6], [1, 12], [4.5, 17], [8, 21]], 2.4, 1), soft: 0, crisp: .8},
+    {d: limb([[1, 12], [-3, 17], [-8, 20]], 1.5, .8), soft: 0, crisp: .8},
+    {d: limb([[4, 17], [9, 15], [14, 16]], 1.2, .7), soft: 0, crisp: .8});
+  for (const [dx, dz, r, turn] of [[8, 22, 2.2, .3], [-8, 21, 2.1, 1], [14, 17, 2, .6], [4.5, 18.5, 1.9, 1.4], [-4, 17.5, 1.8, .1], [10.5, 12.5, 1.7, .9]]) {
+    const [cx, cz] = P(dx, dz);
+    for (const d of five(cx, cz, r * s, turn)) petals.fills.push({d, soft: 0, crisp: 1});
+    heart.fills.push({d: blob(cx, cz, r * s * .42, r * s * .42, 2, 0, 10), soft: 0, crisp: 1});
+  }
+  return [wood, petals, heart];
+}
