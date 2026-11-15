@@ -13,7 +13,7 @@ import { SpotLocale } from '../../../types';
 export const HIGASHIYAMA_ZH: Record<string, SpotLocale> = {
   'HY-001': { name: "祇園四條站", desc: "京阪電鐵車站。出站即是著名的鴨川四條大橋。", tags: "鐵道" },
   'HY-002': { name: "三條京阪站", desc: "換乘樞紐，連接京阪電鐵與地鐵東西線。", tags: "鐵道" },
-  'HY-003': { name: "清水寺", desc: "世界遺產。以「清水的舞台」聞名於世。", tags: "寺院 世界遺產 經典 打卡 ACG" },
+  'HY-003': { name: "清水寺", desc: "世界遺產。以「清水的舞台」聞名於世。", tags: "寺院 世界遺產 國寶 經典 打卡 ACG" },
   'HY-004': { name: "八坂神社", desc: "祇園祭的舉辦地。以厄除、姻緣聞名。", tags: "神社 經典 打卡 ACG" },
   'HY-005': { name: "知恩院", desc: "擁有巨大的三門及日本最大的青銅鐘。", tags: "寺院 打卡 國寶" },
   'HY-006': { name: "建仁寺", desc: "京都最古老的禪寺。以法堂天頂的「雙龍圖」聞名。", tags: "寺院 庭園 打卡 國寶 ACG" },

@@ -36,7 +36,7 @@ import { SpotSchema } from '../../types';
 export const SHIMOGYO_SCHEMA: SpotSchema[] = [
   { id: 'SG-001', wardId: 'W_SHIMOGYO', areaId: 'A04', typeId: 'T_HUB', tagIds: ['鐵道'] },
   { id: 'SG-002', wardId: 'W_SHIMOGYO', areaId: 'A01', typeId: 'T_HUB', tagIds: ['地鐵'] },
-  { id: 'SG-003', wardId: 'W_SHIMOGYO', areaId: 'A04', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '經典', '打卡'] },
+  { id: 'SG-003', wardId: 'W_SHIMOGYO', areaId: 'A04', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '國寶', '經典', '打卡'] },
   { id: 'SG-004', wardId: 'W_SHIMOGYO', areaId: 'A04', typeId: 'T_TEMPLE', tagIds: ['寺院', '經典', '打卡', '國寶'] },
   { id: 'SG-005', wardId: 'W_SHIMOGYO', areaId: 'A04', typeId: 'T_MODERN', tagIds: ['地標', '打卡', '現代'] },
   { id: 'SG-006', wardId: 'W_SHIMOGYO', areaId: 'A01', typeId: 'T_SHOP', tagIds: ['經典', '打卡', '購物'] },

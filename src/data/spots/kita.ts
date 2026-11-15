@@ -38,7 +38,7 @@ export const KITA_SCHEMA: SpotSchema[] = [
   { id: 'KT-002', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_HUB', tagIds: ['巴士'] },
   { id: 'KT-003', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_HUB', tagIds: ['巴士'] },
   { id: 'KT-004', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_HUB', tagIds: ['巴士'] },
-  { id: 'KT-005', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '打卡', '國寶', '庭園', 'ACG'] },
+  { id: 'KT-005', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '打卡', '庭園', 'ACG'] },
   { id: 'KT-006', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_TEMPLE', tagIds: ['寺院', '庭園', '國寶'] },
   { id: 'KT-007', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_TEMPLE', tagIds: ['神社', '賞花'] },
   { id: 'KT-008', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_TEMPLE', tagIds: ['神社', '賞花', 'ACG'] },

@@ -36,7 +36,7 @@ import { SpotSchema } from '../../types';
 export const HIGASHIYAMA_SCHEMA: SpotSchema[] = [
   { id: 'HY-001', wardId: 'W_HIGASHIYAMA', areaId: 'A05', typeId: 'T_HUB', tagIds: ['鐵道'] },
   { id: 'HY-002', wardId: 'W_HIGASHIYAMA', areaId: 'A05', typeId: 'T_HUB', tagIds: ['鐵道'] },
-  { id: 'HY-003', wardId: 'W_HIGASHIYAMA', areaId: 'A05', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '經典', '打卡', 'ACG'] },
+  { id: 'HY-003', wardId: 'W_HIGASHIYAMA', areaId: 'A05', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '國寶', '經典', '打卡', 'ACG'] },
   { id: 'HY-004', wardId: 'W_HIGASHIYAMA', areaId: 'A07', typeId: 'T_TEMPLE', tagIds: ['神社', '經典', '打卡', 'ACG'] },
   { id: 'HY-005', wardId: 'W_HIGASHIYAMA', areaId: 'A07', typeId: 'T_TEMPLE', tagIds: ['寺院', '打卡', '國寶'] },
   { id: 'HY-006', wardId: 'W_HIGASHIYAMA', areaId: 'A05', typeId: 'T_TEMPLE', tagIds: ['寺院', '庭園', '打卡', '國寶', 'ACG'] },
