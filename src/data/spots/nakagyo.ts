@@ -157,4 +157,5 @@ export const NAKAGYO_SCHEMA: SpotSchema[] = [
   { id: 'NK-131', wardId: 'W_NAKAGYO', areaId: 'A03', typeId: 'T_FOOD', tagIds: ['正餐'] },
   { id: 'NK-132', wardId: 'W_NAKAGYO', areaId: 'A01', typeId: 'T_FOOD', tagIds: ['抹茶', '喫茶', '現代'] },
   { id: 'NK-133', wardId: 'W_NAKAGYO', areaId: 'A03', typeId: 'T_FOOD', tagIds: ['正餐'] },
+  { id: 'NK-134', wardId: 'W_NAKAGYO', areaId: 'A01', typeId: 'T_FOOD', tagIds: ['正餐', '拉麵', '名物', '打卡'] },
 ];
