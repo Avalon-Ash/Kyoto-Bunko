@@ -67,17 +67,18 @@ export const MOTIFS = {
 
 /** @type {Record<string, {motif: keyof typeof MOTIFS, verse: {zh: string, ja: string}}>} */
 export const WARD_ART = {
-  W_KITA: {motif: 'shippo', verse: {zh: '鏡湖池上，金影不動。', ja: '鏡湖池に、金の影。'}},
-  W_KAMIGYO: {motif: 'kikko', verse: {zh: '南庭白砂，回廊無聲。', ja: '南庭の白砂、回廊しずか。'}},
-  W_SAKYO: {motif: 'nami', verse: {zh: '銀沙如波，向月而待。', ja: '銀沙の波、月を待つ。'}},
-  W_NAKAGYO: {motif: 'koshi', verse: {zh: '唐門之內，御殿雁行。', ja: '唐門の奥、雁行の御殿。'}},
-  W_HIGASHIYAMA: {motif: 'asanoha', verse: {zh: '音羽山腰，舞台凌空。', ja: '音羽の山に、懸かる舞台。'}},
-  W_SHIMOGYO: {motif: 'hishi', verse: {zh: '兩堂並立，銀杏一樹。', ja: '堂ふたつ、銀杏ひともと。'}},
-  W_MINAMI: {motif: 'uroko', verse: {zh: '梨地之上，五重塔影。', ja: '梨地に、五重の影。'}},
-  W_UKYO: {motif: 'kagome', verse: {zh: '曹源池畔，借山入庭。', ja: '曹源池、山を借りる庭。'}},
-  W_NISHIKYO: {motif: 'ichimatsu', verse: {zh: '月見台前，池心待月。', ja: '月見台、池に月を待つ。'}},
-  W_YAMASHINA: {motif: 'bishamon', verse: {zh: '石階盡處，楓映本殿。', ja: '石段の先、楓の本殿。'}},
-  W_FUSHIMI: {motif: 'tatewaku', verse: {zh: '樓門之後，鳥居連山。', ja: '楼門の奥、鳥居つらなる。'}},
+  // Each verse names the landmark on the lid, then what else the ward is known for (the taglines in data/wards.ts).
+  W_KITA: {motif: 'shippo', verse: {zh: '金閣映池，賀茂水清。', ja: '金閣うつる池、賀茂の流れ。'}},
+  W_KAMIGYO: {motif: 'kikko', verse: {zh: '御所白砂，西陣機聲。', ja: '御所の白砂、西陣の機音。'}},
+  W_SAKYO: {motif: 'nami', verse: {zh: '銀閣待月，哲學道櫻。', ja: '銀閣月を待ち、哲学の道。'}},
+  W_NAKAGYO: {motif: 'koshi', verse: {zh: '二條城下，町家燈宵。', ja: '二条の城、町家に灯る宵。'}},
+  W_HIGASHIYAMA: {motif: 'asanoha', verse: {zh: '清水舞台，坂道陶香。', ja: '清水の舞台、坂に陶の音。'}},
+  W_SHIMOGYO: {motif: 'hishi', verse: {zh: '堂前銀杏，驛前市聲。', ja: '堂前の銀杏、駅前の賑わい。'}},
+  W_MINAMI: {motif: 'uroko', verse: {zh: '五重塔影，弘法市晨。', ja: '五重の塔影、弘法さんの市。'}},
+  W_UKYO: {motif: 'kagome', verse: {zh: '嵐山渡月，禪庭借景。', ja: '嵐山渡月橋、禅の借景。'}},
+  W_NISHIKYO: {motif: 'ichimatsu', verse: {zh: '桂宮待月，苔深竹幽。', ja: '桂の月、苔と竹の奥。'}},
+  W_YAMASHINA: {motif: 'bishamon', verse: {zh: '毘沙門楓，疏水櫻雲。', ja: '毘沙門の楓、疏水の桜。'}},
+  W_FUSHIMI: {motif: 'tatewaku', verse: {zh: '千本鳥居，酒藏水香。', ja: '千本鳥居、酒蔵の水の香。'}},
 };
 
 /** Mist layout seed, so each ward's bands sit differently. Stable per ward. */
