@@ -86,4 +86,6 @@ export const KITA_SCHEMA: SpotSchema[] = [
   { id: 'KT-075', wardId: 'W_KITA', areaId: 'A14', typeId: 'T_NATURE', tagIds: ['自然', '賞花'] },
   { id: 'KT-076', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_FOOD', tagIds: ['喫茶', '打卡', '老舖'] },
   { id: 'KT-077', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_FOOD', tagIds: ['和菓子', '老舖', '隱密'] },
+  { id: 'KT-078', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_FOOD', tagIds: ['喫茶', '隱密', '打卡'] },
+  { id: 'KT-079', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_FOOD', tagIds: ['喫茶', '現代', '打卡'] },
 ];
