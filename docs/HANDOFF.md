@@ -7,10 +7,10 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main` 在 `4ed80e3`（2026-11-15）：three.js 蒔繪盤為預設、T3 材質、黑漆壁真塗都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/roadmap-1116`（2026-11-16 從 `main` 開）：文件整理、開案書與本輪工作。合併 `main` 與 push 各自需要使用者同意 |
+| 工作分支 | `claude/roadmap-1116`（2026-11-16 從 `main` 開）：開案書 R0–R10 的全部成果都在這裡，**尚未合併 `main`、尚未 push**（各自需要使用者同意；push `main` 會觸發部署）。總表見 [`agent-runs/2026-11-16-overnight-chain.md`](agent-runs/2026-11-16-overnight-chain.md) |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
-| 遠端殘留分支 | `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j` 都已併入 `main`；刪遠端分支屬於 push，等使用者同意 |
-| 子代理工作樹 | 放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除；目前有哪些以 `git worktree list` 為準 |
+| 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
+| 子代理工作樹 | 放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除。本輪用過的兩個已移除；目前有哪些以 `git worktree list` 為準 |
 | 遠端與部署 | GitHub repo `Avalon-Ash/Kyoto-Bunko`；GitHub Pages（`https://avalon-ash.github.io/Kyoto-Bunko/`）由 `.github/workflows/deploy.yml` 在 push `main` 時自動部署 |
 | 參考資源 | ThreeRT 原始碼與參考圖在 `C:\Git\_ext`（不在本 repo）；用法見 `MAKIE_THREERT_REFERENCE.md` |
 | 不提交 | `.claude/`、`.shots/`、`dist/`、`node_modules/`、驗收截圖與日誌 |
@@ -25,34 +25,39 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 預覽：首頁 `/`，獨立文箱展示 `/toji-study/index.html`。截圖：`node scripts/plate-shot.mjs <outDir> <job…>`（用法在檔頭；dev server 必須在 127.0.0.1:3000）。
 
-## 2. 目前產品狀態
+## 2. 目前產品狀態（`claude/roadmap-1116`，尚未上線）
 
 | 範圍 | 狀態 |
 |---|---|
-| 資料 | 809 筆，`validate_data.js --strict` ERROR 0／WARN 0。綠燈只代表結構正確，不代表全庫事實查核完成（開案書 R9） |
+| 資料 | **792 筆**，`validate_data.js --strict` ERROR 0／WARN 0。2026-11-16 查完十一區所有食處（Tabelog）與「世界遺產」「國寶」標籤：退役 17 筆、改區 27 筆。「營業中」的依據是 Tabelog 英文版沒有閉店類標示，不是現場確認。寺社、商店等其他類型的事實查核還沒做 |
 | 首頁文庫 | 十一區文箱，每區一面蒔繪盤；單指盒面移光，長拖換函，雙指捏合／滾輪／快捷鍵放大（上限 3 倍），點蓋／Enter／空白鍵開蓋直入 `DetailView`；月光預設、閒置移光 |
-| 蒔繪盤 | **three.js 是預設**（`2ed9e25`）。`?three=0` 或 three 載入／啟動失敗時退回舊的自寫 WebGL2 管線；沒有 WebGL2 時退回更舊的 2.5D 浮雕。地（梨子地、窗光、金色流水、切金、銀）、部件光照 L1–L5、岩與樹幹切金、T3 材質、鄰盒預建都已完成，使用者實機（含 Safari／iOS）看過 OK，樹也 OK。**狐、鳳凰、鶯、銀沙灘向月台仍是平塗佔位**（`three-renderer.js` 的 `paintPlaceholder`） |
-| 降級方案（已決定） | 使用者 2026-11-16：刪舊管線後，不能跑 three 的裝置**顯示靜態圖**，不保留舊 WebGL2 管線與 2.5D 浮雕（開案書 R3） |
-| 全站 UI | 手機優先、深色預設；暖日／月光、語系、減少動態全站共用（色票唯一來源 `src/theme.css`）；卷軸外觀由 `ScrollRoller.tsx` 統一；詳細頁固定底部列表／地圖切換 |
-| 背景 | すやり霞＋和紙＋金箔／銀塵（`backdrop.js`）；十一區各自的紋樣與一行短句（`ward-art.js`）。使用者 2026-11-16：短句要再貼近該區重點（開案書 R1） |
+| 蒔繪盤 | **只有 three.js 一條管線**（`plate/three-renderer.js`＋`three-pack.js`）。舊的自寫 WebGL2 管線、2.5D 浮雕與 `?three=0` 已刪。狐、鳳凰、鶯、銀沙灘與向月台、石垣都是 three 網格，沒有平塗佔位。岩面是菱形切金（受光大而密、背光小而疏），銀岩是銀。地有疏密場（靠近物較密）。九區有依附小景（`plate/<區>.js` 裡帶 `on` 欄位的部件） |
+| 降級 | 沒有 WebGL2、three 載入或啟動失敗、context 遺失、或網址加 `?plate=static` 時，顯示預渲染的靜態圖（`plate/static/` 22 張 webp，十一區 × 日夜），換函與開蓋照常，盒面不動。**盤面有改動就要重拍**：`node scripts/plate-fallback-shots.mjs`（dev server 在 3000） |
+| 全站 UI | 手機優先、深色預設；暖日／月光、語系、減少動態全站共用（色票唯一來源 `src/theme.css`）。卡片有傾斜與柔光（觸控只有按壓回饋）、篩選後新卡片淡入；30 張以上的列表分批渲染（`src/lib/batch-render.ts`） |
+| 背景 | すやり霞＋和紙＋金箔／銀塵、障子格光與卓面光澤（`backdrop.js`）；十一區各自的紋樣與一行短句（`ward-art.js`，2026-11-16 改寫為「地標＋該區另一個重點」） |
 | 歲時記 | 只有[計畫](SEASONAL_PLAN.md)；首頁入口已移除 |
-| 文箱架構 | `study.js`（`mountBunko`：手勢、移光、縮放、換函、開蓋）、`renderer.js`（選渲染器）、`plate/three-renderer.js`＋`plate/three-pack.js`（three 版）、`plate/parts.js`＋`plate/vocab.js`＋`plate/<區>.js`（構圖資料）、`backdrop.js`＋`ward-art.js`（背景）。獨立展示頁另由 `study-chrome.js` 包一層控制，主站不載入 |
+| 文箱架構 | `study.js`（`mountBunko`：手勢、移光、縮放、換函、開蓋）、`renderer.js`（選 three 或靜態圖）、`plate/three-renderer.js`＋`three-pack.js`、`plate/static-plate.js`、`plate/parts.js`＋`vocab.js`＋`mat.js`＋`<區>.js`（構圖資料）、`plate/creature-mesh.js`／`rock-mesh.js`／`architecture-mesh.js` 等（網格）、`backdrop.js`＋`ward-art.js`（背景） |
 
-## 3. 最近一次驗收
+## 3. 最近一次驗收（2026-11-16，`claude/roadmap-1116` `0734d1d`）
 
-`main` `4ed80e3` 的四項檢查（lint、validate strict、test、build）在各 commit 當時通過；本輪每包的結果記在 `agent-runs/2026-11-16-*.md`。
+| 檢查 | 結果 |
+|---|---|
+| `npm run lint` | exit 0 |
+| `npx --no-install tsx validate_data.js --strict` | ERROR 0、WARN 0，792 筆 |
+| `npm test` | `scripts/*.test.mjs` 128/128、`src/lib/*.test.ts` 17/17 |
+| `npm run build` | exit 0；`three-renderer` chunk gzip 約 195 KB |
 
-未測：手機幀時間（three 版）的數字量測。實機手感與 Safari／iOS 使用者已看過。
+截圖都是無頭 Chrome（桌機 GPU）拍的，存在子代理的工作樹裡，已隨工作樹刪除。**本輪所有畫面改動使用者都還沒在實機上看過。**
 
 ## 4. 下一步
 
-照 [`plans/2026-11-16-roadmap.md`](plans/2026-11-16-roadmap.md) 的拆包表與順序。摘要：
+1. **等使用者決定**：把 `claude/roadmap-1116` 合併進 `main`、push（各自分開問）。上線前建議使用者先在本機看一輪：鳳凰、岩面切金、九區小景、卡片高光、`?plate=static`。
+2. **等使用者決定**：[地圖評估備忘錄](plans/2026-11-16-r10-map-evaluation.md)：景點座標管線（建議做）與 MapLibre 小實驗（建議先不全面導入）。
+3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
+4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核；各食處報告裡列的描述細節（米其林、創業年）；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
+5. 已知的小缺口：鳳凰不放大時頭與喙偏小；細小的草、葦、「大」字不放大時幾乎看不到；`parts.js` 的 `act()` 會讓任何 `MAT.lamp` 的部件在游標停留時發橘光，所以小景不要用 `MAT.lamp`。
 
-1. R1 短句、R2 狐／鳳凰／鶯改成 three 網格、R9 資料事實查核（唯讀報告）先行。
-2. R3 T5 收尾：量手機幀時間、做靜態圖降級、刪舊管線。
-3. 之後是岩頂切金、逐區依附小景（方案先給使用者看）、疏密場、換函軌跡光、UI 彈簧與卡片光澤、地圖與歲時記的評估。
-
-使用者 2026-11-16 的授權：蒔繪盤照計畫派工，視覺主代理可自己動手；UI 翻新與 Phase 4 由主代理安排，需要使用者時再說。**合併 `main`、push、新增大型依賴仍要逐次問。**
+使用者 2026-11-16 的常設決定：資料查不到就退役（ID 留給日後補資料）；「國寶」標籤含國寶建造物與國寶藏品；小景的主設計是該區特色，用「日本人會想看到什麼」判斷。**合併 `main`、push、新增大型依賴仍要逐次問。**
 
 ## 5. 不變條件（摘要；全文見 `AGENTS.md` §2）
 
