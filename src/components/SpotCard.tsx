@@ -171,7 +171,7 @@ function useCardFx() {
   return { onPointerEnter, onPointerLeave, onPointerMove, onPointerDown, onPointerUp, onPointerCancel: onPointerUp };
 }
 
-export function SpotCard({ spot, lang, t, activeTag }: SpotCardProps) {
+export const SpotCard = React.memo(function SpotCard({ spot, lang, t, activeTag }: SpotCardProps) {
   const location = getSpotLocation(spot);
   const area = location.isNearby ? t('nearby_trip') : t(spot.areaId, AREA_NAMES);
   const ward = location.isNearby ? `${location.prefecture[lang]} · ${location.city[lang]}` : t(spot.wardId, WARD_NAMES);
@@ -192,4 +192,4 @@ export function SpotCard({ spot, lang, t, activeTag }: SpotCardProps) {
       <MakieIcon motif="map" /><span>{t('btn_map')}</span><span aria-hidden="true">↗</span>
     </a>
   </article>;
-}
+});

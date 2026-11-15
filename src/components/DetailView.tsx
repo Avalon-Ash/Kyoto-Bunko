@@ -7,6 +7,7 @@
 import React, { useRef, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { listMotion } from '../lib/card-fx';
+import { firstBatchSize, renderCount, nextUnlocked } from '../lib/batch-render';
 import { ChevronLeft, List, Filter, Map } from 'lucide-react';
 import { useKyotoEngine } from '../hooks/useKyotoEngine';
 import { TYPES, TYPE_NAMES, WARD_NAMES, AREA_NAMES, getWardStats, getAreaStats } from '../data/index';
@@ -43,6 +44,18 @@ export const DetailView: React.FC<DetailViewProps> = ({ engine, preferences, onP
   const list = listMotion(filteredSpots.length, reduceMotion);
   const [viewMode, setViewMode] = useState<'card' | 'map'>('card');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // A long list mounts the first screens at once and the rest one batch per frame (a new list starts over).
+  const total = filteredSpots.length;
+  const [unlock, setUnlock] = useState({ list: filteredSpots, count: 0 });
+  if (unlock.list !== filteredSpots) setUnlock({ list: filteredSpots, count: 0 });
+  const unlocked = unlock.list === filteredSpots ? unlock.count : 0;
+  const shown = renderCount(total, unlocked, firstBatchSize(window.innerWidth, window.innerHeight));
+  React.useEffect(() => {
+    if (shown >= total) return;
+    const id = requestAnimationFrame(() => setUnlock(u => u.list === filteredSpots ? { list: u.list, count: nextUnlocked(total, shown) } : u));
+    return () => cancelAnimationFrame(id);
+  }, [shown, total, filteredSpots]);
 
   // Auto scroll to top when changing type filters or active tag
   React.useEffect(() => {
@@ -107,9 +120,9 @@ export const DetailView: React.FC<DetailViewProps> = ({ engine, preferences, onP
             <ClusterMap engine={engine} night={preferences.night} paused={preferences.paused} />
           </React.Suspense>
         : <main className="spot-grid" data-enter={list.animate ? "" : undefined} aria-label={title}>
-          {filteredSpots.map(spot => <SpotCard key={spot.id} spot={spot} lang={lang} t={t} activeTag={activeTag} />)}
+          {filteredSpots.slice(0, shown).map(spot => <SpotCard key={spot.id} spot={spot} lang={lang} t={t} activeTag={activeTag} />)}
           {!filteredSpots.length && <div className="ui-status" role="status"><Filter size={28} /><p>{t('empty_msg')}</p></div>}
-          {filteredSpots.length > 0 && <p className="volume-note">{t('volume_note')}</p>}
+          {shown >= total && total > 0 && <p className="volume-note">{t('volume_note')}</p>}
         </main>}
     </div>
     <ScrollRoller />
