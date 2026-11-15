@@ -103,6 +103,32 @@
 .spot-navigation .hira-icon { width:21px; height:21px; }
 .spot-navigation:hover { background:var(--entry-selected); }
 
+/* Card gloss and tilt (R8). Position comes from CSS variables that SpotCard writes on pointer events only;
+   the gloss is a soft pool of the gold token behind the text, never a bright spot. Reduced motion never sets the
+   variables, so only the static hover/focus lighting below remains. */
+.spot-entry { position:relative; isolation:isolate; }
+.spot-entry::after { content:""; position:absolute; inset:6px -10px; z-index:-1; border-radius:6px; pointer-events:none; opacity:0; transition:opacity .28s ease; background:radial-gradient(280px circle at var(--glow-x,50%) var(--glow-y,30%), var(--gloss,color-mix(in srgb,var(--hira-gold) 14%,transparent)), transparent 72%); -webkit-mask:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(transparent,#000 22%,#000 78%,transparent); -webkit-mask-composite:source-in; mask:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(transparent,#000 22%,#000 78%,transparent); mask-composite:intersect; }
+.kyoto-app[data-theme="light"] .spot-entry { --gloss:var(--entry-surface); }
+.spot-entry[data-fx] { will-change:transform; transform:perspective(900px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) scale(var(--press,1)); }
+.spot-entry[data-fx="touch"] { transition:transform .38s cubic-bezier(.34,1.56,.64,1); }
+.spot-entry[data-pressed] { --press:.985; transition-duration:.12s; transition-timing-function:ease-out; }
+.spot-entry[data-pressed]::after, .spot-entry:has(:focus-visible)::after { opacity:1; }
+.spot-entry:has(:focus-visible)::after { box-shadow:inset 0 0 0 1px var(--hira-gold); -webkit-mask:none; mask:none; }
+@media (hover:hover) and (pointer:fine) { .spot-entry:hover::after { opacity:1; } }
+/* A card that joins the list (a filter or tab changed) rises and settles; the first few stagger, the rest arrive with them.
+   Plain CSS on purpose: mounting a motion component per card cost over 100 ms of extra long task at 4x CPU slowdown. */
+@keyframes card-in { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+.spot-grid[data-enter]>.spot-entry { animation:card-in .3s linear(0,.32,.64,.86,.99,1.04,1.04,1.02,1) backwards; }
+.spot-grid[data-enter]>.spot-entry:nth-child(2) { animation-delay:20ms; }
+.spot-grid[data-enter]>.spot-entry:nth-child(3) { animation-delay:40ms; }
+.spot-grid[data-enter]>.spot-entry:nth-child(4) { animation-delay:60ms; }
+.spot-grid[data-enter]>.spot-entry:nth-child(5) { animation-delay:80ms; }
+.spot-grid[data-enter]>.spot-entry:nth-child(6) { animation-delay:100ms; }
+.spot-grid[data-enter]>.spot-entry:nth-child(7) { animation-delay:120ms; }
+.spot-grid[data-enter]>.spot-entry:nth-child(n+8) { animation-delay:140ms; }
+.type-selector button, .tag-selector button, .view-switch button { transition:background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s cubic-bezier(.34,1.56,.64,1); }
+.type-selector button:active, .tag-selector button:active { transform:scale(.97); }
+
 /* Map fits the remaining viewport; its sheet never covers the return tools. */
 .detail-content.is-map { overflow:hidden; padding:0; }
 .cluster-map { height:100%; min-height:180px; position:relative; overflow:hidden; isolation:isolate; background:var(--entry-paper); }

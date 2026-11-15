@@ -32,7 +32,9 @@
  *   禁止用 tagIds 字串替代此欄位
  * - 一律附 Google Maps 導航連結（buildGoogleMapsUrl）
  */
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { animate } from 'motion/react';
+import { cardPose, createFrameGate, movedPastSlop, wantsPress, wantsTilt } from '../lib/card-fx';
 import { MakieIcon } from './MakieIcon';
 import { typeMotifs } from '../lib/makie-icons';
 import { FlatSpot, Lang } from '../types';
@@ -84,6 +86,91 @@ export function buildGoogleMapsUrl(spot: Pick<FlatSpot, 'jaName' | 'wardId' | 'm
   return MAPS_SEARCH + finalQuery;
 }
 
+/** The app's own reduced-motion switch (data attribute on the app root) or the system setting. */
+function reducedMotionNow(el: Element): boolean {
+  return Boolean(el.closest('[data-reduced-motion="true"]')) || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+const setTilt = (el: HTMLElement, rx: number, ry: number) => {
+  el.style.setProperty('--tilt-x', `${rx.toFixed(2)}deg`);
+  el.style.setProperty('--tilt-y', `${ry.toFixed(2)}deg`);
+};
+const setGlow = (el: HTMLElement, gx: number, gy: number) => {
+  el.style.setProperty('--glow-x', `${gx.toFixed(1)}%`);
+  el.style.setProperty('--glow-y', `${gy.toFixed(1)}%`);
+};
+const poseAt = (el: HTMLElement, clientX: number, clientY: number) => {
+  const r = el.getBoundingClientRect();
+  return cardPose({ x: clientX - r.left, y: clientY - r.top, width: r.width, height: r.height });
+};
+
+/**
+ * Tilt and gloss for one card, driven by events only: CSS variables are written at most once per frame
+ * while a mouse is over the card, and nothing runs when it is not. The return to rest is a short `motion` spring.
+ * Touch gets a press (a small dip and a gloss under the finger) that is dropped the moment the touch becomes a scroll.
+ */
+function useCardFx() {
+  const s = useRef<{ gate: ReturnType<typeof createFrameGate> | null; stop?: () => void; rx: number; ry: number; timer: number; end: number; x0: number; y0: number }>(
+    { gate: null, rx: 0, ry: 0, timer: 0, end: 0, x0: 0, y0: 0 });
+  const clearPress = (el: HTMLElement) => {
+    const st = s.current;
+    window.clearTimeout(st.timer);
+    el.removeAttribute('data-pressed');
+    window.clearTimeout(st.end);
+    st.end = window.setTimeout(() => { if (!el.hasAttribute('data-pressed')) el.removeAttribute('data-fx'); }, 450);
+  };
+  const onPointerEnter = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    const el = e.currentTarget, st = s.current;
+    if (!wantsTilt(e.pointerType, reducedMotionNow(el))) return;
+    st.stop?.(); st.stop = undefined;
+    st.gate ??= createFrameGate(cb => requestAnimationFrame(cb), id => cancelAnimationFrame(id));
+    el.setAttribute('data-fx', 'mouse');
+  }, []);
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    const el = e.currentTarget, st = s.current;
+    if (e.pointerType === 'touch') {
+      if (el.hasAttribute('data-pressed') || st.timer) {
+        if (movedPastSlop(e.clientX - st.x0, e.clientY - st.y0)) clearPress(el);
+      }
+      return;
+    }
+    if (el.getAttribute('data-fx') !== 'mouse' || !st.gate) return;
+    const { clientX, clientY } = e;
+    st.gate.push(() => {
+      const p = poseAt(el, clientX, clientY);
+      st.rx = p.rotateX; st.ry = p.rotateY;
+      setTilt(el, p.rotateX, p.rotateY); setGlow(el, p.glowX, p.glowY);
+    });
+  }, []);
+  const onPointerLeave = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    const el = e.currentTarget, st = s.current;
+    if (el.getAttribute('data-fx') !== 'mouse') return;
+    st.gate?.cancel();
+    const { rx, ry } = st;
+    const controls = animate(1, 0, {
+      type: 'spring', stiffness: 260, damping: 20,
+      onUpdate: v => setTilt(el, rx * v, ry * v),
+      onComplete: () => { el.removeAttribute('data-fx'); st.stop = undefined; },
+    });
+    st.stop = () => controls.stop();
+  }, []);
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    const el = e.currentTarget, st = s.current;
+    if (!wantsPress(e.pointerType, reducedMotionNow(el))) return;
+    const p = poseAt(el, e.clientX, e.clientY);
+    setGlow(el, p.glowX, p.glowY);
+    st.x0 = e.clientX; st.y0 = e.clientY;
+    window.clearTimeout(st.timer); window.clearTimeout(st.end);
+    // Wait a beat so a swipe that starts on a card never flashes the press.
+    st.timer = window.setTimeout(() => { st.timer = 0; el.setAttribute('data-fx', 'touch'); el.setAttribute('data-pressed', ''); }, 70);
+  }, []);
+  const onPointerUp = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    if (e.pointerType === 'touch') clearPress(e.currentTarget);
+  }, []);
+  useEffect(() => () => { const st = s.current; st.stop?.(); st.gate?.cancel(); window.clearTimeout(st.timer); window.clearTimeout(st.end); }, []);
+  return { onPointerEnter, onPointerLeave, onPointerMove, onPointerDown, onPointerUp, onPointerCancel: onPointerUp };
+}
+
 export function SpotCard({ spot, lang, t, activeTag }: SpotCardProps) {
   const location = getSpotLocation(spot);
   const area = location.isNearby ? t('nearby_trip') : t(spot.areaId, AREA_NAMES);
@@ -91,7 +178,8 @@ export function SpotCard({ spot, lang, t, activeTag }: SpotCardProps) {
   const tags = spot.tagIds?.length
     ? spot.tagIds.map(id => ({ id, label: TAG_REGISTRY[id]?.label[lang] ?? id }))
     : spot.tags.split(',').filter(Boolean).map(label => ({ id: label, label: label.trim() }));
-  return <article className="spot-entry" aria-label={spot.name}>
+  const fx = useCardFx();
+  return <article className="spot-entry" aria-label={spot.name} {...fx}>
     <div className="spot-meta"><span>{area} · {ward}</span><small>{spot.id}</small></div>
     <h3><MakieIcon motif={typeMotifs[spot.typeId] ?? 'all'} /><span>{spot.name}</span></h3>
     <p className="spot-description">{spot.desc}</p>

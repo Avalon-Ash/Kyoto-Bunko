@@ -49,7 +49,7 @@
 | P1 | 文箱放大：`src/studies/toji/view.js`（`ZOOM_MAX=3`、`ZOOM_STEP=1.4`，捏合／滾輪／`+` `−` `0`／雙擊回全景；放大時 DPR 上限 2、畫布像素上限 2.2e6；陰影貼圖維持 1024²） | `src/studies/toji/view.js`、`study.js`、`interaction.js` | P0 | 已完成（`bc688c3`） |
 | P2 | 蒔繪光澤升級（F2 手法改寫成 shader） | `shaders.js`、`study.js` | P0，可與 P3 並行 | 待辦（未做） |
 | P3 | 首頁背景：`src/studies/toji/backdrop.js`（非 `.ts`，和紙＋すやり霞＋金箔／銀塵微粒；2026-11-11 加上各區紋樣與短句 `ward-art.js`） | `src/studies/toji/backdrop.js`、`src/studies/toji/ward-art.js`、`bunko.css` | P0 | 已完成 |
-| P4 | 其他頁面翻新：書卷併入 `DetailView`（類型 TAB → 標籤 chip → 卡片，無文字搜尋），`ScrollRoller` 軸頭用於詳細頁與御秘帖結果頁。卡片傾斜、彈簧切換等其餘項目未做 | `src/components/DetailView.tsx`、`src/components/ScrollRoller.tsx`、`src/bunko-ui.css` | P0、P2 | 部分完成（UX 統一） |
+| P4 | 其他頁面翻新：書卷併入 `DetailView`（類型 TAB → 標籤 chip → 卡片，無文字搜尋），`ScrollRoller` 軸頭用於詳細頁與御秘帖結果頁。卡片傾斜高光與列表進場已做（R8，2026-11-16，見下） | `src/components/DetailView.tsx`、`src/components/ScrollRoller.tsx`、`src/bunko-ui.css` | P0、P2 | 完成（R8 未提交，待主代理審） |
 | P5 | 全面驗收與實機 | — | 全部 | 待辦 |
 
 ### P1　文箱放大（已完成）
@@ -71,7 +71,8 @@
 
 ### P4　其他頁面（部分完成）
 - **已完成（2026-11-11「UX 統一」）**：書卷併入 `DetailView`（類型 TAB → 標籤 chip → 卡片，無文字搜尋），`ScrollRoller` 軸頭用於詳細頁與御秘帖結果頁。
-- **待辦（未做）**：卡片（SpotCard、名所目錄格子）精簡版 F2 傾斜加高光；列表切換與篩選的彈簧驅動；F1 彈簧核心（`src/lib/spring.ts` 未做）。
+- **已完成（R8，2026-11-16）**：`SpotCard` 傾斜加柔光（桌機滑鼠上限 3.5 度、事件驅動、每幀最多寫一次 CSS 變數，離開時用 `motion` 的 `animate` 彈簧回正；觸控只做按下回饋，捲動即取消；減少動態不掛傾斜）；鍵盤焦點與 hover 同樣亮起。篩選後新進卡片用 CSS 彈簧式進場（30 張以內，前幾張交錯；超過 30 張或減少動態直接切換）。邏輯在 `src/lib/card-fx.ts`（有測試）。
+- **取捨**：列表進場先試過 `motion` 的 `AnimatePresence` + `layout`，在 375px、CPU 降速 4 倍下最長幀由約 50 ms 升到 120–150 ms，改為 CSS 進場；因此沒有離場與重排動畫。不另做 `src/lib/spring.ts`，彈簧用 `motion`。
 - 統一背景顆粒與和色 token，讓詳細頁和首頁看起來是同一套。
 
 ## 5. 驗收（每期都要）

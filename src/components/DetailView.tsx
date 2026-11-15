@@ -6,6 +6,7 @@
  */
 import React, { useRef, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
+import { listMotion } from '../lib/card-fx';
 import { ChevronLeft, List, Filter, Map } from 'lucide-react';
 import { useKyotoEngine } from '../hooks/useKyotoEngine';
 import { TYPES, TYPE_NAMES, WARD_NAMES, AREA_NAMES, getWardStats, getAreaStats } from '../data/index';
@@ -25,6 +26,7 @@ const ClusterMap = React.lazy(() =>
   import('./ClusterMap').then(module => ({ default: module.ClusterMap }))
 );
 
+
 interface DetailViewProps {
   engine: ReturnType<typeof useKyotoEngine>;
   preferences: BunkoPreferences;
@@ -37,7 +39,8 @@ export const DetailView: React.FC<DetailViewProps> = ({ engine, preferences, onP
     t, toggleLang, closeDetail, filteredSpots, typeCounts 
   } = engine;
   const systemReducedMotion = useReducedMotion();
-  const reduceMotion = preferences.paused || systemReducedMotion;
+  const reduceMotion = Boolean(preferences.paused || systemReducedMotion);
+  const list = listMotion(filteredSpots.length, reduceMotion);
   const [viewMode, setViewMode] = useState<'card' | 'map'>('card');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -103,9 +106,9 @@ export const DetailView: React.FC<DetailViewProps> = ({ engine, preferences, onP
         : viewMode === 'map' ? <React.Suspense fallback={<div role="status" className="ui-status">{t('loading')}</div>}>
             <ClusterMap engine={engine} night={preferences.night} paused={preferences.paused} />
           </React.Suspense>
-        : <main className="spot-grid" aria-label={title}>
-          {filteredSpots.length ? filteredSpots.map(spot => <SpotCard key={spot.id} spot={spot} lang={lang} t={t} activeTag={activeTag} />)
-            : <div className="ui-status" role="status"><Filter size={28} /><p>{t('empty_msg')}</p></div>}
+        : <main className="spot-grid" data-enter={list.animate ? "" : undefined} aria-label={title}>
+          {filteredSpots.map(spot => <SpotCard key={spot.id} spot={spot} lang={lang} t={t} activeTag={activeTag} />)}
+          {!filteredSpots.length && <div className="ui-status" role="status"><Filter size={28} /><p>{t('empty_msg')}</p></div>}
           {filteredSpots.length > 0 && <p className="volume-note">{t('volume_note')}</p>}
         </main>}
     </div>
