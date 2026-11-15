@@ -15,6 +15,7 @@ import {meshTorii, meshKakezukuri} from './frame-mesh.js';
 import {meshRoof, meshStorey, meshPagoda, meshHall, meshRomon, meshSanmon, meshKaramon, meshCorridor} from './architecture-mesh.js';
 import {meshLantern} from './lantern-mesh.js';
 import {meshRock} from './rock-mesh.js';
+import {meshFox, meshPhoenix, meshBird, meshSandCone, meshMoonBowl, meshWall, feetCentre} from './creature-mesh.js';
 
 export const PLATE = {halfW: 360, halfH: 230};
 export const MAT = {ground: 1, nashijiLight: 2, mura: 3, gyobu: 4, gold: 5, silver: 6, kirikane: 7, kirigin: 8, aogai: 9,
@@ -259,6 +260,7 @@ export function fox(id, x, z, flip = 1, s = 1, {layer = 2} = {}) {
   const jx = x + 22 * flip * s, jz = z + 10 * s;
   jewel.fills.push({d: blob(jx, jz, 7 * s, 6 * s, 1, 0, 24), soft: 0, crisp: 1});
   jewel.fills.push({d: [[jx - 4 * s, jz - 3 * s], [jx + 1 * s, jz - 12 * s], [jx + 4 * s, jz - 3 * s]], soft: 0, crisp: 1});
+  meshFox(stone, body, s); // the fills and lines above stay as the picture's outline; the relief is raised from them
   return [jewel, stone, body];
 }
 
@@ -272,6 +274,8 @@ export function bird(id, perches, layer = 1) {
     p.fills.push({d: [f(7, -6.8), f(10.4, -6.1), f(7, -5.5)], soft: 0, crisp: 1});                     // bill
     p.fills.push({d: [f(-4, -4.4), f(-13.5, -1.2), f(-12.6, .9), f(-3.4, -1.6)], soft: 0, crisp: 1});  // tail
     p.lines.push({d: [f(-1, -4.4), f(-5.6, -2.5)], w: .5, amp: 1}, {d: [f(.6, 0), f(.6, 2.6)], w: .5, amp: 1}, {d: [f(2.4, 0), f(2.4, 2.6)], w: .5, amp: 1});
+    // Built where the perch was drawn; preparePlate may slide a rider to its carrier's twig, and three-pack moves the mesh by the same amount.
+    p.feet0 = feetCentre(p.lines); meshBird(p, flip, S);
     return p;
   });
 }
@@ -308,12 +312,13 @@ export function pond(id, cx, cz, rx, rz, seed, {reflection = null} = {}) {
 
 /** A broad-winged phoenix crest. The wings and tail stay broad enough to survive swelling. */
 export function phoenix(id, x, z, s = 1, {group = id, order = 0} = {}) {
-  const p = part(id, KIND.tier, 2, MAT.hyomonGold, [x, z], {group, order, thick: 10});
+  const p = part(id, KIND.tier, 2, MAT.hyomonGold, [x, z], {group, order, thick: 10, bias: 8.5}); // 8.5: sits in the ridge of the roof it crowns
   // Compact crest: 55.4 units across at scale 1, against the pavilion's 120-unit top roof.
   const P = (dx, dz) => [x + dx * s * .88, z + dz * s * .88];
   p.fills.push({d: [[-4, 0], [-8, -13], [-28, -20], [-33, -33], [-18, -28], [-5, -21], [4, -23], [17, -32], [30, -36], [25, -22], [9, -13], [5, 0]].map(([a, b]) => P(a, b)), soft: .2, crisp: .9});
   p.fills.push({d: [[-2, -19], [0, -34], [8, -38], [18, -32], [8, -29], [7, -16]].map(([a, b]) => P(a, b)), soft: .2, crisp: .9});
   p.lines.push({d: [P(-24, -26), P(-4, -17), P(0, -5), P(20, -29)], w: .8, amp: 1});
+  meshPhoenix(p, P);
   return [p];
 }
 
@@ -363,6 +368,7 @@ export function sandCone(id, cx, zBase, halfW, height) {
   p.fills.push({d: [[cx - r, top], [cx + r, top], ...quad([cx + halfW, zBase - 3], [cx, zBase + 10], [cx - halfW, zBase - 3], 24)], soft: .35, crisp: .65});
   p.fills.push({d: blob(cx, top, r, r * .24, 4, 0, 40), soft: .2, crisp: .9});
   p.lines.push({d: [...blob(cx, top, r * .87, r * .18, 4, 0, 40), [cx + r * .87, top]], w: .7, amp: .7});
+  meshSandCone(p, cx, zBase, halfW, top);
   return [p];
 }
 
@@ -371,17 +377,18 @@ export function sandCone(id, cx, zBase, halfW, height) {
  */
 export function moonBowl(id, cx, top, group) {
   const anchor = [cx, top], rimZ = top - 13;
-  const bowl = part(id + '-vessel', KIND.tier, 3, MAT.lacquer, anchor, {group, thick: 12, bias: 18, reach: 4});
+  const bowl = part(id + '-vessel', KIND.tier, 3, MAT.lacquer, anchor, {group, thick: 12, bias: 15, reach: 4}); // 15: its foot sinks into the cone's crown
   bowl.fills.push({d: [...quad([cx-18,rimZ], [cx,top+10], [cx+18,rimZ], 24),
     ...quad([cx+18,rimZ], [cx,top-26], [cx-18,rimZ], 24).slice(1)], soft:0,crisp:1});
   bowl.lines.push({d:[...blob(cx,rimZ,17,6.5,1,0,48),[cx+17,rimZ]],w:.7,amp:1});
-  const reflection = part(id + '-reflection', KIND.tier, 1, MAT.aogai, anchor, {group,thick:.7,bias:30.5,reach:3});
+  const reflection = part(id + '-reflection', KIND.tier, 1, MAT.aogai, anchor, {group,thick:.7,bias:15,reach:3});
   reflection.fills.push({d:blob(cx-2,rimZ-1,6.2,4.7,1,0,40),soft:0,crisp:1});
-  const light = part(id + '-light', KIND.tier, 1, MAT.hyomonSilver, anchor, {group,thick:.5,bias:30.5,reach:3});
+  const light = part(id + '-light', KIND.tier, 1, MAT.hyomonSilver, anchor, {group,thick:.5,bias:15,reach:3});
   for (const [dx,dz,len] of [[6,2,7],[-9,5,9],[6,7,6]]) {
     light.fills.push({d:[[cx+dx-len/2,rimZ+dz],[cx+dx+len/2,rimZ+dz-.4],
       [cx+dx+len/2-1,rimZ+dz+.8],[cx+dx-len/2,rimZ+dz+1]],soft:0,crisp:1});
   }
+  meshMoonBowl(bowl, reflection, light);
   return [bowl,reflection,light];
 }
 
@@ -403,6 +410,7 @@ export function moatWall(id, x0, x1, zTop, zBottom, waterFront) {
   for (let x = x0 + 23; x < x1 - 20; x += 42) {
     wall.lines.push({d: [[x, zTop + 1], [x + 3, mid], [x + 21, mid], [x + 23, zBottom - 1]], w: .8, amp: .9});
   }
+  meshWall(wall);
   return [water, wall];
 }
 

@@ -5,8 +5,8 @@
 // floating semi-transparent mist (KIND.mist), every part that is already a mesh (p1–p3 buildings, torii, stage, lanterns),
 // trees (T2: half-tube limbs with procedural bark + instanced foliage stamps with 2D array texture & alphaTest),
 // their motion (createLife → DataTexture → onBeforeCompile hinge), and a DirectionalLight shadow map.
-// Organic non-tree layer > 0 parts (T4: rocks, fox, phoenix, bird, sandCone, moonBowl) still use a transparent
-// placeholder overlay on the lid until T4 replaces them with real three geometry.
+// The creatures and small solids (rocks, fox, phoenix, uguisu, sand cone and bowl, the moat wall) are low-relief meshes
+// (creature-mesh.js, rock-mesh.js) like everything else: no part is painted on the lid any more except layer 0 and the mist.
 import * as THREE from 'three';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {PLATE, MAT, KIND, rand} from './vocab.js';
@@ -72,29 +72,6 @@ function bakeStampTexture(doc, maxAniso) {
 }
 
 /**
- * Transparent overlay for parts above layer 0 that are not three meshes yet (T4 rocks, fox, phoenix, bird,
- * sandCone, moonBowl). Layer 0, KIND.mist, and T2 trees now use real shaders/meshes.
- */
-export function paintPlaceholder(doc, parts, w, h) {
-  const canvas = doc.createElement('canvas'); canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, w, h);
-  ctx.setTransform(w / (PLATE.halfW * 2), 0, 0, h / (PLATE.halfH * 2), w / 2, h / 2);
-  const trace = (d, close) => { ctx.beginPath(); ctx.moveTo(d[0][0], d[0][1]); for (let i = 1; i < d.length; i++) ctx.lineTo(d[i][0], d[i][1]); if (close) ctx.closePath(); };
-  const paint = mat => MATERIALS[mat]?.paint ?? '#8a6a2c';
-  ctx.lineCap = ctx.lineJoin = 'round';
-  for (const p of parts.filter(q => !q.mesh && !q.limbs && !q.stamps && q.layer > 0 && q.kind !== KIND.mist).sort((a, b) => a.layer - b.layer)) {
-    ctx.globalAlpha = .95;
-    ctx.fillStyle = paint(p.mat);
-    for (const f of p.fills) { trace(f.d, true); ctx.fill(); }
-    ctx.globalAlpha = .85; ctx.strokeStyle = '#f0d48c';
-    for (const l of p.lines) { ctx.lineWidth = Math.max(.6, l.w); trace(l.d, false); ctx.stroke(); }
-  }
-  ctx.globalAlpha = 1;
-  return canvas;
-}
-
-/**
  * @param {WebGL2RenderingContext} gl the page's context, shared with the old pipeline
  * @param {HTMLCanvasElement} canvas
  */
@@ -142,7 +119,7 @@ export function createThreeRenderer(gl, canvas) {
   const trails = Array.from({length: 20}, () => new THREE.Vector3());
   const shared = {
     uState: {value: stateTexture}, uTilt: {value: new THREE.Matrix3()}, uOpening: {value: 0},
-    uSoft0: {value: dummySoft}, uIdent0: {value: dummyRg}, uFine0: {value: dummyRgba}, uPlaceholder: {value: dummyRgba},
+    uSoft0: {value: dummySoft}, uIdent0: {value: dummyRg}, uFine0: {value: dummyRgba},
     uMistFine: {value: dummyRgba}, uMistIdent: {value: dummyRg}, uStamps: {value: stampTex},
     uView: {value: new THREE.Vector3(...VIEW)}, uKey: {value: new THREE.Vector3(...KEY)}, uLamp: {value: new THREE.Vector3(0, 70, 0)},
     uTime: {value: 0}, uNight: {value: 1}, uPresence: {value: 0}, uPx: {value: 1}, uTrails: {value: trails},
@@ -516,9 +493,6 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       yield;
 
       t = performance.now();
-      const placeholderTex = new THREE.CanvasTexture(paintPlaceholder(doc, parts, w, h));
-      placeholderTex.flipY = false; placeholderTex.colorSpace = THREE.SRGBColorSpace; placeholderTex.anisotropy = maxAniso; placeholderTex.needsUpdate = true;
-      textures.push(placeholderTex);
       // Bare nashiji, for reference only (fillers.js): share farther than 12 units from any part / largest empty radius.
       const occupied = new Uint8Array(mw * mh);
       for (const map of maps) for (let i = 0; i < map.length; i++) if (map[i]) occupied[i] = 1;
@@ -568,7 +542,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       yield;
 
       t = performance.now();
-      const uniforms = {uFine0: fine0Tex, uSoft0: soft0Tex, uIdent0: ident0Tex, uPlaceholder: placeholderTex};
+      const uniforms = {uFine0: fine0Tex, uSoft0: soft0Tex, uIdent0: ident0Tex};
       const mistParts = parts.filter(p => p.kind === KIND.mist);
       if (mistParts.length) {
         paintLayer(ctx, w, h, mistParts.map(p => ({...p, layer: 1})), 1);
@@ -637,7 +611,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
 
   function freePlate() {
     if (wardGroup) scene.remove(wardGroup);
-    shared.uFine0.value = shared.uPlaceholder.value = shared.uMistFine.value = dummyRgba;
+    shared.uFine0.value = shared.uMistFine.value = dummyRgba;
     shared.uIdent0.value = shared.uMistIdent.value = dummyRg;
     shared.uSoft0.value = dummySoft;
     wardGroup = null; plate = null; life = null;
@@ -648,7 +622,6 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     shared.uFine0.value = entry.uniforms.uFine0;
     shared.uSoft0.value = entry.uniforms.uSoft0;
     shared.uIdent0.value = entry.uniforms.uIdent0;
-    shared.uPlaceholder.value = entry.uniforms.uPlaceholder;
     shared.uMistFine.value = entry.uniforms.uMistFine ?? dummyRgba;
     shared.uMistIdent.value = entry.uniforms.uMistIdent ?? dummyRg;
     scene.add(entry.group);

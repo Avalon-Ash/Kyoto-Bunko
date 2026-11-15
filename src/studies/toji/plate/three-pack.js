@@ -1,9 +1,10 @@
 // Pure data for the three.js plate renderer (three-renderer.js): material table, box and mesh packing, motion state
 // packing and the GLSL that moves a part. Nothing here imports three, so node:test can check it.
-import {MAT} from './vocab.js';
+import {MAT, KIND} from './vocab.js';
 import {MAX_PARTS} from './parts.js';
 import {packMeshes} from './mesh-geometry.js';
 import {limbMesh, stampInstances} from './limbs.js';
+import {shiftChunks, feetCentre} from './creature-mesh.js';
 
 /**
  * MAT → MeshPhysicalMaterial parameters (docs/MAKIE_THREE_PLAN.md §3). First pass: T3 tunes the numbers against .shots/refs.
@@ -59,14 +60,35 @@ export function packLifeState(a, b, out = new Float32Array(STATE_WIDTH * STATE_H
   return out;
 }
 
-/** Part meshes grouped by material id: Map(mat → Float32Array of 16 floats per vertex, the packMeshes layout). */
+/**
+ * A part's mesh where it stands. A bird is built where its perch was drawn, and preparePlate slides it to its carrier's
+ * twig (moving its fills and lines); its mesh slides by the same amount, measured on the two feet.
+ */
+export function placedMesh(p) {
+  if (!p.mesh || !p.feet0 || !p.treeRider) return p.mesh;
+  const [cx, cz] = feetCentre(p.lines);
+  return shiftChunks(p.mesh, cx - p.feet0[0], cz - p.feet0[1], true);
+}
+
+/**
+ * Part meshes grouped by material id: Map(mat → Float32Array of 16 floats per vertex, the packMeshes layout).
+ * Bird vertices carry style.z = 1 and their perch point in uv; the hinge shrinks a bird to that point while it sleeps.
+ */
 export function meshesByMaterial(parts) {
+  const placed = parts.map(p => (p.mesh ? {...p, mesh: placedMesh(p)} : p));
   const mats = new Set();
-  for (const p of parts) for (const chunk of p.mesh ?? []) mats.add(chunk.mat);
+  for (const p of placed) for (const chunk of p.mesh ?? []) mats.add(chunk.mat);
   const out = new Map();
   for (const mat of [...mats].sort((x, y) => x - y)) {
-    const only = parts.filter(p => p.mesh?.some(c => c.mat === mat)).map(p => ({...p, mesh: p.mesh.filter(c => c.mat === mat)}));
-    out.set(mat, packMeshes(only));
+    const only = placed.filter(p => p.mesh?.some(c => c.mat === mat)).map(p => ({...p, mesh: p.mesh.filter(c => c.mat === mat)}));
+    const packed = packMeshes(only);
+    let at = 0;
+    for (const p of only) {
+      const n = p.mesh.reduce((sum, c) => sum + c.vertices.length / 8, 0);
+      if (p.kind === KIND.bird) for (let v = 0; v < n; v++) packed[(at + v) * 16 + 14] = 1;
+      at += n;
+    }
+    out.set(mat, packed);
   }
   return out;
 }
@@ -213,6 +235,8 @@ varying float vGlow; varying float vLift;
 ${GROUND_GLSL}
 void kyotoMotion(vec3 aPos, vec3 aNormal, out vec3 outPos, out vec3 outNormal){
   int id=int(aOwner.x+.5); vec4 A=texelFetch(uState,ivec2(id,0),0), B=texelFetch(uState,ivec2(id,1),0);
+  // A bird (style.z) is at one perch at a time: elsewhere it sinks into the lacquer, shrinking to its perch point (uv).
+  if(aStyle.z>.5){ float k=smoothstep(.04,.22,A.z); aPos=vec3(uv.x+(aPos.x-uv.x)*k, aPos.y*k, uv.y+(aPos.z-uv.y)*k); }
   float foot=aOwner.y; vec2 anchor=aOwner.zw;
   float theta=A.y*aStyle.x, ct=cos(theta), st=sin(theta), cs=cos(A.x), sn=sin(A.x);
   vec2 r=aPos.xz-anchor, q=anchor+vec2(cs*r.x-sn*r.y,sn*r.x+cs*r.y)+B.xy;
@@ -497,7 +521,7 @@ vec4 mFinish(vec3 c,float a){
 /** Fragment declarations injected into groundMaterial (MeshPhysicalMaterial). */
 export const MAKIE_GROUND_PARS_GLSL = `
 varying float vGlow; uniform float uGlowBase, uGlowGain;
-uniform sampler2D uState, uFine0, uPlaceholder;
+uniform sampler2D uState, uFine0;
 varying vec2 vKyotoPlate;
 varying vec3 vKyotoWorld, vKyotoNormal, vKyotoTanX, vKyotoTanZ;
 ${MAKIE_COMMON_GLSL}`;
@@ -607,8 +631,6 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,M_OXID,1.)*.85+M_SILVER*line*(.1+.3*L),shore*.7);
     c=mix(c,wtr,m);
   }
-  vec4 ph=texture(uPlaceholder,mPuv(kp));
-  if(ph.a>.001)c=mix(c,ph.rgb*(.45+1.05*L),ph.a);
   outgoingLight=mFinish(c,1.).rgb;
   diffuseColor.a=1.;
 }`;

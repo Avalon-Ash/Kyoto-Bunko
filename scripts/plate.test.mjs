@@ -491,6 +491,9 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
     if (isTorii || p.id.startsWith('romon-') || p.kind === KIND.rock) {
       assert.ok(Array.isArray(p.mesh) && p.mesh.length > 0, `${p.id} has mesh`);
       assert.equal(p.thick, 0, `${p.id} thick is 0`);
+    } else if (/^(kitsune-(stone|body)|uguisu-)/.test(p.id)) {
+      // Scope fence widened by R2: the fox and the uguisu are low-relief meshes.
+      assert.ok(Array.isArray(p.mesh) && p.mesh.length > 0, `${p.id} has mesh`);
     } else {
       assert.equal(p.mesh, undefined, `${p.id} is not migrated`);
     }
@@ -503,6 +506,8 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
     if (p.id === 'butai-frame' || p.id === 'butai-deck' || p.id.startsWith('hondo-') || p.kind === KIND.rock) {
       assert.ok(Array.isArray(p.mesh) && p.mesh.length > 0, `${p.id} has mesh`);
       assert.equal(p.thick, 0, `${p.id} thick is 0`);
+    } else if (p.id.startsWith('uguisu-')) {
+      assert.ok(Array.isArray(p.mesh) && p.mesh.length > 0, `${p.id} has mesh (R2)`);
     } else {
       assert.equal(p.mesh, undefined, `${p.id} is not migrated`);
     }
@@ -1028,7 +1033,7 @@ import {readFileSync} from 'node:fs';
 import {MATERIALS, BOX_MATERIALS, STATE_WIDTH, STATE_HEIGHT, GROUND_GLSL, PART_MOTION_GLSL, TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, packLifeState, meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox, bakeSoftLayer, mistGeometryData} from '../src/studies/toji/plate/three-pack.js';
 import {packMeshes} from '../src/studies/toji/plate/mesh-geometry.js';
 import {limbMesh, stampInstances} from '../src/studies/toji/plate/limbs.js';
-import {createThreeRenderer, paintPlaceholder} from '../src/studies/toji/plate/three-renderer.js';
+import {createThreeRenderer} from '../src/studies/toji/plate/three-renderer.js';
 
 test('three: every MAT has a material entry with sane physical parameters', () => {
   for (const [name, id] of Object.entries(MAT)) {
@@ -1155,29 +1160,18 @@ test('three: tree limbs and stamps regroup by material without losing a vertex o
   }
 });
 
-test('three: tree motion shaders use anchor groundY and paintPlaceholder skips trees', () => {
+test('three: tree motion shaders use anchor groundY', () => {
   assert.ok(TREE_LIMB_MOTION_GLSL.includes(GROUND_GLSL) && TREE_LIMB_MOTION_GLSL.includes('groundY(anchor)'));
   assert.ok(TREE_STAMP_MOTION_GLSL.includes(GROUND_GLSL) && TREE_STAMP_MOTION_GLSL.includes('groundY(anchor)'));
+});
 
-  const calls = [];
-  const ctx = {
-    clearRect: () => {},
-    setTransform: () => {},
-    beginPath: () => calls.push('beginPath'),
-    moveTo: () => {},
-    lineTo: () => {},
-    closePath: () => {},
-    fill: () => calls.push('fill'),
-    stroke: () => calls.push('stroke'),
-    ellipse: () => calls.push('ellipse'),
-  };
-  const doc = {createElement: () => ({width: 0, height: 0, getContext: () => ctx})};
-  const minami = preparePlate(PLATES.W_MINAMI()).parts;
-  paintPlaceholder(doc, minami.filter(p => p.kind === KIND.pine), 100, 64);
-  assert.equal(calls.length, 0, 'paintPlaceholder draws nothing for tree parts');
-
-  paintPlaceholder(doc, minami.filter(p => p.kind === KIND.bird), 100, 64);
-  assert.ok(calls.includes('fill'), 'paintPlaceholder still draws non-tree T4 placeholders (bird)');
+test('R2: no part above layer 0 is left to be painted on the lid: each is a mesh, a tree, or mist', () => {
+  for (const [ward, build] of Object.entries(PLATES)) {
+    const {parts, errors} = preparePlate(build());
+    assert.deepEqual(errors, [], `${ward} preparePlate errors`);
+    const left = parts.filter(q => !q.mesh && !q.limbs && !q.stamps && q.layer > 0 && q.kind !== KIND.mist);
+    assert.deepEqual(left.map(q => q.id), [], `${ward}: nothing is left for a placeholder`);
+  }
 });
 
 function pointTriDist3D(p, a, b, c) {
@@ -1229,21 +1223,12 @@ function segIntersectXZ(a0, a1, b0, b1) {
 }
 
 test('T4a rock() produces valid closed rock meshes and kirikane/kirigin foil chunks across all wards', () => {
-  const calls = [];
-  const ctx = {
-    clearRect: () => {}, setTransform: () => {}, beginPath: () => calls.push('beginPath'),
-    moveTo: () => {}, lineTo: () => {}, closePath: () => {}, fill: () => calls.push('fill'),
-    stroke: () => calls.push('stroke'), ellipse: () => calls.push('ellipse'),
-  };
-  const doc = {createElement: () => ({width: 0, height: 0, getContext: () => ctx})};
-
   let rockCount = 0;
   for (const [ward, build] of Object.entries(PLATES)) {
     const {parts, errors} = preparePlate(build());
     assert.deepEqual(errors, [], `${ward} preparePlate errors`);
     // rock() parts use kirikane or kirigin; moatWall (ishigaki, MAT.mura) shares KIND.rock and is not part of T4a.
     const rocks = parts.filter(p => p.kind === KIND.rock && (p.mat === MAT.kirikane || p.mat === MAT.kirigin));
-    paintPlaceholder(doc, rocks, 100, 64);
     for (const r of rocks) {
       rockCount++;
       assert.equal(r.thick, 0, `${ward}/${r.id} thick is 0`);
@@ -1256,7 +1241,6 @@ test('T4a rock() produces valid closed rock meshes and kirikane/kirigin foil chu
     }
   }
   assert.ok(rockCount >= 18, `verified ${rockCount} rocks across all wards`);
-  assert.equal(calls.length, 0, 'paintPlaceholder draws nothing for explicit-mesh rocks');
 });
 
 test('T4a kirikane/kirigin tiles hover 0.05-0.2 above the rock surface with positive gaps between tiles', () => {
@@ -1336,4 +1320,71 @@ test('blankStats measures bare ground by distance to the nearest drawn texel', (
   assert.ok(one.ratio > .8 && one.ratio < 1);
   drawn.fill(1);
   assert.deepEqual(blankStats(drawn, w, h, 1), {ratio: 0, radius: 0});
+});
+
+// ---- R2: creatures and small solids as low-relief meshes (creature-mesh.js) ----
+import {makePillow, surfaceOf, feetCentre} from '../src/studies/toji/plate/creature-mesh.js';
+import {placedMesh} from '../src/studies/toji/plate/three-pack.js';
+
+const meshBounds = chunks => {
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, y1 = -Infinity;
+  for (const c of chunks) for (let i = 0; i < c.vertices.length; i += 8) {
+    x0 = Math.min(x0, c.vertices[i]); x1 = Math.max(x1, c.vertices[i]); y1 = Math.max(y1, c.vertices[i + 1]);
+    z0 = Math.min(z0, c.vertices[i + 2]); z1 = Math.max(z1, c.vertices[i + 2]);
+  }
+  return {x0, x1, z0, z1, y1};
+};
+
+test('R2: a pillow keeps its outline: it is raised from the polygon, zero at the edge, a plateau inside', () => {
+  const pillow = makePillow([[0, 0], [20, 0], [20, 12], [0, 12]], {h: 6, round: 4});
+  assert.equal(pillow.height(-1, 5), 0, 'nothing outside the outline');
+  assert.ok(pillow.height(.01, 6) < .2, 'the edge is level with the plane');
+  assert.ok(pillow.height(10, 6) > 5, 'the middle stands near h');
+  const xs = pillow.mesh.pts.map(q => q[0]), zs = pillow.mesh.pts.map(q => q[1]);
+  assert.ok(Math.min(...xs) === 0 && Math.max(...xs) === 20 && Math.min(...zs) === 0 && Math.max(...zs) === 12, 'mesh points never leave the polygon');
+  const higher = makePillow([[5, 3], [9, 3], [9, 7], [5, 7]], {h: 9, round: 1});
+  assert.ok(surfaceOf([pillow, higher])(7, 5) > pillow.height(7, 5), 'the higher boss shows where they overlap');
+});
+
+test('R2: fox, phoenix, uguisu, sand cone, bowl and moat wall are valid meshes that stay inside their own outline', () => {
+  const seen = new Set();
+  for (const [ward, build] of Object.entries(PLATES)) {
+    const {parts, errors} = preparePlate(build());
+    assert.deepEqual(errors, [], `${ward} preparePlate errors`);
+    for (const p of parts.filter(q => /^(kitsune-(stone|body)|ho-o|kogetsudai|moon-|uguisu-|ishigaki$)/.test(q.id))) {
+      seen.add(p.id.replace(/-\d$/, ''));
+      assert.ok(p.mesh?.length, `${ward}/${p.id} has a mesh`);
+      assertValidMeshChunks(p.mesh);
+      const m = meshBounds(placedMesh(p)), f = {x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity};
+      for (const s of [...p.fills, ...p.lines]) for (const [x, z] of s.d) { f.x0 = Math.min(f.x0, x); f.x1 = Math.max(f.x1, x); f.z0 = Math.min(f.z0, z); f.z1 = Math.max(f.z1, z); }
+      // Relief never leaves the outline the picture, the picking map and the bounds use (inlays sit inside it).
+      assert.ok(m.x0 >= f.x0 - .6 && m.x1 <= f.x1 + .6 && m.z0 >= f.z0 - .6 && m.z1 <= f.z1 + .6, `${ward}/${p.id} stays in its outline`);
+      assert.ok(m.x1 - m.x0 > (f.x1 - f.x0) * .9 || /reflection|light|ishigaki/.test(p.id), `${ward}/${p.id} fills its outline`);
+      assert.ok(m.y1 > .5 && m.y1 < 40, `${ward}/${p.id} stands off its plane a sane height (${m.y1})`);
+    }
+  }
+  for (const id of ['kitsune-stone', 'kitsune-body', 'ho-o', 'kogetsudai', 'moon-vessel', 'moon-reflection', 'moon-light', 'uguisu', 'ishigaki']) assert.ok(seen.has(id), `${id} exists in some ward`);
+});
+
+test('R2: a bird rider is built at its drawn perch and slid with its fills to the carrier twig; only birds carry the sink flag and a perch point in uv', () => {
+  for (const [ward, build] of Object.entries(PLATES)) {
+    const {parts} = preparePlate(build());
+    const birds = parts.filter(p => p.kind === KIND.bird);
+    assert.equal(birds.length, 2, `${ward}: one uguisu, two perches`);
+    for (const p of birds) {
+      assert.ok(p.feet0 && p.treeRider, `${ward}/${p.id} is a tree rider with its drawn feet recorded`);
+      const [cx, cz] = feetCentre(p.lines), placed = placedMesh(p), b = meshBounds(placed);
+      assert.ok(cx > b.x0 && cx < b.x1 && cz > b.z0 && cz < b.z1 + 4, `${ward}/${p.id}: the perch lies under the placed mesh`);
+      const uv = [placed[0].vertices[6], placed[0].vertices[7]];
+      assert.ok(Math.hypot(uv[0] - cx, uv[1] - cz) < 12, `${ward}/${p.id}: uv is the perch point (${uv})`);
+    }
+    let flagged = 0;
+    for (const data of meshesByMaterial(parts).values()) for (let i = 0; i < data.length; i += 16) {
+      assert.ok(data[i + 14] === 0 || data[i + 14] === 1);
+      if (data[i + 14] === 1) flagged++;
+    }
+    const expected = birds.reduce((n, p) => n + p.mesh.reduce((m, c) => m + c.vertices.length / 8, 0), 0);
+    assert.equal(flagged, expected, `${ward}: only the uguisu vertices are flagged`);
+  }
+  assert.ok(PART_MOTION_GLSL.includes('aStyle.z>.5') && PART_MOTION_GLSL.includes('A.z'), 'the hinge shrinks a bird by its rise');
 });
