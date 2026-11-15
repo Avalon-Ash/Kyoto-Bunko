@@ -70,7 +70,6 @@ export const MINAMI_SCHEMA: SpotSchema[] = [
   { id: 'MN-058', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_HUB', tagIds: ['鐵道'] },
   { id: 'MN-059', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_FOOD', tagIds: ['正餐', '名物'] },
   { id: 'MN-061', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_FOOD', tagIds: ['正餐', '名物'] },
-  { id: 'MN-062', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_FOOD', tagIds: ['正餐', '拉麵'] },
   { id: 'MN-063', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_FOOD', tagIds: ['正餐', '燒肉', '名物'] },
   { id: 'MN-066', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_FOOD', tagIds: ['正餐', '名物'] },
   { id: 'MN-067', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_SHOP', tagIds: ['購物', '名物', '打卡', '老舖'] },
@@ -78,6 +77,5 @@ export const MINAMI_SCHEMA: SpotSchema[] = [
   { id: 'MN-072', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_TEMPLE', tagIds: ['寺院', '歷史', '隱密'] },
   { id: 'MN-073', wardId: 'W_MINAMI', areaId: 'A10', typeId: 'T_NATURE', tagIds: ['自然', '賞花'] },
   { id: 'MN-074', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_FOOD', tagIds: ['正餐', '拉麵', '名物'] },
-  { id: 'MN-075', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_FOOD', tagIds: ['和菓子', '老舖', '名物'] },
 
 ];
