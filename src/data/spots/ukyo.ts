@@ -36,7 +36,7 @@ import { SpotSchema } from '../../types';
 export const UKYO_SCHEMA: SpotSchema[] = [
   { id: 'UK-001', wardId: 'W_UKYO', areaId: 'A09', typeId: 'T_HUB', tagIds: ['鐵道'] },
   { id: 'UK-002', wardId: 'W_UKYO', areaId: 'A12', typeId: 'T_HUB', tagIds: ['鐵道'] },
-  { id: 'UK-003', wardId: 'W_UKYO', areaId: 'A09', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '經典', '打卡', '國寶', '庭園'] },
+  { id: 'UK-003', wardId: 'W_UKYO', areaId: 'A09', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '經典', '打卡', '庭園'] },
   { id: 'UK-004', wardId: 'W_UKYO', areaId: 'A09', typeId: 'T_TEMPLE', tagIds: ['寺院', '打卡', '國寶', '庭園'] },
   { id: 'UK-005', wardId: 'W_UKYO', areaId: 'A12', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '隱密', '庭園', 'ACG'] },
   { id: 'UK-006', wardId: 'W_UKYO', areaId: 'A12', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '賞花', '國寶'] },

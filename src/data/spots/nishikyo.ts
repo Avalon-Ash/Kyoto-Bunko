@@ -77,7 +77,6 @@ export const NISHIKYO_SCHEMA: SpotSchema[] = [
   { id: 'NS-068', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_FOOD', tagIds: ['正餐', '燒肉', '放題'] },
   { id: 'NS-081', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_FOOD', tagIds: ['正餐', '蕎麥', '名物', '打卡'], reservationRequired: true },
   { id: 'NS-082', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_FOOD', tagIds: ['正餐', '拉麵', '現代', '打卡'] },
-  { id: 'NS-083', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_FOOD', tagIds: ['洋菓子', '名物', '打卡', '隱密'] },
   { id: 'NS-084', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_FOOD', tagIds: ['喫茶', '現代', '打卡'] },
   { id: 'NS-085', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_FOOD', tagIds: ['和菓子', '老舖', '名物'] },
 ];
