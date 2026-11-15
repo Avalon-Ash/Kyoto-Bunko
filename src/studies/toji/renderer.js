@@ -1,15 +1,18 @@
-// WebGL for the cabinet: one mesh per ward, a shadow pass and the lacquer pass. It knows nothing of gestures or pages;
-// study.js hands it a frame description and gets the camera matrix back for hit-testing.
-import {buildScene, multiply, lookAt, ortho, normalize, trailIntensity} from './geometry.js';
-import {vertex, fragment, depth} from './shaders.js';
+// The cabinet's picture: the three.js makie plate where the device can run it, a still picture of the plate where it cannot.
+// It knows nothing of gestures or pages; study.js hands it a frame description and gets the camera matrix back for hit-testing.
+//
+// Which one draws:
+//   three.js   the default. WebGL2 is taken from the canvas and plate/three-renderer.js is loaded on demand.
+//   static     plate/static-plate.js: no WebGL2, the three.js module failed to load or start, or the context was lost.
+//              ?plate=static forces it (for checking the fallback by hand); the canvas never asks for a GL context then.
+// Either way the canvas reports it in data-renderer ('three' or 'static'; 'webgl' only while three.js is still loading).
+import {multiply, lookAt, ortho} from './geometry.js';
 import {viewBox, renderDpr} from './view.js';
-import {createPlateRenderer} from './plate/renderer.js';
-import {hasPlate} from './plate/parts.js';
+import {createStaticPlate} from './plate/static-plate.js';
 import {adjacentCabinet} from './collection';
 
 // Fixed home camera; the backdrop's cabinet keepout shares it.
 const EYE = [430, 720, 920], CAMERA_VIEW = lookAt(EYE, [0, 40, 0]);
-const SHADOW = 1024;
 /** zoom/cx/cy default to the full frame; view.js keeps zoom 1 identical to the original framing. */
 export function cameraMatrix(width, height, zoom = 1, cx = 0, cy = 0) {
   const v = viewBox(width / height, zoom, cx, cy);
@@ -21,133 +24,74 @@ export function cameraMatrix(width, height, zoom = 1, cx = 0, cy = 0) {
  * px:number, py:number, zoom:number, panX:number, panY:number, presence?:number, offset?:number, kick?:number, trails:{x:number, z:number, time:number}[]}} Frame
  * @param {HTMLCanvasElement} canvas
  * @param {string} wardId
- * @param {() => void} [onPlateReady] called once the deferred three.js renderer finishes loading
- * Throws when WebGL or the shadow framebuffer is unavailable; nothing is left allocated in that case.
+ * @param {() => void} [onReady] called when something that was loading has loaded: the three.js module (or its failure, which
+ * switches to the still picture) or, in static mode, the cabinet's picture
+ * @param {{static?: boolean, night?: boolean}} [options] static: use the still picture without trying WebGL (also what ?plate=static does);
+ * night: the light of the first frame, which the still picture uses to fetch the right file first
  */
-export function createRenderer(canvas, wardId, onPlateReady) {
-  // WebGL2 where it exists: redrawn wards are makie plates (plate/renderer.js). The relief mesh below is GLSL ES 1.00
-  // and runs on either context, for the wards not yet redrawn and for devices without WebGL2.
-  const settings = {alpha: true, antialias: true, stencil: true, powerPreference: 'low-power'};
-  const gl2 = canvas.getContext('webgl2', settings), gl = gl2 ?? canvas.getContext('webgl', settings);
-  if (!gl) throw Error('WebGL unavailable');
-  const resources = [];
-  const release = () => resources.splice(0).reverse().forEach(free => free());
-  const shader = (type, source) => {
-    const s = gl.createShader(type); resources.push(() => gl.deleteShader(s));
-    gl.shaderSource(s, source); gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(s));
-    return s;
+export function createRenderer(canvas, wardId, onReady, options = {}) {
+  const forced = options.static || (typeof location !== 'undefined' && new URLSearchParams(location.search).get('plate') === 'static');
+  let gl2 = null;
+  if (!forced) { try { gl2 = canvas.getContext('webgl2', {alpha: true, antialias: true, stencil: true, powerPreference: 'low-power'}); } catch { gl2 = null; } }
+  let ward = wardId, draws = 0, loading = false, disposed = false, plate = null;
+  const releases = [];
+  const ready = () => { if (!disposed) onReady?.(); };
+  /** The still picture: the canvas keeps its (empty) buffer and carries the picture as its CSS background. */
+  const useStatic = () => {
+    plate = createStaticPlate(canvas, ready, Boolean(options.night)); releases.push(() => plate.dispose());
+    canvas.dataset.renderer = 'static'; canvas.dataset.plate = 'true';
   };
-  const program = source => {
-    const p = gl.createProgram(); resources.push(() => gl.deleteProgram(p));
-    gl.attachShader(p, shader(gl.VERTEX_SHADER, vertex)); gl.attachShader(p, shader(gl.FRAGMENT_SHADER, source)); gl.linkProgram(p);
-    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(p));
-    const names = ['camera', 'lightMatrix', 'opening', 'pointer', 'lift', 'time', 'moving', 'light', 'eye', 'ground', 'night', 'trails[0]', 'shadowMap'];
-    return {p, uniform: Object.fromEntries(names.map(n => [n, gl.getUniformLocation(p, n)])), attributes: ['position', 'normal', 'surface'].map(n => gl.getAttribLocation(p, n))};
+  const setMesh = id => {
+    ward = id;
+    if (loading) { canvas.dataset.plate = 'false'; return; }
+    const ok = Boolean(plate?.setWard(id));
+    canvas.dataset.plate = String(ok);
+    if (ok) plate.prefetch?.([adjacentCabinet(id, -1).id, adjacentCabinet(id, 1).id]);
   };
-  try {
-    const main = program(fragment), shadow = program(depth), buffer = gl.createBuffer();
-    resources.push(() => gl.deleteBuffer(buffer));
-    let mesh, ward = wardId, draws = 0, plateActive = false, threeLoading = false, disposed = false;
-    resources.push(() => { disposed = true; });
-    // If the plate renderer cannot be built on this device, every ward falls back to the relief mesh.
-    let plate = null;
-    // The three.js plate renderer is the default (user decision 2026-11-14, docs/MAKIE_THREE_PLAN.md T5); it loads dynamically.
-    // ?three=0 keeps the old WebGL2 plate, which also stays the fallback when three cannot load or start on a device.
-    const useThree = typeof location !== 'undefined' && new URLSearchParams(location.search).get('three') !== '0';
-    const setMesh = id => {
-      ward = id;
-      if (threeLoading && hasPlate(id)) {
-        plateActive = false; canvas.dataset.plate = 'false';
-        return;
-      }
-      plateActive = Boolean(plate && hasPlate(id) && plate.setWard(id));
-      canvas.dataset.plate = String(plateActive);
-      if (plateActive) {
-        plate.prefetch?.([adjacentCabinet(id, -1).id, adjacentCabinet(id, 1).id]);
-        return;
-      }
-      mesh = buildScene(id); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, mesh, gl.STATIC_DRAW);
-    };
-    if (gl2) {
-      if (useThree) {
-        threeLoading = true;
-        import('./plate/three-renderer.js').then(({createThreeRenderer}) => {
-          threeLoading = false;
-          if (disposed) return;
-          try { plate = createThreeRenderer(gl2, canvas); resources.push(() => plate.dispose()); }
-          catch (error) { console.warn('Makie plate unavailable:', error); }
-          setMesh(ward);
-          onPlateReady?.();
-        }).catch(error => {
-          threeLoading = false;
-          if (disposed) return;
-          console.warn('Makie plate unavailable:', error);
-          setMesh(ward);
-          onPlateReady?.();
-        });
-      } else {
-        try { plate = createPlateRenderer(gl2, canvas); } catch (error) { console.warn('Makie plate unavailable:', error); }
-        if (plate) resources.push(() => plate.dispose());
-      }
-    }
-    const framebuffer = gl.createFramebuffer(), texture = gl.createTexture(), depthBuffer = gl.createRenderbuffer();
-    resources.push(() => gl.deleteFramebuffer(framebuffer), () => gl.deleteTexture(texture), () => gl.deleteRenderbuffer(depthBuffer));
-    gl.bindTexture(gl.TEXTURE_2D, texture); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, SHADOW, SHADOW, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, SHADOW, SHADOW);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
-    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw Error('Shadow framebuffer unavailable');
-    setMesh(wardId);
-
-    /** @param {Frame} f */
-    function bind(prog, matrix, lightMatrix, f) {
-      gl.useProgram(prog.p); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      for (let i = 0; i < 3; i++) if (prog.attributes[i] >= 0) { gl.enableVertexAttribArray(prog.attributes[i]); gl.vertexAttribPointer(prog.attributes[i], i === 2 ? 2 : 3, gl.FLOAT, false, 32, i * 12); }
-      const u = prog.uniform, quiet = f.flat || f.still;
-      gl.uniformMatrix4fv(u.camera, false, matrix); gl.uniformMatrix4fv(u.lightMatrix, false, lightMatrix);
-      gl.uniform1f(u.opening, f.opening * f.opening * (3 - 2 * f.opening));
-      gl.uniform2f(u.pointer, f.flat ? 0 : f.px, f.flat ? 0 : f.py); gl.uniform1f(u.lift, f.lift); gl.uniform1f(u.time, f.time / 1000);
-      gl.uniform1f(u.moving, f.moving && !quiet ? 1 : 0);
-    }
-    return {
-      setMesh,
-      /** True while the deferred three.js renderer is still loading (the canvas is blank meanwhile). */
-      loading: () => threeLoading,
-      /** A tap on a part of a plate in close-up; '' when there is no plate or nothing was met. */
-      poke: (x, z, time) => plateActive ? plate.poke(x, z, time) : '',
-      /** Draws one frame and returns the camera matrix it used. @param {Frame} f */
-      draw(f) {
-        const dpr = renderDpr(devicePixelRatio, f.zoom, canvas.clientWidth, canvas.clientHeight), w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
-        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-        const projection = cameraMatrix(w, h, f.zoom, f.panX, f.panY);
-        canvas.dataset.renderedWard = ward; canvas.dataset.frames = String(++draws);
-        if (threeLoading && hasPlate(ward)) {
-          gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-          return projection;
-        }
-        if (plateActive) {
-          plate.draw(f, projection, viewBox(w / h, f.zoom).halfW * 2 / w);
-          return projection;
-        }
-        gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
-        const lightPos = [-390 + f.px * 170, 650, 280 + f.py * 140], lightDir = normalize(lightPos);
-        const lightMatrix = multiply(ortho(-560, 560, -540, 540, 1, 1700), lookAt(lightPos, [0, 0, 0]));
-        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer); gl.viewport(0, 0, SHADOW, SHADOW); gl.clearColor(1, 1, 1, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        // Unbind the sampled texture during the shadow pass to avoid framebuffer feedback.
-        gl.bindTexture(gl.TEXTURE_2D, null); bind(shadow, lightMatrix, lightMatrix, f); gl.drawArrays(gl.TRIANGLES, 0, mesh.length / 8);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        bind(main, projection, lightMatrix, f); const u = main.uniform;
-        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texture); gl.uniform1i(u.shadowMap, 0);
-        gl.uniform3fv(u.light, lightDir); gl.uniform3fv(u.eye, EYE); gl.uniform1f(u.ground, f.ground); gl.uniform1f(u.night, f.night ? 1 : 0);
-        const packed = new Float32Array(60);
-        f.trails.forEach((p, i) => packed.set([p.x, p.z, trailIntensity(p.time, f.time, f.still)], i * 3));
-        gl.uniform3fv(u['trails[0]'], packed); gl.drawArrays(gl.TRIANGLES, 0, mesh.length / 8);
-        canvas.dataset.vertices = String(mesh.length / 8);
+  if (!gl2) {
+    useStatic(); setMesh(wardId);
+  } else {
+    loading = true;
+    // Loaded on demand: three.js is large and the home page may never need it.
+    import('./plate/three-renderer.js').then(({createThreeRenderer}) => {
+      loading = false;
+      if (disposed) return;
+      try { plate = createThreeRenderer(gl2, canvas); releases.push(() => plate.dispose()); }
+      catch (error) { console.warn('three.js plate unavailable, showing the still picture:', error); plate = null; useStatic(); }
+      setMesh(ward); ready();
+    }).catch(error => {
+      loading = false;
+      if (disposed) return;
+      console.warn('three.js plate unavailable, showing the still picture:', error);
+      useStatic(); setMesh(ward); ready();
+    });
+  }
+  const clear = (w, h) => { gl2.bindFramebuffer(gl2.FRAMEBUFFER, null); gl2.viewport(0, 0, w, h); gl2.clearColor(0, 0, 0, 0); gl2.clear(gl2.COLOR_BUFFER_BIT | gl2.DEPTH_BUFFER_BIT); };
+  return {
+    setMesh,
+    /** True while the three.js module is still loading, or the still picture has not arrived (the canvas is blank meanwhile). */
+    loading: () => loading || Boolean(plate?.loading?.()),
+    /** 'webgl' (three.js still loading), 'three' or 'static'. */
+    mode: () => plate?.kind ?? (loading ? 'webgl' : 'three'),
+    /** A tap on a part of a plate in close-up; '' when there is no plate or nothing was met. */
+    poke: (x, z, time) => plate?.poke(x, z, time) ?? '',
+    /** The still picture of `id` on a neighbour's canvas. False when this renderer is not the still picture (the caller draws it itself). */
+    paintNeighbour(target, id, night) { if (plate?.kind !== 'static') return false; plate.paint(target, id, night); return true; },
+    /** Draws one frame and returns the camera matrix it used. @param {Frame} f */
+    draw(f) {
+      canvas.dataset.renderedWard = ward; canvas.dataset.frames = String(++draws);
+      if (plate?.kind === 'static') {
+        const projection = cameraMatrix(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight), f.zoom, f.panX, f.panY);
+        plate.draw(f);
         return projection;
-      },
-      dispose: release,
-    };
-  } catch (error) { release(); throw error; }
+      }
+      const dpr = renderDpr(devicePixelRatio, f.zoom, canvas.clientWidth, canvas.clientHeight), w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      const projection = cameraMatrix(w, h, f.zoom, f.panX, f.panY);
+      if (!plate) { clear(w, h); return projection; }
+      plate.draw(f, projection, viewBox(w / h, f.zoom).halfW * 2 / w);
+      return projection;
+    },
+    dispose() { disposed = true; releases.splice(0).reverse().forEach(release => release()); },
+  };
 }

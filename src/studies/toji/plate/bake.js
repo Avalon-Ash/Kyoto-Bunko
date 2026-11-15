@@ -1,4 +1,4 @@
-// Rasterises a plate's parts with Canvas 2D. The GPU side (blur, upload) lives in renderer.js.
+// Rasterises a plate's parts with Canvas 2D. The GPU side (blur, upload) lives in three-renderer.js.
 // Channels of a painted layer:  R soft swell (blurred later)  G crisp relief  B line work  A coverage.
 import {PLATE} from './vocab.js';
 

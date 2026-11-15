@@ -12,7 +12,7 @@
 
 </div>
 
-京洛文庫把京都的觀光索引做成一櫃漆器文箱。京都市十一個行政區各有一函，蓋面是該區名所的蒔繪浮雕，以 WebGL2 即時繪製。撫過盒面，金粉隨光流轉；左右拖動，換下一函；開蓋，就是這一區的名所之卷。
+京洛文庫把京都的觀光索引做成一櫃漆器文箱。京都市十一個行政區各有一函，蓋面是該區名所的蒔繪浮雕，以 three.js（WebGL2）即時繪製；無法執行的裝置顯示盒面靜態圖。撫過盒面，金粉隨光流轉；左右拖動，換下一函；開蓋，就是這一區的名所之卷。
 
 介面提供繁體中文與日文。
 
@@ -71,7 +71,7 @@ CI 每次部署前跑的檢查：
 npm run lint && npx --no-install tsx validate_data.js --strict && npm test && npm run build
 ```
 
-技術：React 19、Vite、TypeScript、Tailwind CSS 4、Leaflet、原生 WebGL2，不用 3D 引擎。
+技術：React 19、Vite、TypeScript、Tailwind CSS 4、Leaflet、three.js。
 
 ## 參與開發
 

@@ -38,10 +38,11 @@ let dragOffset=0,dragAnimation=null,kick=0;
 // Close-up: current and target zoom/pan; a pinch or pan writes both, the tick eases current toward target.
 let zoom=1,zoomTarget=1,panX=0,panY=0,panTX=0,panTY=0,pinch=null,lastTap=null;
 let lastActivity=-Infinity,idlePhase=0,autoPlaying=false;
-let projection,render,dispose,poke;
+let projection,render,dispose,poke,paintGhost=null;
 const backdrop=mountBackdrop($('stage'),{night,motion:!still(),wardId:cabinet.id});
 // The cabinets either side of this one stand on the same track. Each is a still picture of that cabinet at rest,
 // drawn by the same renderer and kept until the cabinet changes; it travels with the box and becomes the box.
+// (With the still picture of plate/static-plate.js the neighbours simply carry their own pictures.)
 const ghosts=options.embedded?[-1,1].map(side=>{
   const ghost=document.createElement('canvas');ghost.className='neighbour';ghost.setAttribute('aria-hidden','true');ghost.dataset.side=String(side);
   canvas.before(ghost);return ghost;
@@ -71,6 +72,11 @@ function snapshotNeighbours(){
   ghostsStale=false;
   if(!ghosts.length||!rawDraw||!setMeshRaw||failed||!canvas.width)return;
   const own=cabinet.id;
+  if(paintGhost){
+    let still=false;
+    for(const ghost of ghosts){const ward=adjacentCabinet(own,Number(ghost.dataset.side)).id;if(paintGhost(ghost,ward)){still=true;ghost.dataset.ward=ward;ghost.dataset.plate='true';}}
+    if(still)return;
+  }
   for(const ghost of ghosts){
     const ward=adjacentCabinet(own,Number(ghost.dataset.side)).id,ctx=ghost.getContext('2d');
     if(!ctx)continue;
@@ -420,16 +426,18 @@ listen(document,'visibilitychange',()=>{if(document.hidden){cancelAnimationFrame
 const intersection=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;if(!visible){cancelAnimationFrame(frame);frame=0;demoStart=0;trails=[];autoPlaying=false;canvas.dataset.autoplay='false';}else schedule();});intersection.observe(canvas);
 const resize=new ResizeObserver(()=>{syncBackdrop();schedule();queueSnapshot();});resize.observe(canvas);
 
-function init(){
-  const renderer=createRenderer(canvas,cabinet.id,()=>{if(!destroyed){$('loading').hidden=true;$('loading').dataset.kind='';queueSnapshot();schedule();}});
+function init(settings){
+  const renderer=createRenderer(canvas,cabinet.id,()=>{if(!destroyed){$('loading').hidden=true;$('loading').dataset.kind='';queueSnapshot();schedule();}},{...settings,night});
   updateMesh=()=>renderer.setMesh(cabinet.id);setMeshRaw=id=>renderer.setMesh(id);rawDraw=frame=>renderer.draw(frame);queueSnapshot();
   render=(time,moving)=>{projection=renderer.draw({time,moving,still:still(),flat,night,ground,lift,opening:bookProgress,px,py,zoom,panX,panY,trails,presence:hover||autoPlaying||demoStart?1:0,offset:dragOffset,kick});kick=0;};
+  paintGhost=(ghost,ward)=>renderer.paintNeighbour(ghost,ward,night);
   poke=renderer.poke;
-  dispose=renderer.dispose;failed=false;{const pending=Boolean(renderer.loading?.());$('loading').hidden=!pending;$('loading').dataset.kind=pending?'plate':'';}canvas.dataset.renderer='webgl';schedule();
+  dispose=renderer.dispose;failed=false;{const pending=Boolean(renderer.loading());$('loading').hidden=!pending;$('loading').dataset.kind=pending?'plate':'';}canvas.dataset.renderer=renderer.mode();schedule();
 }
-function failure(error){failed=true;render=null;updateMesh=null;poke=null;rawDraw=setMeshRaw=null;canvas.dataset.renderer='failed';$('loading').dataset.kind='';$('loading').hidden=false;syncLanguage();syncMotion();console.error('Toji study:',error);}
-listen(canvas,'webglcontextlost',e=>{e.preventDefault();cancelAnimationFrame(frame);frame=0;dispose?.();failure('Context lost');});
-listen(canvas,'webglcontextrestored',()=>{try{init();syncMotion();}catch(e){failure(e);}});
+function failure(error){failed=true;render=null;updateMesh=null;poke=null;rawDraw=setMeshRaw=paintGhost=null;canvas.dataset.renderer='failed';$('loading').dataset.kind='';$('loading').hidden=false;syncLanguage();syncMotion();console.error('Toji study:',error);}
+// A lost context leaves the still picture; if the browser restores the context, three.js is tried again.
+listen(canvas,'webglcontextlost',e=>{e.preventDefault();cancelAnimationFrame(frame);frame=0;dispose?.();try{init({static:true});syncMotion();}catch(error){failure(error);}});
+listen(canvas,'webglcontextrestored',()=>{dispose?.();try{init();syncMotion();}catch(e){failure(e);}});
 listen(window,'pagehide',event=>{cancelAnimationFrame(frame);frame=0;if(!event.persisted)dispose?.();});
 listen(window,'pageshow',event=>{if(event.persisted)schedule();});
 try{init();}catch(e){failure(e);}

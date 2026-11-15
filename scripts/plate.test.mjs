@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {stepSpring, stepDamped, settled} from '../src/studies/toji/plate/spring.js';
 import {PLATES, hasPlate, preparePlate, createLife, partAt, MAX_PARTS, LAYERS, DWELL_MS, STAND_REST} from '../src/studies/toji/plate/parts.js';
 import {KIND, MAT, PLATE, roof, storey, kakezukuri, stoneSteps, stream, shell, steppingStones, corridor, romon, sanmon, karamon, rock} from '../src/studies/toji/plate/vocab.js';
-import {buildBox, shadeMatrix, SHADE_H} from '../src/studies/toji/plate/renderer.js';
+import {buildBox} from '../src/studies/toji/plate/box.js';
 
 const p3bWards = ['W_KITA', 'W_UKYO', 'W_NISHIKYO', 'W_SAKYO', 'W_KAMIGYO', 'W_SHIMOGYO', 'W_NAKAGYO', 'W_YAMASHINA'];
 const inside = ([x, z], polygon) => {
@@ -195,19 +195,6 @@ test('dwelling on a part makes it answer once; the bird changes perch', () => {
   out = run(life, 3, {light: null, presence: 0}, 12000);
   assert.ok(out.a[birds[0].index * 4 + 2] < .05 && out.a[birds[1].index * 4 + 2] > .5, 'and now at its second');
   assert.equal(life.act(0, 0), false, 'bare ground has no answer');
-});
-
-test('the shade sees the whole lid from above the lamp', () => {
-  const at = (m, x, y, z) => { const w = m[3] * x + m[7] * y + m[11] * z + m[15]; return [0, 1, 2].map(k => (m[k] * x + m[4 + k] * y + m[8 + k] * z + m[12 + k]) / w); };
-  for (const [lx, lz] of [[0, 0], [-430, 300], [280, -120]]) {
-    const m = shadeMatrix(lx, lz);
-    for (const x of [-372, 372]) for (const z of [-242, 242]) assert.ok(at(m, x, 0, z).every(v => Math.abs(v) < 1), `lid corner ${x},${z} at lamp ${lx},${lz}`);
-    // Straight under the lamp a tall thing shades only its own foot; away from it the shadow falls outward.
-    const foot = at(m, lx, 0, lz), top = at(m, lx, 250, lz);
-    assert.ok(Math.hypot(top[0] - foot[0], top[1] - foot[1]) < 1e-6 && top[2] < foot[2], 'nearer the lamp is nearer in depth');
-    const out = at(m, lx + 100, 200, lz), shadow = at(m, lx + 100 * SHADE_H / (SHADE_H - 200), 0, lz);
-    assert.ok(Math.hypot(out[0] - shadow[0], out[1] - shadow[1]) < 1e-6, 'a point and its shadow lie on one ray from the lamp');
-  }
 });
 
 test('the box mesh is closed into the ranges the renderer draws', () => {

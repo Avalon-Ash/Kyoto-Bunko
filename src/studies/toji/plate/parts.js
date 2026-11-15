@@ -22,7 +22,7 @@ export const DWELL_MS = 400;
 export const HINGE = {[KIND.tier]: 1.2, [KIND.pine]: 1.1, [KIND.bird]: 1.1};
 /** Even at rest a standing part is never quite flat: the picture always has some body. */
 export const STAND_REST = .14;
-/** Wards that have been redrawn as plates. The rest still use the relief mesh. */
+/** The plate of each ward (all eleven). */
 export const PLATES = {W_MINAMI: minami, W_FUSHIMI: fushimi, W_HIGASHIYAMA: higashiyama, W_KITA: kita, W_UKYO: ukyo, W_NISHIKYO: nishikyo, W_SAKYO: sakyo, W_KAMIGYO: kamigyo, W_SHIMOGYO: shimogyo, W_NAKAGYO: nakagyo, W_YAMASHINA: yamashina};
 export const hasPlate = ward => Object.hasOwn(PLATES, ward);
 

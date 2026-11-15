@@ -1,6 +1,6 @@
 // What makes each ward's backdrop its own: a ground pattern woven into the paper and one line of verse.
 // Pure data and geometry; backdrop.js bakes the pattern, study.js writes the verse.
-// The pairings are design associations with each cabinet's relief (landmarks.js), not historical claims.
+// The pairings are design associations with each cabinet's plate scene (landmarks.js titles it), not historical claims.
 
 const H = Math.sqrt(3);
 const TAU = Math.PI * 2;

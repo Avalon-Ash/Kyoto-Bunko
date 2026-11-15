@@ -32,7 +32,7 @@
 - `App` 保留執行期間的選區與日夜；語言共用 `useKyotoEngine`，重新整理預設月光。首頁閒置播放、主動操作讓出控制、1.8 秒後恢復；背景、讀卷、拖動及系統減少動態時停播。
 - 首頁不顯示測試工具與換函按鈕；獨立展示（`/toji-study/index.html`）由 `study-chrome.js` 提供外殼（`mountStudy`）與對照控制，展示頁沒有書卷，開蓋後再按一次合蓋。字體由既有 Google Fonts 方式載入，無新 npm 依賴。
 - 文箱核心與展示頁拆開：`study.js` 的 `mountBunko(root, options)` 僅管文箱核心（畫布、移光、縮放、換函、開蓋）；舞台 markup 僅由 `template.ts`（`BUNKO_STAGE`）匯出；舞台樣式由 `bunko.css`（主站與展示頁共用），展示頁專用樣式在 `study.css`；原本的書卷對話框 `library.ts` 已刪除。卸載必須釋放事件、觀察器、RAF 及 GPU 資源。
-- 首頁文箱的蓋面是蒔繪浮雕盤（WebGL2，2026-11-13 起十一區），是寫意的蒔繪構圖，不是精確建築復原／導航圖；沒有 WebGL2 的裝置退回舊的簡化幾何。使用者已選定一區一函方向；早期 GPU 蒔繪原型（`MapCanvas.tsx`、`makie-renderer.ts` 與兩張原型圖）已於 2026-11-09 刪除，需要時從 Git 歷史取回。不恢復蒔繪／區界切換。
+- 首頁文箱的蓋面是蒔繪浮雕盤（WebGL2，2026-11-13 起十一區），是寫意的蒔繪構圖，不是精確建築復原／導航圖；蓋面以 three.js 繪製（`plate/three-renderer.js`，動態載入）；沒有 WebGL2、three.js 載入或啟動失敗、WebGL 內容遺失的裝置顯示該區預渲染的靜態圖（`plate/static/<區>.<day|night>.webp`，由 `scripts/plate-fallback-shots.mjs` 從 three 畫面擷取；盤面改了要重跑），盒面不動、不能移光，換函、開蓋與鍵盤照常；網址加 `?plate=static` 可手動看降級畫面。使用者已選定一區一函方向；早期 GPU 蒔繪原型（`MapCanvas.tsx`、`makie-renderer.ts` 與兩張原型圖）已於 2026-11-09 刪除，需要時從 Git 歷史取回。不恢復蒔繪／區界切換。
 - 實際行政區邊界及鄰近區域仍由詳細地圖呈現。景點統計動態計算，修改資料後自動反映。
 
 ---
@@ -244,11 +244,11 @@ src/
 │   ├── backdrop.js      # すやり霞背景與金箔微粒
 │   ├── bunko.css        # 舞台樣式（主站與獨立展示頁共用）
 │   ├── collection.ts    # 十一區文箱定義與換函邏輯
-│   ├── geometry.js      # 浮雕幾何與投影矩陣
+│   ├── geometry.js      # 相機矩陣、地面拾取與光跡的純函式
 │   ├── interaction.js   # 手勢、軌道跟手與開蓋時序
-│   ├── landmarks.js     # 各區地標銘文與浮雕定義
-│   ├── renderer.js      # WebGL 渲染器（陰影 pass、相機）
-│   ├── shaders.js       # WebGL 著色器
+│   ├── landmarks.js     # 各區蓋面場景的題名（中日）
+│   ├── plate/           # 蒔繪盤：three-renderer.js（three.js 繪製）、static-plate.js 與 static/（降級用預渲染圖）、各區構圖與網格建構
+│   ├── renderer.js      # 選繪製路徑（three.js 或靜態圖）、相機矩陣；`?plate=static` 強制靜態圖
 │   ├── standalone.ts    # 獨立展示頁入口
 │   ├── study.css        # 獨立展示頁專用外殼樣式
 │   ├── study.js         # 文箱核心控制器 (mountBunko)
@@ -273,7 +273,7 @@ public/                 # 【子系統】seasonal.html 已移除（計畫見 doc
 
 目前主入口以「初音調度」意象發展十一區文庫，既有地圖原型保留於程式庫：
 - **首頁與檢索介面**：預設月光，暖日可切換；名所目錄、御秘帖及標籤結果共用紙色、金銀線、Shippori Mincho B1 題字與 Noto Serif TC 繁中內文。書卷以平紋蒔繪意象的 SVG 圖形與短標籤篩選。
-- **文庫浮雕**：`src/studies/toji/` 以原生 WebGL 渲染十一區代表地標、山水、梨地與金銀材質；具有幾何高度、視差、陰影與光跡。固定構圖的簡化浮雕不是測繪建築／完整 3D 復原，沒有導入 Rust 或大型繪圖依賴。
+- **文庫浮雕**：`src/studies/toji/` 以 three.js（WebGL2）渲染十一區代表地標、山水、梨地與金銀材質；具有幾何高度、視差、陰影與光跡。固定構圖的簡化浮雕不是測繪建築／完整 3D 復原，沒有導入 Rust 或大型繪圖依賴。
 - **操作與動態**：左右拖動／方向鍵換函，直接點蓋／Enter 展開真實雙語書卷；手動換函立即播放，閒置循環上限 30 次繪製／秒。主動操作讓出控制，讀卷、離屏、背景與減少動態時抑制播放；不能沿用舊原型「閒置沒有動畫」的描述。
 - **樣式分層**：`src/theme.css` 是唯一色票（`--entry-*`、`--hira-*` 晝夜兩組），主站、文庫與獨立展示頁共用；`index.css` 只放 Tailwind 重設、捲軸與地圖標記，元件樣式在 `bunko-ui.css`，書卷與文庫在 `studies/toji/study.css`。元件不寫色碼，Canvas／Leaflet 需要字面色值時註明「mirrors theme.css」。
 - **驗收界線**：[最新紀錄](agent-runs/2026-11-06-phase04-bunko-index.md)含 1440px／375px、雙語日夜與鍵盤滑鼠；真實手機觸控與 OS reduced-motion 未測。舊 Lighthouse 分數不代表目前版本。

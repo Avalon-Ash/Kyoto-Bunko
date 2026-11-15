@@ -2,6 +2,7 @@
 // Usage: node scripts/plate-shot.mjs <outDir> <job> [job…]   (the dev server must be on 127.0.0.1:3000)
 // job = name:steps:theme:WxH:zoom:fx,fy   steps: signed cabinet steps from Minami; theme: night|day, plus "-still"
 // to press pause first; zoom 1..3; fx,fy: where the light rests, as fractions of the canvas. See docs/MAKIE_PLATE_HANDOFF.md §7.
+// PLATE_SHOT_QUERY=?plate=static node scripts/plate-shot.mjs …  shoots the still-picture fallback instead of three.js.
 import {spawn} from 'node:child_process';
 import {writeFileSync, mkdirSync} from 'node:fs';
 import {join} from 'node:path';
@@ -33,7 +34,7 @@ await send('Runtime.enable'); await send('Page.enable');
 for (const job of jobs) {
   const [name, steps, theme, size, zoom, at] = job.split(':'), [w, h] = size.split('x').map(Number), [fx, fy] = at.split(',').map(Number);
   await send('Emulation.setDeviceMetricsOverride', {width: w, height: h, deviceScaleFactor: w < 700 ? 2 : 1, mobile: false});
-  await send('Page.navigate', {url: 'http://127.0.0.1:3000/toji-study/index.html'});
+  await send('Page.navigate', {url: 'http://127.0.0.1:3000/toji-study/index.html' + (process.env.PLATE_SHOT_QUERY ?? '')});
   for (let i = 0; i < 60 && !(await evalJs(`Boolean(document.querySelector('#scene')?.dataset.lift)`)); i++) await sleep(200);
   if (theme.endsWith('still')) { await evalJs(`document.querySelector('#motion').click()`); await sleep(200); }
   if (theme.startsWith('day')) { await evalJs(`document.querySelector('#night').click()`); await sleep(300); }

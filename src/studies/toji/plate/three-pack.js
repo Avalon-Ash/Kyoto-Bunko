@@ -32,7 +32,7 @@ export const MATERIALS = {
   [MAT.lamp]: {name: 'lamp', color: '#2a1a0a', paint: '#f0b46a', metalness: 0, roughness: .6, clearcoat: 0, clearcoatRoughness: 0, flake: 0, emissive: '#f0b46a', glow: true},
 };
 
-/** The box has its own small material ids (see buildBox in renderer.js). 25 is the shadow underlay and is not drawn here. */
+/** The box has its own small material ids (see buildBox in box.js). 25 is the shadow underlay and is not drawn here. */
 export const BOX_MATERIALS = {
   // Hatsune: the whole body is nashiji (amber lacquer over gold powder), not black lacquer (user decision, handoff §3).
   20: {name: 'side', color: '#a8722e', metalness: .72, roughness: .45, clearcoat: 1, clearcoatRoughness: .06, flake: 0, nashijiSide: true},
@@ -224,7 +224,7 @@ export function mistGeometryData(mistParts, nx = 24, nz = 6) {
 }
 
 /**
- * The hinge of mesh-shaders.js, written as a function so MeshPhysicalMaterial and MeshDepthMaterial run the same code:
+ * The part hinge, written as a function so MeshPhysicalMaterial and MeshDepthMaterial run the same code:
  * stand up about the foot line, sway about the anchor, travel, lift, open with the lid, tilt with the hand.
  * Per-part state comes from uState (row 0 = a, row 1 = b, one texel per part index).
  */
@@ -346,7 +346,7 @@ void kyotoTreeTransform(vec2 rest, float height, vec3 localN, vec2 along, vec4 o
   vGlow=A.w;
 }`;
 
-/** Tree limb hinge/sway transform matching tree-shaders.js (groundY at tree anchor, +0.6 clearance). */
+/** Tree limb hinge/sway transform (groundY at tree anchor, +0.6 clearance). */
 export const TREE_LIMB_MOTION_GLSL = `
 attribute vec4 aOwner; attribute vec4 aStyle;
 ${TREE_MOTION_CORE_GLSL}
@@ -354,7 +354,7 @@ void kyotoLimb(vec3 aPos, vec3 aNormal, out vec3 outPos, out vec3 outNormal, out
   kyotoTreeTransform(aPos.xz, aPos.y, aNormal, vec2(1.,0.), aOwner, aStyle, outPos, outNormal, outTanX, outTanZ);
 }`;
 
-/** Instanced tree stamp hinge/sway transform matching tree-shaders.js. */
+/** Instanced tree stamp hinge/sway transform. */
 export const TREE_STAMP_MOTION_GLSL = `
 attribute vec4 aPlacement, aStamp, aOwner, aStyle;
 varying vec4 vTree;

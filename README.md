@@ -12,7 +12,7 @@ English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 </div>
 
-Kyoto Bunko turns a Kyoto travel index into a shelf of lacquered document boxes. Each of the city's eleven wards gets its own box. Its lid is a maki-e relief of that ward's landmarks, rendered live in WebGL2. Brush the lid and the gold catches your light. Drag sideways to bring down the next box. Open the lid and you're reading that ward's scroll of places.
+Kyoto Bunko turns a Kyoto travel index into a shelf of lacquered document boxes. Each of the city's eleven wards gets its own box. Its lid is a maki-e relief of that ward's landmarks, rendered live with three.js (WebGL2); devices that can't run it show a still picture of the lid. Brush the lid and the gold catches your light. Drag sideways to bring down the next box. Open the lid and you're reading that ward's scroll of places.
 
 The interface is in Traditional Chinese and Japanese.
 
@@ -71,7 +71,7 @@ Checks run by CI before every deploy:
 npm run lint && npx --no-install tsx validate_data.js --strict && npm test && npm run build
 ```
 
-Built with React 19, Vite, TypeScript, Tailwind CSS 4, Leaflet and plain WebGL2. No 3D engine.
+Built with React 19, Vite, TypeScript, Tailwind CSS 4, Leaflet and three.js.
 
 ## For contributors
 

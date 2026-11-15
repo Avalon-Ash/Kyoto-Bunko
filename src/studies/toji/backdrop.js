@@ -5,9 +5,10 @@ import {project} from './geometry.js';
 import {MOTIFS, WARD_ART, wardSeed} from './ward-art.js';
 
 /**
- * World-space vertices whose projection is the convex silhouette of every cabinet (all eleven reliefs and the plain box)
- * under the fixed home camera. The camera is orthographic with a fixed direction, so this hull holds at any aspect.
- * Regenerate if geometry or the camera eye changes; scripts/ui-renewal.test.mjs checks every mesh vertex against it.
+ * World-space vertices whose projection is the convex silhouette of every cabinet under the fixed home camera. Fitted to the old
+ * relief mesh and its box; the three.js box is a little wider at the rim and foot (see the known gap in scripts/ui-renewal.test.mjs).
+ * The camera is orthographic with a fixed direction, so this hull holds at any aspect.
+ * Regenerate if geometry or the camera eye changes; scripts/ui-renewal.test.mjs checks the lid and every plate mesh vertex against it.
  */
 export const CABINET_SILHOUETTE = [
   [-371.3, .6, 240], [-370, -32, 240], [-360, -88, 230], [360, -88, 230], [360, -88, -230], [370, -32, -240],

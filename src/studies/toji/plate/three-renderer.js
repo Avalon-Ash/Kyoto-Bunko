@@ -1,5 +1,5 @@
-// The makie plate drawn with three.js (docs/MAKIE_THREE_PLAN.md). Same interface as plate/renderer.js:
-// {setWard, draw, poke, active, dispose}. The default since 2026-11-14 (see ../renderer.js); ?three=0 keeps the old pipeline.
+// The makie plate drawn with three.js (docs/MAKIE_THREE_PLAN.md): {setWard, prefetch, draw, poke, active, dispose}.
+// The only drawing pipeline since 2026-11-16; where it cannot run, ../renderer.js shows the still picture (static-plate.js).
 //
 // T0–T2 scope: box and lid, layer 0 ground relief (groundY from baked soft/ident maps) and makie ground/water shaders,
 // floating semi-transparent mist (KIND.mist), every part that is already a mesh (p1–p3 buildings, torii, stage, lanterns),
@@ -13,7 +13,7 @@ import {PLATE, MAT, KIND, rand} from './vocab.js';
 import {PLATES, LAYERS, preparePlate, createLife, partAt} from './parts.js';
 import {paintLayer, identMaps} from './bake.js';
 import {blankStats} from './fillers.js';
-import {buildBox, FITTINGS} from './renderer.js';
+import {buildBox, FITTINGS} from './box.js';
 import {bakeStamps} from './stamps.js';
 import {createCord, cordTube} from './cord.js';
 import {stepSpring} from './spring.js';
@@ -72,7 +72,7 @@ function bakeStampTexture(doc, maxAniso) {
 }
 
 /**
- * @param {WebGL2RenderingContext} gl the page's context, shared with the old pipeline
+ * @param {WebGL2RenderingContext} gl the canvas's WebGL2 context
  * @param {HTMLCanvasElement} canvas
  */
 export function createThreeRenderer(gl, canvas) {
@@ -132,7 +132,7 @@ export function createThreeRenderer(gl, canvas) {
     shader.uniforms.uGlowBase = {value: spec.glow ? .3 : 1};
     shader.uniforms.uGlowGain = {value: spec.glow ? 1.8 : 0};
   };
-  /** Faces are lit by their own normals whichever way they wind, as the old pipeline did. */
+  /** Faces are lit by their own normals whichever way they wind. */
   const patchMaterial = (material, spec, glsl, call) => {
     const isPart = call === 'kyotoMotion';
     // Only rock mounds (meshRock bodyMat) use MAT.mura among 3D part meshes; tiles use kirikane/kirigin.
@@ -731,7 +731,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
         .then(bytes => { canvas.dataset.exported = String(bytes); }, error => { console.error('glb export failed', error); canvas.dataset.exported = 'error'; });
     }
 
-    // The box leans a little toward the hand: Rx · Rz, column-major, as in the old pipeline.
+    // The box leans a little toward the hand: Rx · Rz, column-major.
     const rz = quiet ? 0 : -f.px * .05 * f.lift, rx = quiet ? 0 : f.py * .035 * f.lift;
     const cz = Math.cos(rz), sz = Math.sin(rz), cx = Math.cos(rx), sx = Math.sin(rx);
     shared.uTilt.value.fromArray([cz, cx * sz, sx * sz, -sz, cx * cz, sx * cz, 0, -sx, cx]);
