@@ -148,7 +148,7 @@ export function createThreeRenderer(gl, canvas) {
     const isRock = isPart && Boolean(spec.rock), isSilverRock = spec.rock === 'silver';
     // Black lacquer on the pieces (walls, plinths) is shin-nuri: polished to a dark mirror.
     const isLacq = isPart && spec.name === 'lacquer';
-    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v2${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}`;
+    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v3${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
@@ -172,7 +172,8 @@ float kyotoRockAmt = smoothstep(K_ROCK_AMT_LO, K_ROCK_AMT_HI, kyotoRockNL) * mix
 vec2 kyotoRockTilt; float kyotoRockTone;
 float kyotoRockKiri = kyotoRockKiriPattern(kyotoRockXZ, kyotoRockAmt, uPx, kyotoRockTilt, kyotoRockTone);
 vec3 kyotoRockFoil = kyotoRockSilver ? kyotoAgedSilver(mix(K_ROCK_FOIL_OXID, K_ROCK_FOIL_SILVER, smoothstep(.15, .6, kyotoRockAmt)), mix(1., .35, smoothstep(.15, .6, kyotoRockAmt))) : mix(K_ROCK_FOIL_OXID, kyotoKiriGold(), smoothstep(.15, .6, kyotoRockAmt));
-kyotoRockFoil *= mix(.9 + .2 * kyotoRockTone, .62 + .62 * kyotoRockTone, uAge * float(kyotoRockSilver));
+// Old foil is uneven: some squares have dulled, more of them in silver than in gold.
+kyotoRockFoil *= mix(.9 + .2 * kyotoRockTone, kyotoRockSilver ? .62 + .62 * kyotoRockTone : .74 + .42 * kyotoRockTone, uAge);
 diffuseColor.rgb = mix(kyotoAgedSilver(K_ROCK_BODY_SHADE, 1.), kyotoRockSilver ? kyotoAgedSilver(K_ROCK_BODY_SILVER, .8) : K_ROCK_BODY_GOLD, kyotoRockLit);
 diffuseColor.rgb = mix(diffuseColor.rgb, kyotoRockFoil, kyotoRockKiri * K_ROCK_KIRI_COVER);`)
           .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>

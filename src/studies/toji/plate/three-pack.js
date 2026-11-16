@@ -499,6 +499,11 @@ const float M_SWELL=17., M_AMB=.17, M_KEY=.44, M_POOL=1.75;
 // Raised gold keeps its value but loses saturation (M_AGE_PALE): the picture ends up paler than its ground.
 const vec3 M_AGE_BODY=vec3(.42,.35,.22), M_AGE_BODY_NIGHT=vec3(.80,.74,.62), M_AGE_VEIL=vec3(.05,.043,.032);
 // Silver on the lid sulphides the same way (M_TARNISH at age 1), in blotches; fine drawn lines stay bright.
+// The coat no longer mirrors evenly (M_AGE_HAZE: how far its gloss swings from place to place), the lacquer lies a
+// little thicker here and thinner there (M_AGE_MURA: the swing in the ground's value), and where a bank's crown has
+// been rubbed for centuries the red-brown under-lacquer shows through the gold (M_AGE_WEAR, M_UNDER).
+const float M_AGE_HAZE=1.1, M_AGE_MURA=.26, M_AGE_WEAR=.5;
+const vec3 M_UNDER=vec3(.21,.075,.04);
 const vec3 M_CORAL=vec3(.60,.115,.06);
 const vec3 M_TARNISH=vec3(.46,.42,.36);
 const float M_AGE_GLOSS=.35, M_AGE_SHEEN=.25, M_AGE_POOL=.28, M_AGE_PALE=.42;
@@ -572,7 +577,7 @@ float mKiri(vec2 p,float cell,float amount,out vec3 glint){
   glint=cov*gl*2.4*vis;
   return mix(4.*sz*sz,cov,vis);
 }
-vec3 mCoat(){return (vec3(1.,.95,.86)*(mSpec(220.)*.42+mSpec(36.)*.10)+mRoom(0.)*.045+mKeyC*mBand*M_BAND_GAIN)*mix(1.,M_AGE_GLOSS,uAge);}
+vec3 mCoat(){return (vec3(1.,.95,.86)*(mSpec(220.)*.42+mSpec(36.)*.10)+mRoom(0.)*.045+mKeyC*mBand*M_BAND_GAIN)*mix(1.,M_AGE_GLOSS*(.45+M_AGE_HAZE*mVnoise(mWP.xz*.035+9.)),uAge);}
 vec3 mNashiji(vec2 p,float dens,vec3 tint){
   // Gold powder sunk at three depths in amber lacquer (Hatsune: 金粉を透漆で塗りこむ). The lacquer absorbs blue
   // first, so the deepest powder reads red-brown and the shallow powder bright orange-gold; the body between grains
@@ -585,7 +590,7 @@ vec3 mNashiji(vec2 p,float dens,vec3 tint){
   col=mix(col,mid*(.10+.84*L),b*.92);
   col=mix(col,top*(.12+1.02*L),c);
   float sheen=mSheen*mix(1.,M_AGE_SHEEN,uAge);
-  col*=1.+M_SHEEN_GAIN*sheen;
+  col*=(1.+M_SHEEN_GAIN*sheen)*(1.+(mVnoise(p*.011+3.)-.5)*M_AGE_MURA*uAge);
   return mAgedLacquer(col+tint*M_AMBER*(ga*.7+gb*1.2+gc*1.5)*(1.+2.2*mBand*mix(1.,M_AGE_GLOSS,uAge)+1.2*sheen))+mCoat();
 }
 vec3 mMetal(vec2 p,vec3 f0,float rise){
@@ -725,6 +730,10 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     float shore=1.-smoothstep(.5,.95,e/max(fine.g,.01));
     wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.85+M_SILVER*line*(.1+.3*L),shore*.7);
     c=mix(c,wtr,m);
+  }
+  if(uAge>0.&&mat>=2&&mat<=4){
+    float wr=smoothstep(.45,.85,hs)*smoothstep(.52,.74,mVnoise(kp*.16+5.))*M_AGE_WEAR*uAge;
+    c=mix(c,M_UNDER*(.3+L),wr);
   }
   if(uAge>0.){
     // The meshes overhang their own footprints, so only the field's lower half shows round them: stretch it.
