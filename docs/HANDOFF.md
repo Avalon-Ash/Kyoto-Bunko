@@ -7,7 +7,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main` 在 `1b3db65`（2026-11-17，使用者同意合併與 push；GitHub Pages 部署成功，`gh run list` 確認）：開案書 R0–R10、銀的補強、作舊與珊瑚、穿插修正、技法堆疊、屋頂金粉、疊坡（遠山、岸、洲浜）、地與調子、包漿、九區重做都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/finish-1117`（從 `main` 開，只有文件）：下一批的開案書與這份交接，**尚未合併 `main`**。本機還留著已併入 `main` 的 `claude/doha-1116`、`claude/roof-1116`、`claude/handoff-1116` 與 `agent/*`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
+| 工作分支 | `claude/finish-1117`（從 `main` 開）：盤面修整 P1–P4 的程式、降級圖、開案書與這份交接，**尚未合併 `main`**（合併與 push 要分開問使用者）。本機還留著已併入 `main` 的 `claude/doha-1116`、`claude/roof-1116`、`claude/handoff-1116` 與 `agent/*`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 現有一個：`C:\Git\_wt_kyoto_doha`（分支 `agent/next-1116`，等於 `1b3db65`，乾淨），可以直接重用：`git checkout -B agent/<主題> claude/finish-1117`。規矩：放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除；`node_modules` 用 junction 連到主資料夾（`cmd /c mklink /J`），**刪工作樹前先 `cmd /c rmdir` 拿掉 junction**，否則會刪到主資料夾的 `node_modules` |
@@ -56,7 +56,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ### 4.1 現在停在哪裡（2026-11-17）
 
-使用者說：「這版先合併推上去，因為今天一整天下來你自己都不滿意，先擬下一批計畫。視覺要不要你自己跳下來作？」已合併並 push；下一批寫成 [`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md)。**P1（岸與洲浜改成研出）與 P2（山腳暗三角、山面、青金）已由 Fable 主席自己做完**，在 `claude/finish-1117`，等使用者看（開案書 §8、§9）；P3（霞）、P4（構圖）、P5（效能）還沒做。山腳暗三角的原因是山與岸底下的地沒有套用疏密場，不是烘焙的楔形。
+使用者說：「這版先合併推上去，因為今天一整天下來你自己都不滿意，先擬下一批計畫。視覺要不要你自己跳下來作？」已合併並 push；下一批寫成 [`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md)。**P1–P4 已由 Fable 主席自己做完**（岸與洲浜改成研出、遠山沿整條稜線淡出、霞改成金粉、岸與山面的金粉會閃、東山的山腰、左京的「大」、下京堂前的庭），在 `claude/finish-1117`，等使用者看（開案書 §8–§11）；P5（效能）派給 Sonnet 子代理。山腳暗三角的原因是山與岸底下的地沒有套用疏密場，不是烘焙的楔形。
 
 **誰做定調的視覺：已定案。** 使用者要主席和「CODE合約總管」（另一個工作階段，管全域合約）討論，總管擬稿、使用者同意後，2026-11-17 改了全域 `~/.claude/CLAUDE.md`「跨模型派工」（主席讀檔核對過）。新增的「動手原則」不分 Fable 或 Opus：
 
