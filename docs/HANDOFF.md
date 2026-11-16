@@ -6,8 +6,8 @@
 
 | 項目 | 狀態 |
 |---|---|
-| 主線 | `main` 與 `origin/main` 在 `6fd2099`（2026-11-16，使用者同意合併與 push，部署成功）：開案書 R0–R10 全部上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/silver-1116`（從 `main` 開）：銀的補強（樹幹改銀、霞帶裡的銀條）。**尚未合併 `main`、尚未 push**。長鏈總表見 [`agent-runs/2026-11-16-overnight-chain.md`](agent-runs/2026-11-16-overnight-chain.md) |
+| 主線 | `main` 與 `origin/main` 在 `7dca894`（2026-11-16，使用者同意合併與 push，部署成功）：開案書 R0–R10 與銀的補強都已上線。實際 HEAD 以 `git log -1 main` 為準 |
+| 工作分支 | `claude/patina-1116`（從 `main` 開）：目前只有作舊的開案書 [`plans/2026-11-16-patina.md`](plans/2026-11-16-patina.md)，**等使用者同意後開工**。上一輪的總表見 [`agent-runs/2026-11-16-overnight-chain.md`](agent-runs/2026-11-16-overnight-chain.md) |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除。本輪用過的兩個已移除；目前有哪些以 `git worktree list` 為準 |
@@ -25,7 +25,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 預覽：首頁 `/`，獨立文箱展示 `/toji-study/index.html`。截圖：`node scripts/plate-shot.mjs <outDir> <job…>`（用法在檔頭；dev server 必須在 127.0.0.1:3000）。
 
-## 2. 目前產品狀態（`claude/roadmap-1116`，尚未上線）
+## 2. 目前產品狀態（`main`，已上線）
 
 | 範圍 | 狀態 |
 |---|---|
@@ -51,8 +51,8 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ## 4. 下一步
 
-1. **等使用者決定**：把 `claude/roadmap-1116` 合併進 `main`、push（各自分開問）。上線前建議使用者先在本機看一輪：鳳凰、岩面切金、九區小景、卡片高光、`?plate=static`。
-2. **等使用者決定**：[地圖評估備忘錄](plans/2026-11-16-r10-map-evaluation.md)：景點座標管線（建議做）與 MapLibre 小實驗（建議先不全面導入）。
+1. **等使用者決定**：[作舊與材質深度的開案書](plans/2026-11-16-patina.md)要不要照做。
+2. 地圖：使用者 2026-11-16 決定不做（現況夠用）。[備忘錄](plans/2026-11-16-r10-map-evaluation.md)留作紀錄。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
 4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核；各食處報告裡列的描述細節（米其林、創業年）；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
 5. 已知的小缺口：鳳凰不放大時頭與喙偏小；細小的草、葦、「大」字不放大時幾乎看不到；`parts.js` 的 `act()` 會讓任何 `MAT.lamp` 的部件在游標停留時發橘光，所以小景不要用 `MAT.lamp`。
