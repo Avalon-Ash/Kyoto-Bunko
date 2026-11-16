@@ -43,22 +43,6 @@ export function blob(cx, cz, rx, rz, seed, wobble = .1, n = 44) {
   });
 }
 
-/** Dohā: a rounded earth bank. Its crown is firm, its foot dissolves into the ground. */
-export function hill(id, x0, x1, crown, foot, seed, {amp = .7, mat = MAT.mura, layer = 0, humps = 2} = {}) {
-  const r = rand(seed), top = [], n = 36;
-  const ph = r() * 6.283;
-  for (let i = 0; i <= n; i++) {
-    const t = i / n, x = lerp(x0, x1, t), arch = Math.pow(Math.sin(Math.PI * t), .6);
-    top.push([x, foot - (foot - crown) * arch * (.78 + .22 * Math.sin(t * Math.PI * humps * 2 + ph))]);
-  }
-  const p = part(id, KIND.hill, layer, mat, [(x0 + x1) / 2, (crown + foot) / 2]);
-  p.fills.push({d: [...top, [x1, foot + 26], [x0, foot + 26]], soft: amp, crisp: 0});
-  // A second, smaller swell inside gives the bank a body instead of a flat cut-out.
-  p.fills.push({d: blob(lerp(x0, x1, .42 + r() * .2), lerp(crown, foot, .52), (x1 - x0) * .26, (foot - crown) * .3, seed + 5, .14), soft: Math.min(1, amp + .25), crisp: 0});
-  p.lines.push({d: top.slice(3, n - 2), w: .9, amp: .5});
-  return [p];
-}
-
 /** A stream: a band that widens as it nears the viewer, with togidashi flow lines inside. */
 export function stream(id, points, widths, layer = 0) {
   if (points.length < 2) throw new Error(`stream(${id}): points must have at least 2 points`);
@@ -471,14 +455,6 @@ export function stoneSteps(id, cx, zBack, zFront, farW, nearW, count = 11) {
 /** An open mountain gate: the lower passage is negative space, with all posts on the same foot line. */
 export function sanmon(id, cx, zBase, halfW) { return meshSanmon(id, cx, zBase, halfW); }
 
-/** A quiet field of powdered earth joins a precinct without filling its reserved negative space with objects. */
-export function gardenGround(id, outline, {mat = MAT.mura, amp = .24} = {}) {
-  const centre = outline.reduce(([x, z], p) => [x + p[0] / outline.length, z + p[1] / outline.length], [0, 0]);
-  const p = part(id, KIND.still, 0, mat, centre);
-  p.fills.push({d: outline, soft: amp, crisp: 0});
-  return [p];
-}
-
 // Trees bypass the inflated silhouette path. Branch-prefixed names are compatibility aliases for ward scores.
 export {stampedPine, stampedPine as pine, stampedPine as branchPine,
   stampedMaple, stampedMaple as maple, stampedMaple as branchMaple,
@@ -488,7 +464,7 @@ export {stampedPine, stampedPine as pine, stampedPine as branchPine,
 // ---- Attached scenes (R5a). Each hangs on a named part (`on`), is flat inlay in the ground, and sits at a place written
 // out in its ward's own file. `rand` only jitters a stroke, with fixed seeds.
 // Their reach is .5, never 0: bake.js repaints every part with reach > 0 over the margins, in order, so a reach-0 part
-// under one of the big ground parts (a garden floor, a hill) would be painted out of the material map.
+// under one of the big ground parts (a ground piece) would be painted out of the material map.
 const need = (fn, id, on) => { if (typeof on !== 'string' || !on) throw new Error(`${fn}(${id}): "on" must name the part it hangs on`); };
 /** A band along a polyline, w0 wide at its first point and w1 at its last (closed outline). */
 function ribbon(pts, w0, w1) {
@@ -498,11 +474,6 @@ function ribbon(pts, w0, w1) {
     left.push([x - (b[1] - a[1]) / l * w, z + (b[0] - a[0]) / l * w]); right.push([x + (b[1] - a[1]) / l * w, z - (b[0] - a[0]) / l * w]);
   });
   return [...left, ...right.reverse()];
-}
-/** Where a hill's crest runs at x: the same curve hill() draws, so a small figure can stand on a ridge. */
-export function hillCrest(x0, x1, crown, foot, seed, {humps = 2} = {}) {
-  const ph = rand(seed)() * 6.283;
-  return x => { const t = (x - x0) / (x1 - x0); return foot - (foot - crown) * Math.pow(Math.sin(Math.PI * t), .6) * (.78 + .22 * Math.sin(t * Math.PI * humps * 2 + ph)); };
 }
 /** A point on one bank of a stream() (same Catmull-Rom as stream) with its tangent: [x, z, tx, tz]. side is -1 or 1. */
 export function streamEdge(points, widths, t, side) {

@@ -6,11 +6,15 @@ import {KIND, MAT, PLATE, roof, storey, kakezukuri, stoneSteps, stream, shell, s
 import {densityFromMask} from '../src/studies/toji/plate/bake.js';
 import {buildBox} from '../src/studies/toji/plate/box.js';
 
-// Wards whose ground is already doha.js pieces (suhama tongues, banks) and not hill() or gardenGround(); more join as the other wards are redone.
-const dohaWards = new Set(['W_NAKAGYO', 'W_FUSHIMI', 'W_HIGASHIYAMA', 'W_KITA', 'W_MINAMI', 'W_UKYO', 'W_SAKYO', 'W_YAMASHINA']);
+// Wards whose ground is already doha.js pieces (suhama tongues, banks) (hill() and gardenGround() no longer exist: every ward has been redone).
+const dohaWards = new Set(['W_NAKAGYO', 'W_FUSHIMI', 'W_HIGASHIYAMA', 'W_KITA', 'W_MINAMI', 'W_UKYO', 'W_SAKYO', 'W_YAMASHINA', 'W_NISHIKYO', 'W_KAMIGYO', 'W_SHIMOGYO']);
 // The wards redone in the nine-wards run (docs/plans/2026-11-16-nine-wards.md): a far mountain, a shore and the rocks they already had (not yet redone), so
 // the cluster, piece-count, silver-share and rock-total ranges of the scattered pilot are not asked of them.
-const nineWards = new Set(['W_HIGASHIYAMA', 'W_KITA', 'W_MINAMI', 'W_UKYO', 'W_SAKYO', 'W_YAMASHINA']);
+const mountainWards = new Set(['W_HIGASHIYAMA', 'W_KITA', 'W_MINAMI', 'W_UKYO', 'W_SAKYO', 'W_YAMASHINA']);
+// The three wards of the third run have no mountain: a shore (Nishikyo's pond, Shimogyo's long bank) or nothing at all (Kamigyo: the Gosho is flat and still,
+// so no ground is laid outside the galleries and the 15-35% of mountains and shores does not apply to it). Their pieces: [lowest, highest] number of pieces.
+const flatWards = {W_NISHIKYO: [4, 6], W_KAMIGYO: [0, 0], W_SHIMOGYO: [3, 4]};
+const nineWards = new Set([...mountainWards, ...Object.keys(flatWards)]);
 const p3bWards = ['W_KITA', 'W_UKYO', 'W_NISHIKYO', 'W_SAKYO', 'W_KAMIGYO', 'W_SHIMOGYO', 'W_NAKAGYO', 'W_YAMASHINA'];
 const inside = ([x, z], polygon) => {
   let hit = false;
@@ -1494,7 +1498,7 @@ import {measureDoha} from './plate-doha-measure.mjs';
 import {similar} from './plate-doha-similar.mjs';
 import {bankGeom, tongueGeom, mountain, JITTER} from '../src/studies/toji/plate/doha.js';
 import {meshRock} from '../src/studies/toji/plate/rock-mesh.js';
-const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5], W_HIGASHIYAMA: [2, 2], W_KITA: [0, 0], W_MINAMI: [3, 3], W_UKYO: [0, 0], W_SAKYO: [0, 0], W_YAMASHINA: [0, 0]}; // Kita's two rocks are not named rock-*, so the measure does not count them
+const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5], W_HIGASHIYAMA: [2, 2], W_KITA: [0, 0], W_MINAMI: [3, 3], W_UKYO: [0, 0], W_SAKYO: [0, 0], W_YAMASHINA: [0, 0], W_NISHIKYO: [0, 0], W_KAMIGYO: [0, 0], W_SHIMOGYO: [0, 0]}; // Kita's two rocks are not named rock-*, so the measure does not count them
 for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition numbers`, () => {
   const m = measureDoha(ward);
   // Nakagyo is one shore of four long banks (plan §11.2): the cluster, piece-count, size and straight-run ranges are for the scattered wards.
@@ -1502,12 +1506,13 @@ for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition nu
   if (!shore) assert.ok(m.clusters >= 2 && m.clusters <= 4, `clusters ${m.clusters}`);
   if (!shore) for (const [c, n] of Object.entries(m.piecesPerCluster)) assert.ok(n >= 3 && n <= 7, `${c}: ${n} pieces`);
   else if (!nineWards.has(ward)) assert.ok(m.pieces >= 2 && m.pieces <= 4, `shore pieces ${m.pieces}`);
+  else if (flatWards[ward]) assert.ok(m.pieces >= flatWards[ward][0] && m.pieces <= flatWards[ward][1] && m.farHeads === 0, `shore pieces ${m.pieces}, mountain heads ${m.farHeads}`);
   else assert.ok(m.pieces >= 6 && m.pieces <= 14 && m.farHeads >= 3, `mountain heads ${m.farHeads} and shore pieces ${m.pieces - m.farHeads}`);
   for (const [c, n] of Object.entries(m.rocksPerCluster)) assert.ok(n <= 5, `${c}: ${n} rocks`);
   const [lo, hi] = rockTotals[ward];
   assert.ok(m.rocks >= lo && m.rocks <= hi, `${m.rocks} rocks, not ${lo}-${hi}`);
   if (!shore) assert.ok(m.largestPiece <= 4, `largest piece ${m.largestPiece}%`);
-  assert.ok(m.piecesAndRocksShare >= (nineWards.has(ward) ? 15 : 20) && m.piecesAndRocksShare <= 35, `taken ${m.piecesAndRocksShare}%`);
+  assert.ok(m.piecesAndRocksShare >= (ward === 'W_KAMIGYO' ? 0 : flatWards[ward] ? 12 : nineWards.has(ward) ? 15 : 20) && m.piecesAndRocksShare <= (flatWards[ward] ? 30 : 35), `taken ${m.piecesAndRocksShare}%`);
   assert.ok(m.bareShare >= 35 && m.bareConnectedShare >= 70, `bare ${m.bareShare}%, connected ${m.bareConnectedShare}%`);
   if (!shore) assert.ok(m.silverPieces >= 33.3, `silver ${m.silverPieces}% (far mountains excepted)`);
   if (!shore || nineWards.has(ward)) assert.ok((nineWards.has(ward) ? m.longestStraightPieces : m.longestStraight) <= 30, `straight run ${nineWards.has(ward) ? m.longestStraightPieces : m.longestStraight}`);

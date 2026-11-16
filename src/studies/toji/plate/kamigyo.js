@@ -1,12 +1,18 @@
 // A ceremonial enclosure around a white court: the broad hall is its head and low galleries its open arms.
 // Blossom and citrus face across the court; the bare outer rim and open entrance keep the enclosure breathing.
-import {MAT, gardenGround, hall, sandGarden, corridor, branchCourtTree as courtTree, petals, fruits, branchPine as pine, bird, rock, suyari, grassTufts} from './vocab.js';
+// There is no ground laid outside the galleries (no shore, no bank, no mountain): the court is already a floor of silver, and the Gosho is
+// meant to be flat and still. Outside the galleries is bare lacquer and nashiji, and three bands of mist (behind the hall, left and right).
+import {MAT, hall, sandGarden, corridor, branchCourtTree as courtTree, petals, fruits, branchPine as pine, bird, rock, suyari, grassTufts} from './vocab.js';
+
+/** No pieces of ground in this ward, for the measuring and checking scripts. */
+const PIECES = {};
+export {PIECES};
 
 export function kamigyo() {
   return [
-    ...gardenGround('court-surround', [[-315, -186], [315, -186], [309, 136], [260, 188], [-260, 188], [-309, 136]], {amp: .12}),
     ...sandGarden('nantei', -154, 154, -37, 142, {raked: false, mat: MAT.silver}),
     ...suyari('mist-west', -338, -185, -199, 12, 3),
+    ...suyari('mist-back', -118, 122, -183, 12, 5),
     ...suyari('mist-east', 157, 337, -177, 13, 8),
     ...rock('west-stone', -320, 159, 18, 15, 6),
     ...rock('east-stone', 308, 162, 21, 16, 2, {mat: MAT.kirigin}),
