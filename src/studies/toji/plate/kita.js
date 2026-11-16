@@ -56,7 +56,7 @@ export function kita() {
   return [
     ...mountain('kinugasa', KINUGASA),
     ...pond('kyoko', -5, 68, 244, 82, 3, {reflection: {x: -85, z: 9, width: 78, height: 90}}),
-    ...tongues('suhama', SHORE),
+    ...tongues('suhama', SHORE, {toward: [[-150, 68], [-5, 68], [140, 68]]}),
     // Reeds of silver line work on the north-west bank, from the pavilion's west foot toward the shore stone.
     ...grassTufts('kyoko-reeds', [reed(45, 21, 5), reed(47, 25, 5), reed(49, 21, 5), reed(51, 18, 4)], {on: 'kyoko', mat: MAT.silver, seed: 5, w: 2.4, spread: .12}),
     ...suyari('mist-west', -350, -196, -98, 10, 2),

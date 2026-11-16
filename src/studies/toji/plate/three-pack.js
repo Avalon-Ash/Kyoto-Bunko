@@ -877,7 +877,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   ivec2 im=mIdent0(kp);int id=im.x,mat=im.y;
   float rise=texelFetch(uState,ivec2(id,0),0).z,glow=texelFetch(uState,ivec2(id,0),0).w;
   vec4 fine=texture(uFine0,mPuv(kp));float hs=texture(uSoft0,mPuv(kp)).r;
-  float eS=3.,sH=M_SWELL*mix(.3,1.,rise),cH=(mat==19||mat==20)?M_BANK_CH:(mat==23||mat==24)?5.*smoothstep(.56,.72,fine.g):2.4,lH=.7,eC=max(uPx*.9,.55);
+  float eS=3.,sH=M_SWELL*mix(.3,1.,rise),cH=(mat==19||mat==20)?M_BANK_CH:(mat==23||mat==24)?5.*smoothstep(.56,.72,fine.g):(mat==21||mat==22)?0.:2.4,lH=mat==21?.15:.7,eC=max(uPx*.9,.55);
   vec4 st=vec4(texture(uSoft0,mPuv(kp+vec2(eS,0.))).r,texture(uSoft0,mPuv(kp-vec2(eS,0.))).r,
                texture(uSoft0,mPuv(kp+vec2(0.,eS))).r,texture(uSoft0,mPuv(kp-vec2(0.,eS))).r);
   vec2 gs=vec2(st.x-st.y,st.z-st.w)/(2.*eS)*sH;
@@ -915,7 +915,8 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     else if(mat==6){mKS=.45;mKT=.55;}
     else if(mat==2||mat==3||mat==4){mKS=1.-smoothstep(.01,.14,hs);mKT=1.-mKS;}
     else if(mat==19||mat==20||mat==23||mat==24){mKS=1.-smoothstep(.0,.3,fine.g);mKT=1.-mKS;}
-    else if(mat==21||mat==22){mKS=1.-inlay;mKT=inlay;}
+    else if(mat==21){mKS=1.-smoothstep(.0,.35,fine.g);mKT=1.-mKS;}
+    else if(mat==22){mKS=1.-inlay;mKT=inlay;}
     else if(mat==12){mFlat=1.;mKE=smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.02,.06));mKT=1.-mKE;}
     else if(mat==5||mat==7||mat==8||mat==10||mat==11){mFlat=1.;float ke=smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.42,.58));mKE=ke*smoothstep(0.,.25,inlay);mKS=(1.-inlay)*(1.-mKE);mKT=inlay*(1.-ke);}
     else if(mat==9||mat==17){mKT=0.;mKS=0.;mKE=0.;}
@@ -934,7 +935,8 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   float dField=texture(uDens,mPuv(kp)).r;
   // Maki-bokashi: powder gathers toward things and thins in the open. On an old, darker ground the grading carries
   // further (M_AGE_BOKASHI times as strong at age 1): it is what joins a form to the ground it stands on.
-  if(mat==1){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
+  // (A gold suhama's ground is the plain ground itself: its powder is laid over it and thins into it.)
+  if(mat==1||mat==21){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
   else if(mat==2||mat==3){
     float cloud=mat==3?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
     // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
@@ -952,7 +954,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(mat==10){wS=inlay;wN=1.-inlay;f0=M_PALE;c=M_PALE*glow*.5*inlay;}
   else if(mat==11){wS=inlay;wN=1.-inlay;f0=mAgedSilver(M_SILVER,kp,.3);}
   else if(mat==13){wS=.82;wM=.18;f0=M_GOLD;tint=M_GOLD;}
-  else if(mat>=19&&mat<=22){wN=mat<21?1.:1.-inlay;}
+  else if(mat>=19&&mat<=22){wN=mat<22?1.:1.-inlay;}
   else if(mat==23||mat==24){wN=1.;}
   else if(mat==17){wN=1.-inlay;c=(M_CORAL*(.12+.70*L)+mCoat()*.55)*inlay;}
   else if(mat==14)c=M_LACQ*(.8+1.4*L)+mCoat()*2.2+M_GOLD*line*(.16+.80*L)*mix(.5,1.,rise);
@@ -991,14 +993,21 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
       if(mat==19)c*=1.-.34*clamp(max(-face,0.)*1.2,0.,1.)*ha;
       kiriB=ha;
     }else{
-      // A suhama tongue: a flat sheet inside its own outline (inlay), gold or silver; the plain ground runs up to its edge.
+      // A suhama tongue (togidashi): ground flush with the lid, no step and no shade at its edge.
       if(mat==21){
-        // Gold suhama: polished, finely raked sand; brighter and yellower than the ground it lies on.
+        // Gold suhama. fine.g is how thick the powder lies: 1 along the drawn edge, thinning away from it until it is the ground's own
+        // sprinkle (maki-bokashi). Thick, it is a polished, finely raked sand, brighter and yellower than the ground; thin, single flakes.
+        float dn=fine.g,body=smoothstep(.35,.9,dn),a=smoothstep(.0,.1,dn);
         float rake=.93+.07*sin(kp.y*2.1+mVnoise(kp*.06)*7.)*(.6+.4*mVnoise(kp*.4));
-        c=mix(c,mix(mNashiji(kp,2.7,mix(M_GOLD,M_PALE,.35)),mMetal(kp,M_GOLD,max(rise,.8)),.3)*vec3(1.3,1.18,.96)*rake,inlay);
+        vec3 pw=mix(mNashiji(kp,mix(dens,2.8,pow(dn,1.3)),mix(tint,mix(M_GOLD,M_PALE,.35),a)),mMetal(kp,M_GOLD,max(rise,.8)),.4*body)*mix(vec3(1.),vec3(1.3,1.18,.96)*rake,body);
+        c=mix(c,pw,a);
+        // The drawn edge: a fine line of pale gold laid on top (tsukegaki).
+        c=mix(c,mMetal(kp,mix(M_GOLD,M_PALE,.7),1.)*1.2,smoothstep(.1,.45,line)*.9);
+        kiriB=a;
+      }else{
+        c=mix(c,mix(mHirame(mMetal(kp,mAgedSilver(mix(M_SILVER,M_OXID,.4),kp,.8),max(rise,.8))*.9,kp,.8,max(rise,.8)),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,.25),inlay);
+        kiriB=inlay;
       }
-      else c=mix(c,mix(mHirame(mMetal(kp,mAgedSilver(mix(M_SILVER,M_OXID,.4),kp,.8),max(rise,.8))*.9,kp,.8,max(rise,.8)),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,.25),inlay);
-      kiriB=inlay;
     }
     c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.8))*mix(1.5,1.,uAge)+M_PALE*.12*kiri,kiri);
     kiriV=kiri;

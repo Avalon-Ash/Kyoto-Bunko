@@ -105,21 +105,78 @@ export function bankGeom(q) {
 
 /**
  * A cluster of tongues. pieces: {p: [[x, z]...] the outline's control points, at?: [dx, dz] to move them all, tone: 'gold' |
- * 'silver', seed, kiri?: [from, to]} listed far to near (a later piece lies over an earlier one). kiri puts a string of cut
+ * 'silver', seed, kiri?: [from, to], toward?, run?, facing? (tongueFade)} listed far to near (a later piece lies over an earlier one).
+ * `all` gives every piece a default for those (a pond's shores all face the pond). kiri puts a string of cut
  * gold along the outline between two fractions of its length. The first listed piece of each tone names its part.
  */
-export function tongues(id, pieces) {
+export function tongues(id, pieces, all = {}) {
   if (!pieces.length) throw new Error(`tongues(${id}): no pieces`);
   const out = {}, geoms = pieces.map(tongueGeom), centre = centreOf(geoms);
-  pieces.forEach((q, i) => {
-    const s = geoms[i], tone = q.tone ?? 'gold';
+  pieces.forEach((piece, i) => {
+    const q = {...all, ...piece}, s = geoms[i], tone = q.tone ?? 'gold';
     const p = out[tone] ??= part(`${id}-${tone}`, id, tone === 'silver' ? MAT.sandSilver : MAT.sandGold, centre, {reach: 1.6, order: tone === 'silver' ? 1 : 0});
-    const f = {d: s.outline, soft: .1, crisp: 1, tongue: true};
+    const f = {d: s.outline, soft: tone === 'silver' ? .03 : .05, crisp: 1, tongue: true};
     if (q.kiri) { const [from, to] = q.kiri; f.kiri = [{path: pathOf(s.outline, from, to), pitch: 4, half: 1.1}]; }
+    if (tone !== 'silver') {
+      // Togidashi: the powder is laid thick along the drawn edge and thins away from it until it is the ground's own.
+      f.fade = tongueFade(s.outline, q);
+      for (const r of f.fade.runs) p.lines.push({d: r, w: 1, amp: .7});
+    }
     p.fills.push(f);
-    p.lines.push({d: [...s.outline, s.outline[0]], w: 1.3, amp: .7});
   });
   return Object.values(out);
+}
+
+/** How thick the powder lies at a share u (0 at the drawn edge, 1 where it has thinned to nothing) of a tongue's fade. */
+export const fadeHeight = u => { const t = Math.max(0, Math.min(1, (u - .28) / .72)); return 1 - t * t * (3 - 2 * t); };
+
+/**
+ * A tongue's drawn edge and how far its powder runs from it. The drawn edge is the stretch of the outline that faces
+ * q.toward (a point: the water the piece lies along) or, with none given, the far side of the plate (the upper contour, as a
+ * bank is drawn: firm above, dissolving toward the viewer). q.run (units) is how far the powder reaches from that edge; by
+ * default it is the piece's own depth, so the powder is gone where the outline's other side would have been.
+ * Returns {runs: [[x, z]...] the stretches of the drawn edge, coarse: the same with fewer points, run}.
+ */
+export function tongueFade(outline, q = {}) {
+  const n = outline.length;
+  let area = 0;
+  for (let i = 0; i < n; i++) { const a = outline[i], b = outline[(i + 1) % n]; area += a[0] * b[1] - b[0] * a[1]; }
+  const sgn = area > 0 ? 1 : -1;
+  const on = outline.map((p, i) => {
+    const a = outline[(i + n - 1) % n], b = outline[(i + 1) % n], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const nx = sgn * (b[1] - a[1]) / l, nz = -sgn * (b[0] - a[0]) / l;
+    let dx = 0, dz = -1;
+    if (q.toward) {
+      // The nearest of the points given (one point, or a few along a pond's length or a stream's course).
+      const pts = Array.isArray(q.toward[0]) ? q.toward : [q.toward];
+      const t = pts.reduce((best, c) => Math.hypot(c[0] - p[0], c[1] - p[1]) < Math.hypot(best[0] - p[0], best[1] - p[1]) ? c : best);
+      dx = t[0] - p[0]; dz = t[1] - p[1]; const m = Math.hypot(dx, dz) || 1; dx /= m; dz /= m;
+    }
+    return nx * dx + nz * dz > (q.facing ?? -.15);
+  });
+  // A short break in the drawn edge (a cove turned away) is drawn through; a short stray stretch is dropped.
+  const heal = (value, most) => {
+    for (let i = 0; i < n; i++) {
+      if (on[i] !== value || on[(i + n - 1) % n] === value) continue;
+      let len = 0; while (len < n && on[(i + len) % n] === value) len++;
+      if (len < n && len <= most) for (let k = 0; k < len; k++) on[(i + k) % n] = !value;
+    }
+  };
+  heal(false, Math.round(n * .12)); heal(true, Math.round(n * .05));
+  const runs = [];
+  if (on.every(Boolean)) runs.push([...outline, outline[0]]);
+  else for (let i = 0; i < n; i++) {
+    if (!on[i] || on[(i + n - 1) % n]) continue;
+    const r = []; for (let k = 0; k < n && on[(i + k) % n]; k++) r.push(outline[(i + k) % n]);
+    if (r.length > 1) runs.push(r);
+  }
+  if (!runs.length) runs.push([...outline, outline[0]]);
+  // The piece's own depth: the farthest any point of the outline lies from the drawn edge.
+  const edge = runs.flat(), far = Math.max(...outline.map(p => Math.min(...edge.map(e => Math.hypot(p[0] - e[0], p[1] - e[1])))));
+  const xs = outline.map(p => p[0]), zs = outline.map(p => p[1]), half = Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) / 2;
+  // The same stretches with two points in three left out: what the baker strokes for the fade (a wide stroke through every point is slow).
+  const coarse = runs.map(r => r.filter((_, i) => i % 3 === 0 || i === r.length - 1));
+  return {runs, coarse, run: q.run ?? Math.max(6, far > 1 ? far : half)};
 }
 
 /**

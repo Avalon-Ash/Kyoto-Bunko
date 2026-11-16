@@ -26,16 +26,18 @@ const KAMEYAMA = [
   {ridge: [[-270, -114], [-246, -128], [-220, -140], [-190, -150], [-160, -162], [-134, -146], [-114, -116]], depth: 46},
 ];
 /// The shores, far to near. Each outline is written round the piece as a few broad lobes (a big lobe 40-70 wide, a small one 15-25) with bays of different depths between.
+// The pond's length: the shores that lie along it are drawn firm at the water and thin away from it (doha.js tongueFade).
+const POND = [[80, 49], [143, 49], [210, 49]];
 const SHORES = [
   // west, under the old pine behind the hall: a big lobe, a small one and a mid one along its back, two lobes below with a shallow bay
   {p: [[-348, -54], [-340, -76], [-322, -85], [-302, -88], [-290, -80], [-284, -88], [-274, -91], [-266, -82], [-260, -77], [-252, -86], [-238, -84], [-226, -72], [-222, -58],
     [-232, -46], [-246, -38], [-268, -34], [-290, -36], [-300, -42], [-306, -49], [-314, -44], [-324, -35], [-336, -38], [-347, -42]], tone: 'gold', seed: 51},
   // east, under the pine at the pond's back right: reaches round the pond's north-east corner; a big lobe and a small one on top, a mid and a small one below
   {p: [[214, -70], [224, -90], [244, -100], [266, -96], [276, -88], [284, -93], [292, -101], [304, -104], [313, -98], [320, -92], [328, -97], [343, -86], [352, -66], [354, -50], [346, -34],
-    [336, -27], [320, -21], [302, -24], [290, -32], [284, -37], [278, -31], [268, -24], [260, -31], [254, -40], [246, -45], [232, -51], [220, -59]], tone: 'gold', seed: 52},
+    [336, -27], [320, -21], [302, -24], [290, -32], [284, -37], [278, -31], [268, -24], [260, -31], [254, -40], [246, -45], [232, -51], [220, -59]], toward: POND, tone: 'gold', seed: 52},
   // north: the crescent along the pond's back where the two stones lie, thick in the middle, its lower edge on the water: two big lobes above, two small ones, a long lower edge of lobes of every size
   {p: [[-8, 8], [-5, -16], [4, -34], [22, -52], [32, -74], [54, -84], [78, -82], [92, -72], [97, -69], [102, -78], [112, -90], [124, -88], [131, -80], [138, -90], [160, -100], [186, -98], [204, -88], [210, -78], [218, -84], [228, -86], [236, -76], [242, -68], [252, -62], [266, -46], [276, -30], [284, -12], [284, 4],
-    [278, 2], [270, -16], [258, -30], [244, -32], [234, -44], [226, -50], [214, -58], [204, -58], [196, -66], [184, -62], [160, -58], [140, -60], [128, -62], [118, -68], [110, -62], [98, -54], [90, -58], [80, -50], [62, -40], [44, -36], [34, -40], [28, -33], [20, -24], [8, -14]], tone: 'gold', seed: 53},
+    [278, 2], [270, -16], [258, -30], [244, -32], [234, -44], [226, -50], [214, -58], [204, -58], [196, -66], [184, -62], [160, -58], [140, -60], [128, -62], [118, -68], [110, -62], [98, -54], [90, -58], [80, -50], [62, -40], [44, -36], [34, -40], [28, -33], [20, -24], [8, -14]], toward: POND, tone: 'gold', seed: 53},
   // the silver waterline on the north crescent, laid over the gold along its lower edge: a hand's breadth between the gold and the water
   {p: [[130, -67], [144, -65], [160, -62], [182, -66], [194, -70], [202, -63], [212, -62], [220, -59], [216, -69], [205, -74], [189, -77], [161, -71], [143, -73], [129, -74]], tone: 'silver', seed: 54},
   // the long bank in front of the hall: the veranda stands on it; five lobes along its back and six below, its right end reaching the pond's west tip
@@ -43,7 +45,7 @@ const SHORES = [
     [-8, 124], [-18, 133], [-38, 137], [-56, 133], [-64, 126], [-70, 122], [-76, 126], [-86, 134], [-98, 130], [-104, 122], [-112, 128], [-134, 136], [-166, 138], [-188, 132], [-198, 126], [-204, 120], [-210, 126], [-218, 132], [-226, 126], [-232, 118], [-240, 124], [-262, 134], [-290, 134], [-310, 128], [-316, 120], [-322, 118], [-330, 126], [-340, 121]], tone: 'gold', seed: 55},
   // south, under the red maple: a round tongue in the near corner where the leaves fall; a big lobe, two small ones and a mid one on its back
   {p: [[198, 196], [202, 176], [224, 168], [250, 166], [266, 172], [272, 178], [280, 172], [292, 166], [304, 172], [310, 178], [316, 172], [334, 180], [344, 198],
-    [342, 210], [334, 220], [314, 222], [296, 217], [288, 212], [280, 216], [270, 222], [248, 224], [230, 220], [222, 213], [214, 218], [204, 212]], tone: 'gold', seed: 56},
+    [342, 210], [334, 220], [314, 222], [296, 217], [288, 212], [280, 216], [270, 222], [248, 224], [230, 220], [222, 213], [214, 218], [204, 212]], toward: POND, tone: 'gold', seed: 56},
 ];
 /** The clusters, for the measuring and checking scripts. */
 const PIECES = {ARASHIYAMA, KAMEYAMA, SHORES};

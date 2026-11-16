@@ -1,7 +1,7 @@
 // Rasterises a plate's parts with Canvas 2D. The GPU side (blur, upload) lives in three-renderer.js.
 // Channels of a painted layer:  R soft swell (blurred later)  G crisp relief  B line work  A coverage.
 import {PLATE, KIND} from './vocab.js';
-import {WEDGE_PROFILE} from './doha.js';
+import {WEDGE_PROFILE, fadeHeight} from './doha.js';
 
 const trace = (ctx, d, close) => {
   ctx.beginPath();
@@ -73,6 +73,25 @@ function paintKiriString(ctx, strings) {
   ctx.restore();
 }
 
+/**
+ * A suhama tongue's powder (doha.js tongueFade): G is how thick it lies, 1 along the drawn edge and thinning to 0 over `run`
+ * units away from it. The drawn edge is stroked again and again, each time narrower and higher, kept by 'lighten' and clipped
+ * to the tongue's outline, so the fade follows the edge round its bends. R carries the same times f.soft (a breath of swell).
+ */
+function paintTongue(ctx, f) {
+  const {coarse: runs, run} = f.fade, N = 22;
+  ctx.save();
+  trace(ctx, f.d, true); ctx.clip();
+  ctx.globalCompositeOperation = 'lighten';
+  for (let i = N; i >= 1; i--) {
+    const h = fadeHeight((i - .5) / N);
+    if (h < .004) continue;
+    ctx.strokeStyle = 'rgb(' + Math.round(255 * f.soft * h) + ',' + Math.round(255 * f.crisp * h) + ',0)'; ctx.lineWidth = 2 * run * i / N;
+    for (const r of runs) { trace(ctx, r, false); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+
 /** Paint one layer of the plate into ctx (w × h pixels). Layer 0 is opaque: it is the ground itself. */
 export function paintLayer(ctx, w, h, parts, layer) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -84,8 +103,11 @@ export function paintLayer(ctx, w, h, parts, layer) {
   for (const p of parts) {
     if (p.layer !== layer || p.limbs || p.mesh) continue;
     ctx.globalCompositeOperation = 'source-over';
+    // Fading tongues: clear what lies under the whole cluster first, then lay each one's powder; where two overlap the thicker shows.
+    if (layer === 0 && p.fills.some(f => f.fade)) { ctx.fillStyle = '#000'; for (const f of p.fills) if (f.fade) { trace(ctx, f.d, true); ctx.fill(); } }
     for (const f of p.fills) {
       if (f.wedge && layer === 0) { paintWedge(ctx, f); if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
+      if (f.fade && layer === 0) { paintTongue(ctx, f); ctx.globalCompositeOperation = 'source-over'; if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
       // A standing part is a pillow: its whole silhouette feeds the blurred channel, which becomes its dome.
       ctx.fillStyle = `rgb(${layer > 0 ? 255 : Math.round(f.soft * 255)},${Math.round(f.crisp * 255)},0)`;
       trace(ctx, f.d, true); ctx.fill();
@@ -165,7 +187,14 @@ export function bakeDensityField(doc, parts, w, h, falloff) {
       ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, (z0 + z1) / 2, Math.max((x1 - x0) / 2, 1), Math.max((z1 - z0) / 2, 1), 0, 0, 6.2832); ctx.fill();
       continue;
     }
-    for (const f of p.fills) { trace(ctx, f.d, true); ctx.fill(); }
+    for (const f of p.fills) {
+      if (f.fade) {
+        // A fading tongue gathers the ground's sprinkle where its own powder lies (along its drawn edge), not over its whole outline.
+        ctx.save(); trace(ctx, f.d, true); ctx.clip(); ctx.lineWidth = f.fade.run * 1.1;
+        for (const r of f.fade.runs) { trace(ctx, r, false); ctx.stroke(); }
+        ctx.restore();
+      } else { trace(ctx, f.d, true); ctx.fill(); }
+    }
     for (const l of p.lines) { ctx.lineWidth = l.w + (p.reach ?? 0) * 2; trace(ctx, l.d, false); ctx.stroke(); }
   }
   const rgba = ctx.getImageData(0, 0, w, h).data, mask = new Float32Array(w * h);
@@ -202,8 +231,9 @@ export function bakeContactField(doc, parts, w, h, falloff) {
       for (const f of p.fills) {
         // A mountain head's step: the head behind it lies in the step's shadow, so that near and far read without a drawn edge.
         ctx.strokeStyle = f.wedge?.far ? 'rgb(235,235,235)' : 'rgb(150,150,150)'; ctx.lineWidth = f.wedge?.far ? 6.5 : 3.4;
-        if (f.tongue) { trace(ctx, f.d, true); ctx.stroke(); }
-        else if (f.wedge) {
+        // A suhama tongue is ground flush with the lid (togidashi): it has no step, so it shades nothing.
+        if (f.tongue) continue;
+        if (f.wedge) {
           ctx.beginPath(); let pen = false;
           for (const [x, z, e] of f.wedge.ridge) {
             if (e < .3) { pen = false; continue; }

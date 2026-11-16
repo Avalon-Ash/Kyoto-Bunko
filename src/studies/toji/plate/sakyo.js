@@ -54,7 +54,7 @@ export function sakyo() {
     ...mountain('higashiyama', HEADS),
     // Daimonji: the character 大 in cut gold on the tall head's flank, right of the pavilion's roof.
     ...daimonji('daimonji', -32, -190, 66, {on: 'higashiyama-blue', tile: 7.2}),
-    ...tongues('shore', SHORES),
+    ...tongues('shore', SHORES, {toward: [[-230, 36], [-182, 36], [-130, 36]]}),
     ...pond('kinkyo', -182, 36, 112, 67, 5),
     ...sandGarden('ginshadan', 14, 249, 0, 102),
     // Grass at the pond's edge: a few tufts of gold line work on the west, south and east banks, none on the pavilion's side.
