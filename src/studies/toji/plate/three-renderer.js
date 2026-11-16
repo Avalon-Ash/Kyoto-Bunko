@@ -19,7 +19,7 @@ import {createCord, cordTube} from './cord.js';
 import {stepSpring} from './spring.js';
 import {groundPoint, normalize, trailIntensity} from '../geometry.js';
 import {
-  MATERIALS, BOX_MATERIALS, GROUND_LID, STATE_WIDTH, STATE_HEIGHT, packLifeState,
+  MATERIALS, agedSpec, BOX_MATERIALS, GROUND_LID, STATE_WIDTH, STATE_HEIGHT, packLifeState,
   meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox,
   bakeSoftLayer, mistGeometryData, PART_MOTION_GLSL, PART_LIGHT_GLSL, PART_KIRIKANE_GLSL, BOX_MOTION_GLSL, BOX_GROUND_GLSL, BOX_GROUND_DEPTH_GLSL,
   TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, DENSITY,
@@ -171,7 +171,7 @@ float kyotoRockRim = pow(1. - clamp(dot(normalize(vNormal), normalize(vViewPosit
 float kyotoRockAmt = smoothstep(K_ROCK_AMT_LO, K_ROCK_AMT_HI, kyotoRockNL) * mix(K_ROCK_LOW_AMT, 1., smoothstep(1.5, 12., vLift)) + kyotoRockRim * K_ROCK_RIM_AMT;
 vec2 kyotoRockTilt; float kyotoRockTone;
 float kyotoRockKiri = kyotoRockKiriPattern(kyotoRockXZ, kyotoRockAmt, uPx, kyotoRockTilt, kyotoRockTone);
-vec3 kyotoRockFoil = kyotoRockSilver ? mix(K_ROCK_FOIL_OXID, K_ROCK_FOIL_SILVER, smoothstep(.15, .6, kyotoRockAmt)) : mix(K_ROCK_FOIL_OXID, K_KIRI_GOLD, smoothstep(.15, .6, kyotoRockAmt));
+vec3 kyotoRockFoil = kyotoRockSilver ? mix(K_ROCK_FOIL_OXID, K_ROCK_FOIL_SILVER, smoothstep(.15, .6, kyotoRockAmt)) : mix(K_ROCK_FOIL_OXID, kyotoKiriGold(), smoothstep(.15, .6, kyotoRockAmt));
 kyotoRockFoil *= .9 + .2 * kyotoRockTone;
 diffuseColor.rgb = mix(K_ROCK_BODY_SHADE, kyotoRockSilver ? K_ROCK_BODY_SILVER : K_ROCK_BODY_GOLD, kyotoRockLit);
 diffuseColor.rgb = mix(diffuseColor.rgb, kyotoRockFoil, kyotoRockKiri * K_ROCK_KIRI_COVER);`)
@@ -214,7 +214,7 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
   };
   const patchLimbMaterial = (material, spec) => {
     // Wood is silver where the foliage is gold (Hatsune); a tree that flowers in silver keeps gold wood.
-    const silver = spec.name === 'silver', foil = silver ? 'K_ROCK_FOIL_SILVER' : 'K_KIRI_GOLD';
+    const silver = spec.name === 'silver', foil = silver ? 'K_ROCK_FOIL_SILVER' : 'kyotoKiriGold()';
     material.customProgramCacheKey = () => `kyoto-limb-${spec.glow ? 1 : 0}-${silver ? 's' : 'g'}-kiri-v2`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
@@ -413,7 +413,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       if (!cache.has(mat)) {
         const spec = MATERIALS[mat];
         if (!spec) throw new Error(`three renderer: no material for MAT ${mat}`);
-        cache.set(mat, patch(physical(spec, extra), spec));
+        cache.set(mat, patch(physical(agedSpec(spec, shared.uAge.value), extra), spec));
       }
       return cache.get(mat);
     };
@@ -787,9 +787,11 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
 
     // Light: a key from the window side, a cool dim room by night, and the hand's own lamp.
     const night = f.night;
-    ambient.color.set(night ? '#7f96d6' : '#fff4e0'); ambient.intensity = night ? .35 : .55;
-    key.color.set(night ? '#9fb4e8' : '#fff0d6'); key.intensity = night ? 1.7 : 3.4;
-    scene.environmentIntensity = night ? .22 : .55;
+    // An aged box sits in a quieter day: the night is already as dim as the Hatsune photographs.
+    const age = shared.uAge.value, dayDim = night ? 1 : 1 - .24 * age;
+    ambient.color.set(night ? '#7f96d6' : '#fff4e0'); ambient.intensity = (night ? .35 : .55) * dayDim;
+    key.color.set(night ? '#9fb4e8' : '#fff0d6'); key.intensity = (night ? 1.7 : 3.4) * dayDim;
+    scene.environmentIntensity = (night ? .22 : .55) * dayDim;
     lamp.position.set(lampAt[0], lampAt[1], lampAt[2]); lamp.intensity = (night ? 120000 : 50000) * (.15 + presence.x);
 
     shared.uLamp.value.set(lampAt[0], lampAt[1], lampAt[2]);
