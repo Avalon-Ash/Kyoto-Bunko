@@ -53,55 +53,59 @@ const FOX = [
   {at: [250, 184], p: [[-16, 0], [-8, -8], [6, -8], [16, 0], [10, 8], [-4, 10], [-14, 6]], tone: 'silver', seed: 43},
 ];
 
-// Rocks (docs/plans/2026-11-16-doha.md §15.1, §16): only in the near land, each cluster against something. A cluster is one large crag
-// of four or five lobes (a hand-written outline each, [dx, dz] points round it; h its height; a lobe listed later lies over the one
-// before), one or two small lobes beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of
-// cut-gold squares. Everything is relative to (x, z). on: what it stands against; why: the reason it is there. No rock on the mountain.
+// Rocks (docs/plans/2026-11-16-doha.md §15.1, §17): only in the near land, each cluster against something. A cluster is one large crag
+// of four to six lobes, each a thick slab of low relief (a hand-written outline: its cusps [dx, dz], round bulges between them; h its
+// height; t its terraces [k, dx, dz, h]); a lobe listed later stands on whatever it lies over. Then one or two small lobes beside
+// it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
+// (x, z). on: what it stands against; why: the reason it is there. No rock on the mountain.
 export const ROCKS = [
-  // between the east post of the great torii and the root of the pine: a tall crown at the back with a hole through it, a silver
-  // shoulder at the left, a broad olive swell in front, a gold knob and a low silver skirt
+  // between the east post of the great torii and the root of the pine: a back slab with a hole through it, a gold and a silver slab
+  // at its sides, a broad olive one over their feet, two small slabs in front
   {id: 'torii-foot', x: -139, z: 211,
     crags: [
       {lobes: [
-        {mat: 'olive', h: 27, d: [[-14, -2], [-15, -9], [-11, -13], [-9, -19], [-4, -17], [-1, -23], [4, -18], [8, -20], [11, -14], [9, -9], [13, -5], [9, 0], [2, -2], [-4, 1], [-9, 0]], holes: [[[-3, -12], [0, -14], [2, -11], [0, -8]]]},
-        {mat: 'silver', h: 11, d: [[-25, -3], [-23, -9], [-18, -8], [-14, -12], [-11, -6], [-12, 1], [-15, 6], [-20, 8], [-26, 5]]},
-        {mat: 'olive', h: 13, d: [[-12, 4], [-9, -2], [-3, -4], [3, -2], [8, -4], [11, 1], [8, 6], [2, 9], [-5, 8], [-10, 10]]},
-        {mat: 'gold', h: 7, d: [[8, 2], [12, -2], [17, -1], [19, 3], [16, 8], [10, 8]]},
-        {mat: 'silver', h: 5, d: [[-9, 10], [-3, 8], [4, 9], [9, 12], [5, 15], [-2, 15], [-9, 14]]},
+        {mat: 'olive', h: 3.4, d: [[-12, -14], [-3, -16], [6, -14], [9, -8], [6, -2], [-4, -1], [-12, -4]], holes: [[[-4, -11], [0, -12], [2, -8], [-2, -6]]], t: [[.64, -1, .5, 1.3], [.36, -2, 1.2, 1]]},
+        {mat: 'gold', h: 3, d: [[-26, -5], [-18, -9], [-10, -6], [-6, 0], [-10, 5], [-19, 6], [-25, 3]], t: [[.6, -.5, -1, 1.2]]},
+        {mat: 'silver', h: 2.8, d: [[2, -5], [9, -9], [17, -8], [22, -2], [20, 5], [11, 7], [4, 3]], t: [[.58, 1, .5, 1.1]]},
+        {mat: 'olive', h: 2.6, d: [[-14, -1], [-6, -7], [2, -7], [10, -3], [12, 5], [5, 11], [-5, 11], [-12, 7]], t: [[.6, 0, 1.5, 1.2], [.32, 1.5, 2, .9]]},
+        {mat: 'gold', h: 2.2, d: [[-22, 7], [-15, 4], [-9, 6], [-4, 10], [-9, 15], [-17, 15]], t: [[.55, -.5, 1, 1]]},
+        {mat: 'silver', h: 2, d: [[2, 10], [8, 6], [15, 6], [20, 11], [16, 15], [8, 15]]},
       ]},
-      {lobes: [{mat: 'silver', h: 4, d: [[-38, 2], [-37, -4], [-33, -6], [-30, -3], [-31, 2], [-35, 3]]}]},
+      {lobes: [{mat: 'silver', h: 1.8, d: [[-38, 1], [-35, -4], [-30, -4], [-29, 1], [-33, 4]]}]},
     ],
-    lines: [[[1, -17], [0, -11], [-2, -5], [-3, 1]], [[6, -16], [8, -11], [7, -5]], [[-6, -14], [-9, -8], [-10, -3]], [[-20, -5], [-18, 0], [-17, 5]], [[-6, 0], [-1, 1], [5, 0], [8, -1]], [[13, 0], [15, 4]]],
-    pebbles: [[-13, 14, 3.4, 2, .9, .2, 'silver'], [8, 17, 2.4, 1.6, .7, -.3, 'olive'], [20, 10, 3, 1.9, .8, .1, 'silver'], [-30, 8, 2.2, 1.5, .6, 0, 'olive']],
+    lines: [[[-4, -14], [-1, -9], [-2, -4]], [[4, -13], [6, -9], [5, -4]], [[-22, -6], [-19, -1], [-20, 4]], [[12, -7], [16, -3], [15, 3]], [[-8, 2], [-1, 4], [6, 3]]],
+    pebbles: [[-13, 19, 3.4, 2, .9, .2, 'silver'], [8, 20, 2.4, 1.6, .7, -.3, 'olive'], [24, 11, 3, 1.9, .8, .1, 'silver'], [-30, 8, 2.2, 1.5, .6, 0, 'olive']],
     on: 'the east post of the great torii and the root of the pine, on the big gold ground', why: 'a stone where the torii post and the pine both plant their feet, the stone that holds the ground between them'},
-  // at the foot of the two-storey gate: two crowns with a deep notch between, bridged low by a silver swell; a small stone at its side
+  // at the foot of the two-storey gate: two crowns, a silver slab bridging them low, a small stone at its side
   {id: 'romon-step', x: -166, z: 47,
     crags: [
       {lobes: [
-        {mat: 'olive', h: 26, d: [[-24, -4], [-22, -12], [-17, -15], [-14, -22], [-9, -16], [-5, -12], [-4, -5], [-7, 0], [-13, 2], [-20, 2]]},
-        {mat: 'gold', h: 22, d: [[4, -6], [6, -13], [11, -11], [15, -17], [19, -10], [18, -4], [22, 0], [17, 4], [9, 3]]},
-        {mat: 'silver', h: 8, d: [[-14, 2], [-8, -2], [0, -1], [8, 1], [15, 3], [12, 8], [4, 9], [-6, 10], [-13, 8]]},
-        {mat: 'olive', h: 9, d: [[6, 6], [11, 5], [15, 8], [13, 12], [7, 12]]},
-        {mat: 'gold', h: 6, d: [[-22, 6], [-17, 5], [-14, 9], [-18, 13], [-23, 11]]},
+        {mat: 'olive', h: 3.4, mv: [1, 3], d: [[-22, -12], [-16, -18], [-8, -17], [-3, -11], [-5, -4], [-14, -2], [-21, -5]], t: [[.62, -1, -.5, 1.3], [.34, -2.5, -1, 1]]},
+        {mat: 'gold', h: 3.2, mv: [-1, 3], d: [[4, -9], [8, -15], [15, -16], [21, -11], [20, -4], [12, -2], [6, -4]], t: [[.6, 1.5, 0, 1.2]]},
+        {mat: 'silver', h: 2.8, d: [[-13, -1], [-6, -7], [3, -8], [11, -6], [16, 0], [10, 6], [-2, 7], [-10, 5]], t: [[.58, 0, 0, 1.1]]},
+        {mat: 'olive', h: 2.4, mv: [4, -6], d: [[-23, 5], [-17, 1], [-10, 2], [-6, 7], [-11, 12], [-19, 12]], t: [[.55, -1, .5, 1]]},
+        {mat: 'gold', h: 2.4, mv: [-3, -6], d: [[3, 4], [8, 0], [16, -1], [21, 4], [18, 10], [10, 12], [4, 10]], t: [[.56, 1, .5, 1]]},
+        {mat: 'silver', h: 1.9, mv: [0, -6], d: [[-7, 9], [-2, 5], [4, 6], [8, 10], [3, 14], [-4, 13]]},
       ]},
-      {at: [30, 5], lobes: [{mat: 'olive', h: 6, d: [[-4, -4], [-1, -9], [4, -9], [7, -5], [5, 0], [-1, 1]]}, {mat: 'silver', h: 3, d: [[-3, 1], [1, 0], [4, 3], [0, 6], [-4, 4]]}]},
+      {at: [30, 5], lobes: [{mat: 'olive', h: 2.2, d: [[-4, -4], [-1, -9], [4, -9], [7, -5], [5, 0], [-1, 1]]}, {mat: 'silver', h: 1.5, d: [[-3, 1], [1, 0], [4, 3], [0, 6], [-4, 4]]}]},
     ],
-    lines: [[[-14, -18], [-13, -12], [-15, -6], [-17, 0]], [[-9, -13], [-8, -7], [-9, -2]], [[11, -14], [12, -8], [14, -3]], [[17, -11], [19, -5]], [[-9, 4], [-3, 6], [4, 6]], [[30, -7], [32, -3], [33, 1]]],
-    kiri: [{at: [-14, -9], cols: 2, rows: 3, turn: .2}],
-    pebbles: [[-25, 11, 3, 1.8, .8, .1, 'silver'], [17, 15, 3.6, 2, .9, -.2, 'olive'], [28, 12, 2.2, 1.5, .6, .4, 'silver'], [-26, -3, 2, 1.4, .6, 0, 'olive']],
+    lines: [[[-17, -14], [-12, -11], [-10, -6]], [[-6, -6], [-2, -4], [3, -5]], [[10, -12], [14, -9], [16, -4]], [[-18, 5], [-14, 8]], [[8, 3], [14, 5]], [[30, -7], [32, -3]]],
+    kiri: [{at: [-13, -9], cols: 2, rows: 3, turn: .2}],
+    pebbles: [[-25, 11, 3, 1.8, .8, .1, 'silver'], [17, 16, 3.6, 2, .9, -.2, 'olive'], [28, 12, 2.2, 1.5, .6, .4, 'silver'], [-26, -3, 2, 1.4, .6, 0, 'olive']],
     on: 'the small gold ground east of the two-storey gate, at its foot', why: 'the stone the steps of the gate rest on'},
-  // by the fox seat: a long spine that rises from the left, one steep crown, falls away to the right; a gold lobe in front, a silver shoulder at the left
+  // by the fox seat: a long back slab, a gold and a silver one at its flanks, a broad one in front, a small gold step at the right end
   {id: 'fox-seat', x: 227, z: 212,
     crags: [
       {lobes: [
-        {mat: 'olive', h: 25, d: [[-18, -2], [-16, -8], [-11, -11], [-7, -19], [-2, -17], [3, -21], [8, -14], [14, -10], [20, -8], [24, -3], [20, 0], [12, -1], [4, 2], [-6, 3], [-14, 3]]},
-        {mat: 'silver', h: 9, d: [[-24, 2], [-21, -3], [-16, -3], [-12, 2], [-13, 7], [-18, 9], [-23, 8]]},
-        {mat: 'gold', h: 11, d: [[-3, 2], [2, -2], [10, -1], [14, 3], [11, 8], [3, 10], [-3, 8]]},
-        {mat: 'olive', h: 6, d: [[14, -6], [19, -9], [24, -5], [22, 0], [16, 0]]},
+        {mat: 'olive', h: 3.2, d: [[-18, -8], [-12, -14], [-4, -19], [6, -19], [16, -16], [23, -10], [19, -5], [6, -4], [-9, -4]], t: [[.68, -1.5, -1, 1.3], [.4, -4, -1.5, 1]]},
+        {mat: 'gold', h: 3, d: [[-7, -1], [-1, -8], [8, -8], [16, -5], [18, 1], [11, 6], [1, 6]], t: [[.58, 0, 0, 1.2]]},
+        {mat: 'silver', h: 2.6, mv: [4, -1], d: [[-23, 0], [-18, -6], [-11, -5], [-8, 1], [-11, 7], [-19, 8]], t: [[.55, -.5, .5, 1]]},
+        {mat: 'olive', h: 2.4, mv: [-9, -5], d: [[-5, 8], [0, 3], [8, 2], [14, 6], [11, 12], [3, 14], [-3, 12]], t: [[.55, .5, 1, 1]]},
+        {mat: 'gold', h: 2.2, d: [[13, -3], [17, -8], [23, -7], [26, -2], [22, 2], [16, 1]]},
       ]},
     ],
-    lines: [[[-7, -16], [-9, -10], [-11, -4], [-12, 1]], [[-1, -15], [0, -9], [-1, -3]], [[10, -9], [12, -5], [13, -1]], [[-19, 0], [-18, 4]], [[2, 3], [7, 4], [11, 3]]],
-    pebbles: [[-28, 9, 2.6, 1.7, .7, .2, 'silver'], [14, 13, 3.2, 1.9, .8, -.1, 'olive'], [-2, 15, 2.2, 1.4, .6, .3, 'silver']],
+    lines: [[[-8, -14], [-3, -11], [-2, -6]], [[8, -14], [14, -11], [16, -7]], [[-18, -2], [-16, 3]], [[0, 1], [6, 3], [12, 2]], [[-1, 10], [6, 9]]],
+    pebbles: [[-28, 9, 2.6, 1.7, .7, .2, 'silver'], [14, 17, 3.2, 1.9, .8, -.1, 'olive'], [-2, 18, 2.2, 1.4, .6, .3, 'silver']],
     on: 'the shore of the fox ground, east of its stone seat', why: 'a stone by the seat: the fox sits among stones'},
 ];
 
