@@ -52,7 +52,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ## 4. 下一步
 
-1. **等使用者決定**：疊坡的樣板方向對不對（[開案書](plans/2026-11-16-doha.md)、[報告](agent-runs/2026-11-16-doha-pilot.md)）；對了才派其餘九區。屋頂（[開案書](plans/2026-11-16-roof-makie.md)）要不要先合併。工具：`node scripts/plate-doha-measure.mjs`、`node scripts/plate-clip.mjs <out.json>`、`PLATE_KIRI=1`／`PLATE_TONE=1 node scripts/plate-shot.mjs …`（都要 dev server）。
+1. **等使用者決定**：疊坡的樣板（[開案書](plans/2026-11-16-doha.md) §14）做了三輪，形對了但金的山與岸和地同亮度；主席建議先做「地與調子」（同檔 §13.1：地壓深、金片變大變多色、三層亮度）再回來。屋頂（[開案書](plans/2026-11-16-roof-makie.md)）在 `claude/roof-1116`，還沒合併。參考圖在 `.shots/ref/`（不提交）：使用者的收藏相簿、初音的局部、江戶印籠。工具：`node scripts/plate-doha-measure.mjs`、`plate-doha-similar.mjs`、`plate-clip.mjs <out.json>`、`PLATE_KIRI=1`／`PLATE_TONE=1 node scripts/plate-shot.mjs …`（都要 dev server）。
 2. 地圖：使用者 2026-11-16 決定不做（現況夠用）。[備忘錄](plans/2026-11-16-r10-map-evaluation.md)留作紀錄。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
 4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核；各食處報告裡列的描述細節（米其林、創業年）；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
