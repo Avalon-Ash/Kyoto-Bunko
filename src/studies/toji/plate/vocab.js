@@ -174,9 +174,10 @@ function mapleLeaf(cx, cz, radius, turn) {
  * small it is: this is where a picture says what the solids are too round to say. Densest at the centre of the drift.
  * mats: [name, material, every]. The first is the body; each later one takes one piece in `every` (3 if not given),
  * the last listed winning where two fall on the same piece.
+ * An inlay owns its outline and half a unit round it (reach .5): the lid's material stops where the piece stops.
  */
 function scatter(id, cx, cz, rx, rz, count, seed, size, shape, mats) {
-  const r = rand(seed), parts = mats.map(([name, mat]) => part(`${id}-${name}`, KIND.still, 0, mat, [cx, cz]));
+  const r = rand(seed), parts = mats.map(([name, mat]) => part(`${id}-${name}`, KIND.still, 0, mat, [cx, cz], {reach: .5}));
   const clamp = (v, m) => Math.max(-m, Math.min(m, v));
   for (let i = 0; i < count; i++) {
     const a = r() * 6.283, q = Math.pow(r(), .7), R = size * (.75 + r() * .6), m = R + 2;
@@ -219,7 +220,7 @@ export function moon(id, cx, cz, radius, {ripples = 3} = {}) {
   const disc = part(id, KIND.still, 0, MAT.aogai, [cx, cz]);
   disc.fills.push({d: blob(cx, cz, radius, radius, 2, 0, 40), soft: 0, crisp: 1});
   if (!ripples) return [disc];
-  const wake = part(`${id}-wake`, KIND.still, 0, MAT.kirigin, [cx, cz + radius * 2]);
+  const wake = part(`${id}-wake`, KIND.still, 0, MAT.kirigin, [cx, cz + radius * 2], {reach: .5});
   for (let i = 0; i < ripples; i++) {
     const z = cz + radius * (1.5 + i * .62), half = radius * (.95 - i * .22), h = Math.max(1.4, radius * .1), dx = (i % 2 ? -1 : 1) * radius * .22;
     wake.fills.push({d: [[cx + dx - half, z - h], [cx + dx + half, z - h], [cx + dx + half * .8, z + h], [cx + dx - half * .8, z + h]], soft: 0, crisp: 1});
@@ -228,7 +229,7 @@ export function moon(id, cx, cz, radius, {ripples = 3} = {}) {
 }
 /** A fox's trail in cut silver: `points` are [x, z] along its way, the prints falling left and right of the line. */
 export function pawPrints(id, points, {size = 4.6} = {}) {
-  const p = part(id, KIND.still, 0, MAT.kirigin, points[0]);
+  const p = part(id, KIND.still, 0, MAT.kirigin, points[0], {reach: .5});
   points.forEach(([x, z], i) => {
     const [nx, nz] = points[Math.min(i + 1, points.length - 1)], [px, pz] = points[Math.max(i - 1, 0)], a = Math.atan2(nz - pz, nx - px);
     const side = i % 2 ? 1 : -1, ox = x - Math.sin(a) * side * size * .9, oz = z + Math.cos(a) * side * size * .9;

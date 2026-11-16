@@ -21,7 +21,8 @@ export function stampedTree(id, x, z, h, lean, seed, species) {
   const r = rand(seed), dir = Math.sign(lean) || 1;
   const at = (dx, up) => [x + lean * up + dx * h, z - up * h];
   const limb = (pts, radii) => { const points = curve(pts, radii); p.limbs.push({points, bark: species === 'pine' ? 1 : 0, mat: species === 'cherry' ? MAT.gold : MAT.silver}); };
-  const stamp = (cell, px, pz, w, hh, turn, mat) => p.stamps.push({cell,x:px,z:pz,w,h:hh,turn,mat,offset:4.8+p.stamps.length*.035,relief:species==='pine'?.42:.24});
+  // A coral leaf lies on top of its neighbours, so it shows whole and not as slivers between them.
+  const stamp = (cell, px, pz, w, hh, turn, mat) => p.stamps.push({cell,x:px,z:pz,w,h:hh,turn,mat,offset:4.8+p.stamps.length*.035+(mat===MAT.coral?1.2:0),relief:species==='pine'?.42:.24});
   if (species === 'pine') {
     const spine = [at(0,0),at(-dir*.045,.18),at(dir*.04,.35),at(-dir*.055,.55),at(dir*.025,.75),at(0,.93)];
     limb(spine,[h*.065,h*.052,h*.042,h*.030,h*.021,.6]);

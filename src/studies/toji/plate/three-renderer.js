@@ -319,6 +319,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       side: THREE.DoubleSide, shadowSide: THREE.DoubleSide, ...extra,
     });
     if (spec.emissive) { m.emissive.set(spec.emissive); m.emissiveIntensity = 1; }
+    if (spec.envMapIntensity) m.envMapIntensity = spec.envMapIntensity;
     if (spec.iridescence) { m.iridescence = spec.iridescence; m.iridescenceIOR = spec.iridescenceIOR; m.iridescenceThicknessRange = [...spec.iridescenceThicknessRange]; }
     if (spec.flake) { m.normalMap = flake; m.normalScale.set(spec.flake, spec.flake); }
     return own(m);
