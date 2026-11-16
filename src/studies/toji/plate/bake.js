@@ -188,7 +188,12 @@ export function bakeDensityField(doc, parts, w, h, falloff) {
       continue;
     }
     for (const f of p.fills) {
-      if (f.fade) {
+      if (f.wedge) {
+        // A bank or a far mountain gathers the sprinkle under its powder (a band below the ridge), not over its whole outline.
+        ctx.save(); trace(ctx, f.d, true); ctx.clip(); ctx.lineWidth = f.wedge.depth * .7;
+        ctx.beginPath(); f.wedge.ridge.forEach(([x, z], i) => i ? ctx.lineTo(x, z + f.wedge.depth * .3) : ctx.moveTo(x, z + f.wedge.depth * .3)); ctx.stroke();
+        ctx.restore();
+      } else if (f.fade) {
         // A fading tongue gathers the ground's sprinkle where its own powder lies (along its drawn edge), not over its whole outline.
         ctx.save(); trace(ctx, f.d, true); ctx.clip(); ctx.lineWidth = f.fade.run * 1.1;
         for (const r of f.fade.runs) { trace(ctx, r, false); ctx.stroke(); }

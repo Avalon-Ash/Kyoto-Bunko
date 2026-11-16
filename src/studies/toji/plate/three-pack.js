@@ -935,8 +935,9 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   float dField=texture(uDens,mPuv(kp)).r;
   // Maki-bokashi: powder gathers toward things and thins in the open. On an old, darker ground the grading carries
   // further (M_AGE_BOKASHI times as strong at age 1): it is what joins a form to the ground it stands on.
-  // (A gold suhama's ground is the plain ground itself: its powder is laid over it and thins into it.)
-  if(mat==1||mat==21){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
+  // (Under a bank, a gold suhama or a far mountain the ground is the plain ground itself: their powder is laid over it and thins into it,
+  // so nothing marks where their outline runs.)
+  if(mat==1||(mat>=19&&mat<=21)||mat==23||mat==24){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
   else if(mat==2||mat==3){
     float cloud=mat==3?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
     // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
@@ -1018,11 +1019,14 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     // it is the ground's own. No flake, no cut gold, no grain but the powder's. Powder is laid on or left off; no dark is mixed in.
     float Ht=fine.g,a=smoothstep(.0,.85,Ht),ridgeV=smoothstep(.45,1.,Ht),edgeV=smoothstep(.6,1.,Ht);
     // A silver head (24) is made the way a gold one is: opaque pale silver powder, a warm neutral, thinning from the ridge to the ground. Its ridge is a line of gold.
-    vec3 pw=mat==23?mix(M_GOLD,M_PALE,.8):vec3(.96,.92,.84);
+    // A blue-gold head (24, aokin: gold with silver in it) is a pale, greenish gold, never white.
+    vec3 pw=mat==23?mix(M_GOLD,M_PALE,.8):vec3(.95,.90,.58);
     vec3 pwd=mNashiji(kp,mix(1.4,2.5,Ht),pw)*mix(1.55,2.1,ridgeV);
     // Silver is laid thick: opaque over most of the face (the ground's flakes do not show through), and only the last of the slope thins into the ground.
-    if(mat==24){pwd=mix(mMetal(kp,pw*.9,.9)*1.22,pwd*1.05,.3);a=1.-pow(1.-smoothstep(.0,.5,Ht),2.2);}
-    c=mix(c,pwd,a)+(mat==24?mMetal(kp,M_GOLD*1.25,1.)*2.2*smoothstep(.55,.9,Ht):mMetal(kp,pw,.9)*.9*edgeV);
+    if(mat==24){pwd=mix(mMetal(kp,pw*.9,.9)*1.1,pwd*1.05,.35);a=1.-pow(1.-smoothstep(.0,.4,Ht),2.4);}
+    // Gold: toward the ridge the powder closes into a matt body (the ground's flakes no longer show through); lower down it is a veil.
+    else{pwd=mix(pwd,mMetal(kp,pw,.9)*1.05,.3+.4*smoothstep(.1,.7,Ht));a=1.-pow(1.-smoothstep(.0,.45,Ht),2.);}
+    c=mix(c,pwd,a)+(mat==24?mMetal(kp,M_GOLD*1.25,1.)*1.5*smoothstep(.55,.9,Ht):mMetal(kp,pw,.9)*.9*edgeV);
   }
   if(kAmt>0.){
     // Halftone kirikane on banks: light-facing slopes and the rim of the bank get the big pieces.
