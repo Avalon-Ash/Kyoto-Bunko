@@ -1,97 +1,74 @@
-// Crag: a Hatsune-style rock for the two pilot wards (docs/plans/2026-11-16-doha.md §15.1, §17). Not a solid but a few slabs of thick,
-// low relief laid one over another: each lobe has a hand-written scalloped outline (a cusp, a round bulge, a cusp), a steep shoulder
-// and a nearly flat top, with one or two terraces drawn in on it like contour lines; a later lobe stands on whatever it lies over.
-// Every lobe has its own powder (blue-gold, pale gold or pale silver). Over the faces run a few fine raised lines in the grain of
-// the rock (the stroke of a fude), and on a few lit faces a small group of cut-gold squares. At the foot there are flat pebbles.
-// All of it is written by hand in the ward's file; only the surface is computed here.
+// Crag: a Hatsune-style rock for the two pilot wards (docs/plans/2026-11-16-doha.md §15.1). Not a mound with a star outline but a
+// handful of blocks laid one in front of another, each a ridge (a polyline of [dx, dz, height, radius]) whose two sides fall away
+// in planes to the ground. The blocks are united by their highest surface, so two blocks meet in a crease, and the front block
+// lies over the one behind it. Every block has its own powder (blue-gold, pale gold or pale silver). Over the faces run a few fine
+// raised lines in the grain of the rock (the stroke of a fude), and on a few lit faces a small group of cut-gold squares. At the
+// foot there are flat pebbles. All of it is written by hand in the ward's file; only the surface is computed here.
 // Pure geometry. Returns one plate part (`mesh` + `fills` for the bake and for picking), like meshRock.
 import {MAT} from './mat.js';
 import {KIND} from './vocab.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const unit = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
-const STEP = .9;
+const STEP = 1.1;
 /** How far the whole form sinks below the lid, so that its foot is in the ground and no edge stands. */
 const SINK = .3;
 const BODY = {olive: MAT.rockOlive, gold: MAT.rockGold, silver: MAT.rockSilver};
 
-/** The distance of (px, pz) to the segment a-b. */
-function segD(px, pz, a, b) {
+/** The distance of (px, pz) to the segment a-b, and where along it (0..1) the nearest point is. */
+function toSeg(px, pz, a, b) {
   const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz, t = l2 > 1e-9 ? clamp(((px - a[0]) * dx + (pz - a[1]) * dz) / l2, 0, 1) : 0;
-  return Math.hypot(px - a[0] - t * dx, pz - a[1] - t * dz);
+  return [Math.hypot(px - a[0] - t * dx, pz - a[1] - t * dz), t];
 }
-const ringD = (x, z, r) => { let d = Infinity; for (let i = 0; i < r.length; i++) d = Math.min(d, segD(x, z, r[i], r[(i + 1) % r.length])); return d; };
-const inRing = (x, z, r) => {
-  let inside = false;
-  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
-    const a = r[i], b = r[j];
-    if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
+
+/** The height of one block at (x, z): the highest of its ridge segments, each a plane sloping from the ridge to the ground. */
+/** The lumpiness of a rock's surface: two slow waves, one of about 8 units and one of about 3.3, each with phases from the crag's seed. */
+function lumps(seed) {
+  return (x, z, fine) => fine
+    ? Math.sin(1.9 * x - 1.3 * z + seed * 3.1) * Math.sin(1.7 * z + 1.1 * x + seed * .7)
+    : Math.sin(.83 * x + .57 * z + seed * 1.7) * Math.sin(.61 * z - .49 * x + seed * 2.3);
+}
+function blockHeight(bl, x, z, nz) {
+  const q = bl.q ?? .72, top = bl.top ?? .4, r = bl.ridge;
+  let best = 0;
+  for (let i = 0; i < r.length - 1 || (r.length === 1 && i === 0); i++) {
+    const a = r[i], b = r[Math.min(i + 1, r.length - 1)], [d0, t] = toSeg(x, z, a, b), d = d0 * (1 - .2 * nz(x, z, false)), R = a[3] + (b[3] - a[3]) * t, Y = a[2] + (b[2] - a[2]) * t;
+    const k = clamp((d - top * R) / (R * (1 - top)), 0, 1);
+    if (k < 1) best = Math.max(best, Y * Math.pow(1 - k, q));
   }
-  return inside;
-};
-
-/**
- * The scalloped outline of a lobe: `pts` are the hand-written cusps (the sharp notches), taken in order round the shape; between two
- * of them the edge is a round bulge (an arc of the circle through both, `bulge` of the half chord deep) pushed away from the heart.
- * A lobe of five to nine cusps has five to nine such bulges: the edge of a cloud or a wood-ear fungus.
- */
-function scallop(pts, bulge = .5, per = 7) {
-  const c = pts.reduce((m, p) => [m[0] + p[0] / pts.length, m[1] + p[1] / pts.length], [0, 0]), out = [];
-  for (let i = 0; i < pts.length; i++) {
-    const a = pts[i], b = pts[(i + 1) % pts.length], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1;
-    let nx = -dz / l, nz = dx / l;
-    if (nx * ((a[0] + b[0]) / 2 - c[0]) + nz * ((a[1] + b[1]) / 2 - c[1]) < 0) { nx = -nx; nz = -nz; }
-    const sag = bulge * l / 2;
-    for (let k = 0; k < per; k++) { const t = k / per, w = Math.sin(Math.PI * t); out.push([a[0] + dx * t + nx * sag * w, a[1] + dz * t + nz * sag * w]); }
+  // Strata: shallow creases across the block in the lean of the rock, one every `period` units, `amp` deep (the folds of its face).
+  const st = bl.strata;
+  if (st && best > 0) {
+    const u = (x * Math.cos(st.ang) + z * Math.sin(st.ang)) / st.period + (st.phase ?? 0), f = Math.abs(u - Math.round(u)) * st.period;
+    if (f < (st.w ?? 1)) best -= st.amp * (1 - f / (st.w ?? 1)) * Math.min(1, best / 3);
   }
-  return out;
+  return Math.max(0, best * (1 + .15 * nz(x, z, false) + .022 * nz(x, z, true)));
 }
 
-/**
- * One lobe of a crag, written as a thick slab of relief: its outline (cusps in `d`, scalloped; `holes` plain) stands up with a steep
- * shoulder `s` wide and then is nearly flat, so every cusp and hole of the outline reads as it was written. Inside it, `t` lists
- * terraces: [k, dx, dz, h], a smaller outline (the same cusps drawn in by k about the heart, moved by dx, dz and swelled or
- * pinched a little from cusp to cusp, so it is not a copy), `h` higher still. l: {mat, h, d, bulge?, holes?, t?}
- */
-function lobeOf(l, ox, oz, seed) {
-  ox += l.mv?.[0] ?? 0; oz += l.mv?.[1] ?? 0;
-  const mv = r => r.map(([x, z]) => [x + ox, z + oz]), holes = (l.holes ?? []).map(mv);
-  const centre = l.d.reduce((m, p) => [m[0] + p[0] / l.d.length, m[1] + p[1] / l.d.length], [0, 0]);
-  const levels = [{d: l.d, h: l.h, s: 2.2, bulge: l.bulge ?? .5}];
-  (l.t ?? []).forEach(([k, dx, dz, h], n) => levels.push({
-    d: l.d.map(([x, z], i) => { const f = k * (1 + .17 * Math.sin(i * 2.3 + n * 4.1 + seed)); return [centre[0] + dx + (x - centre[0]) * f, centre[1] + dz + (z - centre[1]) * f]; }),
-    h, s: 1.5, bulge: (l.bulge ?? .5) * .8,
-  }));
-  return levels.map((lv, n) => {
-    const outer = mv(scallop(lv.d, lv.bulge)), rings = [outer, ...holes];
-    const xs = outer.map(p => p[0]), zs = outer.map(p => p[1]), bx0 = Math.min(...xs), bx1 = Math.max(...xs), bz0 = Math.min(...zs), bz1 = Math.max(...zs);
-    const inside = (x, z) => inRing(x, z, outer) && !holes.some(r => inRing(x, z, r)), dist = (x, z) => Math.min(...rings.map(r => ringD(x, z, r)));
-    const ph = seed * 1.3 + n;
-    return {mat: l.mat, bounds: [bx0, bz0, bx1, bz1], outer, holes, area: polyAreaOf(outer), inside, h: (x, z) => {
-      if (x < bx0 || x > bx1 || z < bz0 || z > bz1 || !inside(x, z)) return 0;
-      const t = clamp(dist(x, z) / lv.s, 0, 1), up = 1 - (1 - t) * (1 - t);
-      // a very shallow swell on the top face, so a plateau is not a table
-      return lv.h * up + .22 * Math.sin(.55 * x + ph) * Math.sin(.47 * z - ph * .6) * up;
-    }};
-  });
+/** A groove (a V along a polyline) that notches the highest blocks. g: {p: [[dx, dz]...], w, depth}. */
+function grooveCut(grooves, x, z) {
+  let cut = 0;
+  for (const g of grooves) for (let i = 0; i < g.p.length - 1; i++) {
+    const [d] = toSeg(x, z, g.p[i], g.p[i + 1]);
+    if (d < g.w) cut = Math.max(cut, g.depth * (1 - d / g.w));
+  }
+  return cut;
 }
-const polyAreaOf = d => Math.abs(d.reduce((s, [x, z], i) => { const [x2, z2] = d[(i + 1) % d.length]; return s + x * z2 - x2 * z; }, 0)) / 2;
 
-/**
- * The field of a crag: {h(x, z), b(x, z)} (height, and the index of the lobe that shows there). All in the part's own frame.
- * The lobes are laid back to front, each standing on whatever lies under it: inside its outline the surface is what was there plus
- * its own relief, so where a lobe lies over another, its steep shoulder is a ledge on the one behind, and the surface stays continuous.
- */
+/** The field of a crag: {h(x, z), b(x, z)} (height, and the index of the block that is highest there). All in the part's own frame. */
 function cragField(crag, ox, oz) {
-  const lobes = crag.lobes.flatMap((l, i) => lobeOf(l, ox, oz, i + (crag.seed ?? 0)));
+  const nz = lumps(crag.seed ?? 1);
+  const blocks = crag.blocks.map(bl => ({...bl, ridge: bl.ridge.map(([x, z, y, r]) => [x + ox, z + oz, y, r])}));
+  const grooves = (crag.grooves ?? []).map(g => ({...g, p: g.p.map(([x, z]) => [x + ox, z + oz])}));
   const pick = (x, z) => {
-    let y = 0, b = 0;
-    lobes.forEach((lb, i) => { const v = lb.h(x, z); if (v > 0) { y += v; b = i; } });
-    return [y, b];
+    let h = 0, b = 0;
+    blocks.forEach((bl, i) => { const v = blockHeight(bl, x, z, nz); if (v > h + 1e-9) { h = v; b = i; } });
+    return [h, b];
   };
   return {
-    h: (x, z) => pick(x, z)[0], b: (x, z) => pick(x, z)[1], blocks: lobes, lobes,
-    bounds: lobes.reduce((m, l) => [Math.min(m[0], l.bounds[0] - 2), Math.min(m[1], l.bounds[1] - 2), Math.max(m[2], l.bounds[2] + 2), Math.max(m[3], l.bounds[3] + 2)], [Infinity, Infinity, -Infinity, -Infinity]),
+    h: (x, z) => { const [h] = pick(x, z); return h <= 0 ? 0 : Math.max(0, h - grooveCut(grooves, x, z) * Math.min(1, h / 3)); },
+    b: (x, z) => pick(x, z)[1],
+    blocks, bounds: blocks.flatMap(bl => bl.ridge).reduce((m, [x, z, , r]) => [Math.min(m[0], x - r * 1.3 - 2), Math.min(m[1], z - r * 1.3 - 2), Math.max(m[2], x + r * 1.3 + 2), Math.max(m[3], z + r * 1.3 + 2)], [Infinity, Infinity, -Infinity, -Infinity]),
   };
 }
 
@@ -175,16 +152,27 @@ function meshField(field, matOf, out, push, flat) {
   return {loops, sample: (x, z) => { const i = (x - bx0) / STEP, j = (z - bz0) / STEP; return {i: Math.round(i), j: Math.round(j)}; }};
 }
 
+/** spec.scale (default 1) enlarges a cluster's plan (offsets, radii, lines, pebbles), never its heights. */
+function scaled(spec) {
+  const k = spec.scale ?? 1;
+  if (k === 1) return spec;
+  const xz = ([x, z, ...r]) => [x * k, z * k, ...r], ridge = ([x, z, y, r]) => [x * k, z * k, y, r * k];
+  return {...spec,
+    crags: spec.crags.map(c => ({...c, at: c.at && xz(c.at), blocks: c.blocks.map(b => ({...b, ridge: b.ridge.map(ridge), strata: b.strata && {...b.strata, period: b.strata.period * k}})), grooves: c.grooves?.map(g => ({...g, p: g.p.map(xz), w: g.w * k}))})),
+    lines: spec.lines?.map(l => l.map(xz)), kiri: spec.kiri?.map(g => ({...g, at: xz(g.at)})),
+    pebbles: spec.pebbles?.map(([x, z, rx, rz, ...r]) => [x * k, z * k, rx * k, rz * k, ...r])};
+}
+
 /**
- * A crag cluster. spec (everything in final plate units, relative to the cluster's (x, z)):
- *   crags    [{at?: [dx, dz], lobes: [{mat: 'olive' | 'gold' | 'silver', h, d: [[dx, dz]...] (5-9 cusps), bulge?, holes?: [[[dx, dz]...]], t?: [[k, dx, dz, h]...] terraces, mv?: [dx, dz] the whole lobe moved}]}]
- *            listed far to near; a crag's lobes likewise (a later lobe lies over the one before)
+ * A crag cluster. spec:
+ *   crags    [{at: [dx, dz], blocks: [{mat: 'olive' | 'gold' | 'silver', ridge: [[dx, dz, height, radius]...], q?, top?}], grooves?: [{p: [[dx, dz]...], w, depth}]}]
+ *            listed far to near; a crag's blocks likewise (a later block lies in front)
  *   lines    [[[dx, dz]...]] fine raised lines of the grain (pale gold), laid over the faces
  *   kiri     [{at: [dx, dz], cols, rows, turn?}] small groups of cut-gold squares on lit faces
  *   pebbles  [[dx, dz, rx, rz, height, turn?, 'silver' | 'olive']] flat stones at the foot
  */
 export function meshCrag(id, cx, cz, spec0) {
-  const spec = spec0;
+  const spec = scaled(spec0);
   if (typeof id !== 'string' || !id) throw new Error(`meshCrag: invalid id ${id}`);
   if (![cx, cz].every(Number.isFinite) || !spec.crags?.length) throw new Error(`meshCrag(${id}): invalid parameters`);
   const out = new Map();
@@ -194,7 +182,7 @@ export function meshCrag(id, cx, cz, spec0) {
     for (const q of v) list.push(q.p[0], q.p[1], q.p[2], q.n[0], q.n[1], q.n[2], q.p[0], q.p[2]); };
   const fields = [...spec.crags.map(c => cragField(c, cx + (c.at?.[0] ?? 0), cz + (c.at?.[1] ?? 0))), ...(spec.pebbles ?? []).map(p => pebbleField(p, cx, cz))];
   const loops = [];
-  for (const f of fields) loops.push(...meshField(f, k => BODY[k] ?? k, out, push, !f.pebble && (spec.flat ?? false)).loops);
+  for (const f of fields) loops.push(...meshField(f, k => BODY[k] ?? k, out, push, !f.pebble && (spec.flat ?? true)).loops);
   loops.sort((a, b) => polyArea(b) - polyArea(a));
   // The highest surface under (x, z) over every field, for the lines and the tiles.
   const surf = (x, z) => Math.max(0, ...fields.map(f => f.h(x, z)));
@@ -241,10 +229,10 @@ export function meshCrag(id, cx, cz, spec0) {
   return [{id, kind: KIND.rock, group: id, order: 0, layer: spec.layer ?? 1, mat: MAT.rockGold, reach: 4, thick: 0, bias: 0, anchor: [cx, near - 2], fills, lines: [], mesh}];
 }
 
-
-/** The numbers of a cluster for the report and the tests: per crag, its footprint width and depth, its height, its lobes and summits. */
-export function cragStats(cx, cz, spec) {
+/** The numbers of a cluster for the report and the tests: per crag, its footprint width and depth, its height, its blocks and summits. */
+export function cragStats(cx, cz, spec0) {
   const ST = 2;
+  const spec = scaled(spec0);
   return spec.crags.map(c => {
     const f = cragField(c, cx + (c.at?.[0] ?? 0), cz + (c.at?.[1] ?? 0)), [x0, z0, x1, z1] = f.bounds;
     let w = [Infinity, -Infinity], d = [Infinity, -Infinity], top = 0, hs = new Map();
@@ -254,6 +242,7 @@ export function cragStats(cx, cz, spec) {
       if (h > .05) { w = [Math.min(w[0], x), Math.max(w[1], x)]; d = [Math.min(d[0], z), Math.max(d[1], z)]; top = Math.max(top, h); }
       hs.set(`${i},${j}`, h);
     }
+    // Summits: local maxima of the height field that stand at least 2.5 over the lowest pass to a higher summit (a coarse count).
     const peaks = [];
     for (let j = 1; j < nz; j++) for (let i = 1; i < nx; i++) {
       const h = hs.get(`${i},${j}`);
@@ -264,17 +253,9 @@ export function cragStats(cx, cz, spec) {
     }
     const kept = [];
     for (const p of peaks.sort((a, b) => b[2] - a[2])) {
+      // A summit counts when, on the straight line to every higher summit already kept, the surface dips at least 2.5 below it.
       if (kept.every(q => { let lo = Infinity; for (let k = 1; k < 24; k++) lo = Math.min(lo, f.h(p[0] + (q[0] - p[0]) * k / 24, p[1] + (q[1] - p[1]) * k / 24)); return lo < p[2] - 4; })) kept.push(p);
     }
-    // Per lobe: how much of its area later lobes lie over, and its height against its short side (the main level only).
-    const mainIdx = []; let n = 0;
-    for (const l of c.lobes) { mainIdx.push(n); n += 1 + (l.t?.length ?? 0); }
-    const covered = [], ratio = [];
-    c.lobes.forEach((l, i) => {
-      const me = f.lobes[mainIdx[i]], [lx0, lz0, lx1, lz1] = me.bounds; let tot = 0, cov = 0;
-      for (let z = lz0; z <= lz1; z += .5) for (let x = lx0; x <= lx1; x += .5) if (me.inside(x, z)) { tot++; if (mainIdx.slice(i + 1).some(k => f.lobes[k].inside(x, z))) cov++; }
-      covered.push(+(cov / Math.max(1, tot)).toFixed(2)); ratio.push(+(l.h / Math.min(lx1 - lx0, lz1 - lz0)).toFixed(2));
-    });
-    return {width: +(w[1] - w[0]).toFixed(1), depth: +(d[1] - d[0]).toFixed(1), height: +top.toFixed(1), lobes: c.lobes.length, peaks: kept.length, covered, ratio};
+    return {width: +(w[1] - w[0]).toFixed(1), depth: +(d[1] - d[0]).toFixed(1), height: +top.toFixed(1), blocks: c.blocks.length, peaks: kept.length};
   });
 }
