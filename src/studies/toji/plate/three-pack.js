@@ -586,7 +586,7 @@ vec3 kyotoCoatPart(vec3 nW,float lift,int cls){
   float th=mix(1.5,.7,smoothstep(0.,16.,lift))*(.75+.5*(1.-up));
   vec3 A=cls==0?K_COAT_AS:cls==1?K_COAT_AT:K_COAT_AF;
   float g=cls==0?K_COAT_GS:cls==1?K_COAT_GT:1.;
-  return kyotoCoatT(A,th,clamp(dot(nW,uCoatV),0.,1.),clamp(dot(nW,uCoatL),0.,1.))*mix(1.,g,step(1e-4,uCoatK));
+  return kyotoCoatT(A,th,clamp(dot(nW,uCoatV),0.,1.),clamp(dot(nW,uCoatL),0.,1.))*pow(g,min(uCoatK/.85,1.));
 }
 #endif`;
 const MAKIE_COMMON_GLSL = `
@@ -731,8 +731,12 @@ float mKiriCluster(vec2 p,vec2 tdir,float e,out vec3 glint){
 #ifdef KYOTO_COAT_ON
 float mEdgeOut(sampler2D tex,int ch,vec2 p,float r,float lo,float hi){
   float o=0.;
-  for(int i=0;i<6;i++){float a=float(i)*1.0472+1.3;vec2 q=p+vec2(cos(a),sin(a))*r;vec4 t=texture(tex,mPuv(q));o+=1.-smoothstep(lo,hi,ch==0?t.g:ch==1?t.r:t.a);}
-  return o*.16667;
+  for(int i=0;i<6;i++){
+    float a=float(i)*1.0472+1.3;vec2 d=vec2(cos(a),sin(a));
+    vec4 t=texture(tex,mPuv(p+d*r)),u=texture(tex,mPuv(p+vec2(-d.y,d.x)*r*.5));
+    o+=2.-smoothstep(lo,hi,ch==0?t.g:ch==1?t.r:t.a)-smoothstep(lo,hi,ch==0?u.g:ch==1?u.r:u.a);
+  }
+  return o*.08333;
 }
 #endif
 vec3 mCoat(){return (vec3(1.,.95,.86)*(mSpec(220.)*.42+mSpec(36.)*.10)+mRoom(0.)*.045+mKeyC*mBand*M_BAND_GAIN)*mix(1.,M_AGE_GLOSS*(.45+M_AGE_HAZE*mVnoise(mWP.xz*.035+9.)),uAge);}
@@ -827,7 +831,7 @@ vec3 mHirame(vec3 c,vec2 kp,float dS,float rise){
 vec4 mFinish(vec3 c,float a){
 #ifdef KYOTO_COAT_ON
   if(uCoatK>0.){
-    vec3 T=kyotoCoatT(K_COAT_AS*mKS+K_COAT_AT*mKT+K_COAT_AE*mKE,mThick,clamp(dot(mN,uCoatV),0.,1.),clamp(dot(mN,uCoatL),0.,1.))*mix(1.,K_COAT_GS,mKS*step(1e-4,uCoatK))*mix(1.,K_COAT_GT,mKT*step(1e-4,uCoatK));
+    vec3 T=kyotoCoatT(K_COAT_AS*mKS+K_COAT_AT*mKT+K_COAT_AE*mKE,mThick,clamp(dot(mN,uCoatV),0.,1.),clamp(dot(mN,uCoatL),0.,1.))*pow(K_COAT_GS,mKS*min(uCoatK/.85,1.))*pow(K_COAT_GT,mKT*min(uCoatK/.85,1.));
     c=c*T+mCoat()*(1.-T)*.3;
   }
 #endif
@@ -899,28 +903,35 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   mOcc=1.-M_OCC_AMB*occ*uAge;mSh*=1.-M_OCC_ALL*occ*uAge;
   // The film lies thick in the hollows and at the foot of things, thin over raised ground (the coat, kyotoCoatT).
   mThick=(.55+.8*occ+.55*(1.-smoothstep(0.,.3,hs)))*(.85+.3*mVnoise(kp*.3+4.));
+  // A flat inlay (cut foil, sheet, coral) is exactly its own outline: the plain ground runs right up to its edge.
+  float inlay=clamp((fine.g-.5)/max(fwidth(fine.g),.004)+.5,0.,1.);
+#ifdef KYOTO_COAT_ON
+  if(uCoatK>0.){
+    // Which kind of coat this pixel has (three-pack COAT): sunk chips; a flush inlay's edge, wrapped by the lacquer, in a soft ring inside the outline;
+    // or a thin film. Hills, banks and sandbars are raised toward their crest and fade out at the foot: no ring, the crest keeps its own light.
+    mKS=0.;mKT=1.;mKE=0.;float mFlat=0.;
+    float er=(${COAT.edgeWidth[0].toFixed(2)}+${COAT.edgeWidth[1].toFixed(2)}*uAge)*(.75+.5*mVnoise(kp*.9+3.))*(.8+.4*mThick);
+    if(mat==1){mKS=1.;mKT=0.;}
+    else if(mat==6){mKS=.45;mKT=.55;}
+    else if(mat==2||mat==3||mat==4){mKS=1.-smoothstep(.01,.14,hs);mKT=1.-mKS;}
+    else if(mat==19||mat==20||mat==23||mat==24){mKS=1.-smoothstep(.0,.3,fine.g);mKT=1.-mKS;}
+    else if(mat==21||mat==22){mKS=1.-inlay;mKT=inlay;}
+    else if(mat==12){mFlat=1.;mKE=smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.02,.06));mKT=1.-mKE;}
+    else if(mat==5||mat==7||mat==8||mat==10||mat==11){mFlat=1.;float ke=smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.42,.58));mKE=ke*smoothstep(0.,.25,inlay);mKS=(1.-inlay)*(1.-mKE);mKT=inlay*(1.-ke);}
+    else if(mat==9||mat==17){mKT=0.;mKS=0.;mKE=0.;}
+    // Flush inlay has no step: the relief that bevels its outline is left out (the drawn line stays, dimmed inside the ring).
+    if(mFlat>0.){
+      vec2 gfg=vec2(fx1.g-fx0.g,fz1.g-fz0.g)*cH/(2.*eC)*mix(.55,1.,rise),gfb=vec2(fx1.b-fx0.b,fz1.b-fz0.b)*lH/(2.*eC)*mix(.55,1.,rise);
+      grad=gs+gfb;grad*=min(1.,2.4/max(length(grad),1e-4));
+    }
+  }
+#endif
   mSetLight(normalize(normalize(vKyotoNormal)-grad.x*vKyotoTanX-grad.y*vKyotoTanZ),vKyotoWorld);
   float line=fine.b;vec3 L=mLight();
   float w=smoothstep(.02,.34,hs);
   float dens=.82+.22*mVnoise(kp*.02),kAmt=0.,wN=0.,wM=0.,wS=0.,bigD=0.,bigCell=6.6,bigSq=0.,kiriV=0.,kiriB=0.;
   vec3 tint=M_GOLD,f0=M_GOLD,c=vec3(0.);
-  // A flat inlay (cut foil, sheet, coral) is exactly its own outline: the plain ground runs right up to its edge.
-  float inlay=clamp((fine.g-.5)/max(fwidth(fine.g),.004)+.5,0.,1.);
   float dField=texture(uDens,mPuv(kp)).r;
-#ifdef KYOTO_COAT_ON
-  if(uCoatK>0.){
-    // Which kind of coat this pixel has (three-pack COAT): sunk chips, a flush inlay's wrapped edge, or a thin film over something raised.
-    mKS=0.;mKT=1.;mKE=0.;
-    float er=(${COAT.edgeWidth[0].toFixed(2)}+${COAT.edgeWidth[1].toFixed(2)}*uAge)*(.75+.5*mVnoise(kp*.9+3.))*(.8+.4*mThick);
-    if(mat==1){mKS=1.;mKT=0.;}
-    else if(mat==6){mKS=.45;mKT=.55;}
-    else if(mat==2||mat==3||mat==4){mKE=.6*(1.-smoothstep(.01,.14,hs));mKT=1.-mKE;}
-    else if(mat==19||mat==20||mat==23||mat==24){mKE=1.-smoothstep(.02,.2,fine.g);mKT=1.-mKE;}
-    else if(mat==12){float ke=mEdgeOut(uFine0,0,kp,er,.02,.06);mKE=smoothstep(.0,.4,ke);mKT=1.-mKE;}
-    else if(mat==5||mat==7||mat==8||mat==10||mat==11||mat==21||mat==22){float ke=smoothstep(.0,.4,mEdgeOut(uFine0,0,kp,er,.42,.58));mKE=ke*smoothstep(0.,.25,inlay);mKS=(1.-inlay)*(1.-mKE);mKT=inlay*(1.-ke);}
-    else if(mat==9||mat==17){mKT=0.;mKS=0.;mKE=0.;}
-  }
-#endif
   // Maki-bokashi: powder gathers toward things and thins in the open. On an old, darker ground the grading carries
   // further (M_AGE_BOKASHI times as strong at age 1): it is what joins a form to the ground it stands on.
   if(mat==1){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
@@ -935,8 +946,8 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(mat==5){wM=1.;c=M_PALE*line*(.12+.6*L)*mix(.5,1.,rise);}
   // Flat silver stands for white things (sand, petals): it dulls but stays pale. Raised and shaded silver goes dark.
   else if(mat==6){wN=1.;dens=.95;}
-  else if(mat==7){wM=inlay;wN=1.-inlay;f0=M_GOLD*.9;rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_PALE*line*(.22+.6*L)*inlay;}
-  else if(mat==8){wM=inlay;wN=1.-inlay;f0=mAgedSilver(mix(M_SILVER,M_GOLD,.25)*.9,kp,.35);rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_SILVER*line*(.22+.6*L)*inlay;}
+  else if(mat==7){wM=inlay;wN=1.-inlay;f0=M_GOLD*.9;rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_PALE*line*(.22+.6*L)*inlay*(1.-mKE);}
+  else if(mat==8){wM=inlay;wN=1.-inlay;f0=mAgedSilver(mix(M_SILVER,M_GOLD,.25)*.9,kp,.35);rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_SILVER*line*(.22+.6*L)*inlay*(1.-mKE);}
   else if(mat==9||mat==12){wN=1.;}
   else if(mat==10){wS=inlay;wN=1.-inlay;f0=M_PALE;c=M_PALE*glow*.5*inlay;}
   else if(mat==11){wS=inlay;wN=1.-inlay;f0=mAgedSilver(M_SILVER,kp,.3);}
