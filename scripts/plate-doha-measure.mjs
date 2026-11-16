@@ -88,7 +88,8 @@ export function measureDoha(ward) {
     }
     biggest = Math.max(biggest, n);
   }
-  const straight = Math.max(0, ...pieces.map(q => q.far ? 0 : q.ridge ? longestStraight(q.ridge, false) : longestStraight(q.d)), ...parts.filter(p => p.kind === KIND.rock && /^rock-/.test(p.id)).flatMap(p => p.fills.map(f => longestStraight(f.d))));
+  const straightPieces = Math.max(0, ...pieces.map(q => q.far ? 0 : q.ridge ? longestStraight(q.ridge, false) : longestStraight(q.d)));
+  const straight = Math.max(straightPieces, ...parts.filter(p => p.kind === KIND.rock && /^rock-/.test(p.id)).flatMap(p => p.fills.map(f => longestStraight(f.d))));
   return {
     ward, clusters: clusters.length,
     piecesPerCluster: Object.fromEntries(clusters.map(c => [c, pieces.filter(q => q.cluster === c).length])),
@@ -107,6 +108,8 @@ export function measureDoha(ward) {
     farHeads: pieces.filter(q => q.far).length,
     // A far mountain's ridge is one smooth arc through few points, never ruled: it is not a straight run.
     longestStraight: +straight.toFixed(1),
+    // The same over the pieces alone (the rocks are the old crags, kept as they were in the nine-wards run).
+    longestStraightPieces: +straightPieces.toFixed(1),
     kiriPieces: pieces.filter(q => q.hasKiri).length,
   };
 }

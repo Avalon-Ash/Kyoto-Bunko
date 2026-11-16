@@ -7,10 +7,10 @@ import {densityFromMask} from '../src/studies/toji/plate/bake.js';
 import {buildBox} from '../src/studies/toji/plate/box.js';
 
 // Wards whose ground is already doha.js pieces (suhama tongues, banks) and not hill() or gardenGround(); more join as the other wards are redone.
-const dohaWards = new Set(['W_NAKAGYO', 'W_FUSHIMI', 'W_HIGASHIYAMA', 'W_KITA']);
+const dohaWards = new Set(['W_NAKAGYO', 'W_FUSHIMI', 'W_HIGASHIYAMA', 'W_KITA', 'W_MINAMI', 'W_UKYO']);
 // The wards redone in the nine-wards run (docs/plans/2026-11-16-nine-wards.md): a far mountain, a shore and the rocks they already had (not yet redone), so
 // the cluster, piece-count, silver-share and rock-total ranges of the scattered pilot are not asked of them.
-const nineWards = new Set(['W_HIGASHIYAMA', 'W_KITA']);
+const nineWards = new Set(['W_HIGASHIYAMA', 'W_KITA', 'W_MINAMI', 'W_UKYO']);
 const p3bWards = ['W_KITA', 'W_UKYO', 'W_NISHIKYO', 'W_SAKYO', 'W_KAMIGYO', 'W_SHIMOGYO', 'W_NAKAGYO', 'W_YAMASHINA'];
 const inside = ([x, z], polygon) => {
   let hit = false;
@@ -481,7 +481,7 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
 
   // Scope fence: part counts per ward. R5a/R5b added the attached scenes to every ward; patina P3b split the coral
   // leaves, the fire of the 大, the silver petals and the dew of shell into parts of their own (one part per material).
-  const expectedCounts = {W_MINAMI: 54, W_UKYO: 26, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 46, W_KITA: 32, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 45, W_HIGASHIYAMA: 31, W_SHIMOGYO: 36};
+  const expectedCounts = {W_MINAMI: 55, W_UKYO: 29, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 46, W_KITA: 32, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 45, W_HIGASHIYAMA: 31, W_SHIMOGYO: 36};
   for (const [ward, build] of Object.entries(PLATES)) {
     const {parts, errors} = preparePlate(build());
     assert.deepEqual(errors, [], ward);
@@ -1494,7 +1494,7 @@ import {measureDoha} from './plate-doha-measure.mjs';
 import {similar} from './plate-doha-similar.mjs';
 import {bankGeom, tongueGeom, mountain, JITTER} from '../src/studies/toji/plate/doha.js';
 import {meshRock} from '../src/studies/toji/plate/rock-mesh.js';
-const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5], W_HIGASHIYAMA: [2, 2], W_KITA: [0, 0]}; // Kita's two rocks are not named rock-*, so the measure does not count them
+const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5], W_HIGASHIYAMA: [2, 2], W_KITA: [0, 0], W_MINAMI: [3, 3], W_UKYO: [0, 0]}; // Kita's two rocks are not named rock-*, so the measure does not count them
 for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition numbers`, () => {
   const m = measureDoha(ward);
   // Nakagyo is one shore of four long banks (plan §11.2): the cluster, piece-count, size and straight-run ranges are for the scattered wards.
@@ -1510,7 +1510,7 @@ for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition nu
   assert.ok(m.piecesAndRocksShare >= (nineWards.has(ward) ? 15 : 20) && m.piecesAndRocksShare <= 35, `taken ${m.piecesAndRocksShare}%`);
   assert.ok(m.bareShare >= 35 && m.bareConnectedShare >= 70, `bare ${m.bareShare}%, connected ${m.bareConnectedShare}%`);
   if (!shore) assert.ok(m.silverPieces >= 33.3, `silver ${m.silverPieces}% (far mountains excepted)`);
-  if (!shore || nineWards.has(ward)) assert.ok(m.longestStraight <= 30, `straight run ${m.longestStraight}`);
+  if (!shore || nineWards.has(ward)) assert.ok((nineWards.has(ward) ? m.longestStraightPieces : m.longestStraight) <= 30, `straight run ${nineWards.has(ward) ? m.longestStraightPieces : m.longestStraight}`);
   const {parts} = preparePlate(PLATES[ward]());
   for (const id of ['palace-ground', 'inari-yama', 'ridge-far', 'bank-near', 'bank-gate']) assert.ok(!parts.some(p => p.id === id), `${ward} no longer has ${id}`);
 });
