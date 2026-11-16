@@ -961,6 +961,8 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(mat==14)c=M_LACQ*(.8+1.4*L)+mCoat()*2.2+M_GOLD*line*(.16+.80*L)*mix(.5,1.,rise);
   else c=mix(vec3(.10,.06,.025)*(.4+.5*L),vec3(1.,.62,.22)*1.15,glow)+M_LACQ;
   c+=wN*mNashiji(kp,dens,tint)+wM*mMetal(kp,f0,rise)+wS*mSheet(f0);
+  // Gold suhama and far mountains carry a scatter of larger flakes that catch the light (the powder of the Hatsune set is coarse and of several golds).
+  if(mat==21||mat==23){bigD=.3;bigCell=5.2;}
   vec3 bigG;float bigX=mFlake(M_R2*kp,bigCell,mix(.47,.30,bigSq),bigD,bigSq,.26,bigG);
   if(mat==7||mat==8){
     vec3 foil=mat==7?M_PALE:mAgedSilver(M_SILVER,kp,.6);bigX*=inlay;bigG*=inlay;
@@ -1002,6 +1004,8 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
         float rake=.93+.07*sin(kp.y*2.1+mVnoise(kp*.06)*7.)*(.6+.4*mVnoise(kp*.4));
         vec3 pw=mix(mNashiji(kp,mix(dens,2.8,pow(dn,1.3)),mix(tint,mix(M_GOLD,M_PALE,.35),a)),mMetal(kp,M_GOLD,max(rise,.8)),.4*body)*mix(vec3(1.),vec3(1.3,1.18,.96)*rake,body);
         c=mix(c,pw,a);
+        // Larger flakes lie in the powder and glint as the light moves: the face is not one flat tone.
+        c=mix(c,mix(M_GOLD,M_PALE,.55)*(.1+.85*L),bigX*.5*a)+M_AMBER*bigG*.55*a;
         // The drawn edge: a fine line of pale gold laid on top (tsukegaki).
         c=mix(c,mMetal(kp,mix(M_GOLD,M_PALE,.7),1.)*1.2,smoothstep(.1,.45,line)*.9);
         kiriB=a;
@@ -1026,6 +1030,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     if(mat==24){pwd=mix(mMetal(kp,pw*.9,.9)*1.1,pwd*1.05,.35);a=1.-pow(1.-smoothstep(.0,.4,Ht),2.4);}
     // Gold: toward the ridge the powder closes into a matt body (the ground's flakes no longer show through); lower down it is a veil.
     else{pwd=mix(pwd,mMetal(kp,pw,.9)*1.05,.3+.4*smoothstep(.1,.7,Ht));a=1.-pow(1.-smoothstep(.0,.45,Ht),2.);}
+    if(mat==23)pwd=mix(pwd,mix(M_GOLD,M_PALE,.6)*(.1+.85*L),bigX*.45)+M_AMBER*bigG*.5;
     c=mix(c,pwd,a)+(mat==24?mMetal(kp,M_GOLD*1.25,1.)*1.5*smoothstep(.55,.9,Ht):mMetal(kp,pw,.9)*.9*edgeV);
   }
   if(kAmt>0.){
