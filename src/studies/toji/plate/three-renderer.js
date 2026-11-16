@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {PLATE, MAT, KIND, rand} from './vocab.js';
 import {PLATES, LAYERS, preparePlate, createLife, partAt} from './parts.js';
-import {paintLayer, identMaps, bakeDensityField, bakeContactField} from './bake.js';
+import {paintLayer, identMaps, bakeDensityField, bakeContactField, bakeSoftField} from './bake.js';
 import {blankStats} from './fillers.js';
 import {buildBox, FITTINGS} from './box.js';
 import {bakeStamps} from './stamps.js';
@@ -21,7 +21,7 @@ import {groundPoint, normalize, trailIntensity} from '../geometry.js';
 import {
   MATERIALS, agedSpec, CONTACT, BOX_MATERIALS, GROUND_LID, STATE_WIDTH, STATE_HEIGHT, packLifeState,
   meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox,
-  bakeSoftLayer, mistGeometryData, PART_MOTION_GLSL, PART_LIGHT_GLSL, PART_POWDER_GLSL, PART_KIRIKANE_GLSL, BOX_MOTION_GLSL, BOX_GROUND_GLSL, BOX_GROUND_DEPTH_GLSL,
+  mistGeometryData, PART_MOTION_GLSL, PART_LIGHT_GLSL, PART_POWDER_GLSL, PART_KIRIKANE_GLSL, BOX_MOTION_GLSL, BOX_GROUND_GLSL, BOX_GROUND_DEPTH_GLSL,
   TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, DENSITY, COAT, COAT_GLSL,
   MAKIE_GROUND_PARS_GLSL, MAKIE_GROUND_FRAG_GLSL, MAKIE_MIST_VERT_GLSL, MAKIE_MIST_FRAG_GLSL,
   BOX_SIDE_VERT_GLSL, BOX_SIDE_PARS_GLSL, BOX_SIDE_FRAG_GLSL,
@@ -557,7 +557,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       scratch.width = w; scratch.height = h;
       const ctx = scratch.getContext('2d', {willReadFrequently: true});
       paintLayer(ctx, w, h, parts, 0);
-      let fine0Img = new Uint8Array(ctx.getImageData(0, 0, w, h).data);
+      let fine0Img = new Uint8Array(ctx.getImageData(0, 0, w, h).data.buffer); // a view of the readback's own bytes, not a copy of them
       const fine0Tex = new THREE.DataTexture(fine0Img, w, h, THREE.RGBAFormat, THREE.UnsignedByteType);
       fine0Tex.minFilter = THREE.LinearMipmapLinearFilter; fine0Tex.magFilter = THREE.LinearFilter;
       fine0Tex.generateMipmaps = true; fine0Tex.anisotropy = maxAniso; fine0Tex.unpackAlignment = 1; fine0Tex.needsUpdate = true;
@@ -566,7 +566,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       yield;
 
       t = performance.now();
-      const soft = bakeSoftLayer(fine0Img, w, h);
+      const soft = bakeSoftField(fine0Img, w, h);
       fine0Img = null;
       const softHalf = new Uint16Array(soft.data.length);
       for (let i = 0; i < soft.data.length; i++) softHalf[i] = THREE.DataUtils.toHalfFloat(soft.data[i]);
@@ -606,14 +606,14 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       buildMs += performance.now() - t;
       yield;
 
-      t = performance.now();
       // Bare nashiji, for reference only (fillers.js): share farther than 12 units from any part / largest empty radius.
-      const occupied = new Uint8Array(mw * mh);
-      for (const map of maps) for (let i = 0; i < map.length; i++) if (map[i]) occupied[i] = 1;
-      const blank = blankStats(occupied, mw, mh, PLATE.halfW * 2 / mw);
-      const blankStr = `${(blank.ratio * 100).toFixed(1)}%/${blank.radius.toFixed(0)}`;
-      buildMs += performance.now() - t;
-      yield;
+      // A readout for the measuring scripts, not something the plate needs: it is worked out after the ward is up (blankText below).
+      const blankText = () => {
+        const occupied = new Uint8Array(mw * mh);
+        for (const map of maps) for (let i = 0; i < map.length; i++) if (map[i]) occupied[i] = 1;
+        const blank = blankStats(occupied, mw, mh, PLATE.halfW * 2 / mw);
+        return `${(blank.ratio * 100).toFixed(1)}%/${blank.radius.toFixed(0)}`;
+      };
 
       t = performance.now();
       const addInterleaved = (byMat, getMaterial, depth) => {
@@ -660,7 +660,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       const mistParts = parts.filter(p => p.kind === KIND.mist);
       if (mistParts.length) {
         paintLayer(ctx, w, h, mistParts.map(p => ({...p, layer: 1})), 1);
-        const mistFineImg = new Uint8Array(ctx.getImageData(0, 0, w, h).data);
+        const mistFineImg = new Uint8Array(ctx.getImageData(0, 0, w, h).data.buffer);
         const mistFineTex = new THREE.DataTexture(mistFineImg, w, h, THREE.RGBAFormat, THREE.UnsignedByteType);
         mistFineTex.minFilter = THREE.LinearMipmapLinearFilter; mistFineTex.magFilter = THREE.LinearFilter;
         mistFineTex.generateMipmaps = true; mistFineTex.anisotropy = maxAniso; mistFineTex.unpackAlignment = 1; mistFineTex.needsUpdate = true;
@@ -692,7 +692,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
         textures,
         uniforms,
         densMean,
-        stats: {meshVertices, treeVertices, treeStamps, boxVertices, parts: parts.length, blank: blankStr},
+        stats: {meshVertices, treeVertices, treeStamps, boxVertices, parts: parts.length, blank: blankText},
         plate: {parts, maps, mw, mh, ward, soft, ident: packed[0]},
         buildMs,
       };
@@ -749,10 +749,11 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     canvas.dataset.renderer = 'three'; canvas.dataset.ward = entry.ward;
     canvas.dataset.meshVertices = String(entry.stats.meshVertices); canvas.dataset.parts = String(entry.stats.parts);
     canvas.dataset.treeVertices = String(entry.stats.treeVertices); canvas.dataset.treeStamps = String(entry.stats.treeStamps);
-    canvas.dataset.boxVertices = String(entry.stats.boxVertices); canvas.dataset.blank = entry.stats.blank;
+    canvas.dataset.boxVertices = String(entry.stats.boxVertices); canvas.dataset.blank = '';
     canvas.dataset.bakeMs = (performance.now() - started).toFixed(0);
     canvas.dataset.prefetched = String(prefetched);
     canvas.dataset.buildMs = entry.buildMs.toFixed(0);
+    idle(() => { if (!disposed && canvas.dataset.ward === entry.ward) canvas.dataset.blank = entry.stats.blank(); });
   }
 
   /** Builds or activates a ward's plate. Returns false when the ward has not been redrawn as a plate. */

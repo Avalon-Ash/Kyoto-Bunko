@@ -71,7 +71,8 @@ function paintFar(ctx, f) {
   ctx.save();
   trace(ctx, f.d, true); ctx.clip();
   ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#000'; ctx.fill();
-  ctx.globalCompositeOperation = 'lighten';
+  // Each stroke is narrower and higher than the one before and the dome was cleared to black, so 'lighten' would only ever keep the newer one: plain source-over, the cheaper blend.
+  ctx.globalCompositeOperation = 'source-over';
   for (let i = FAR_STEPS.length - 1; i >= 0; i--) {
     const h = profileAt(profile, FAR_STEPS[i]);
     if (h < .004) continue;
@@ -131,10 +132,15 @@ function paintTongue(ctx, f) {
   ctx.save();
   trace(ctx, f.d, true); ctx.clip();
   ctx.globalCompositeOperation = 'lighten';
+  let last = '';
   for (let i = N; i >= 1; i--) {
     const h = fadeHeight((i - .5) / N);
     if (h < .004) continue;
-    ctx.strokeStyle = 'rgb(' + Math.round(255 * f.soft * h) + ',' + Math.round(255 * f.crisp * h) + ',0)'; ctx.lineWidth = 2 * run * i / N;
+    const colour = 'rgb(' + Math.round(255 * f.soft * h) + ',' + Math.round(255 * f.crisp * h) + ',0)';
+    // Where the powder lies at full height the narrower strokes are the same colour inside the widest of them: skipped.
+    if (colour === last) continue;
+    last = colour;
+    ctx.strokeStyle = colour; ctx.lineWidth = 2 * run * i / N;
     for (const r of runs) { trace(ctx, r, false); ctx.stroke(); }
   }
   ctx.restore();
@@ -178,6 +184,55 @@ export function paintLayer(ctx, w, h, parts, layer) {
 }
 
 /**
+ * The soft swell's field (the same numbers as three-pack.js bakeSoftLayer, which stays as the reference the tests hold this to):
+ * the red channel of layer 0 averaged down to a quarter of its size, then a 15-tap Gaussian blur along each axis. Same sums in the
+ * same order, so the result is bit for bit the reference's; it is faster because the interior needs no clamping and the second
+ * pass runs along rows instead of down columns.
+ */
+export function bakeSoftField(rgba, w, h) {
+  const sw = Math.round(w / 4), sh = Math.round(h / 4);
+  const src = new Float32Array(sw * sh), tmp = new Float32Array(sw * sh), dst = new Float32Array(sw * sh);
+  const xs = new Int32Array(sw + 1), ys = new Int32Array(sh + 1);
+  for (let i = 0; i <= sw; i++) xs[i] = Math.floor(i * w / sw);
+  for (let i = 0; i <= sh; i++) ys[i] = Math.floor(i * h / sh);
+  for (let sy = 0; sy < sh; sy++) {
+    const y0 = ys[sy], y1 = Math.min(h, ys[sy + 1]);
+    for (let sx = 0; sx < sw; sx++) {
+      const x0 = xs[sx], x1 = Math.min(w, xs[sx + 1]);
+      let sum = 0;
+      for (let y = y0; y < y1; y++) for (let k = (y * w + x0) * 4, e = (y * w + x1) * 4; k < e; k += 4) sum += rgba[k];
+      const count = x1 > x0 && y1 > y0 ? (x1 - x0) * (y1 - y0) : 0;
+      src[sy * sw + sx] = count ? sum / (count * 255) : 0;
+    }
+  }
+  const weights = new Float32Array(15);
+  let norm = 0;
+  for (let i = -7; i <= 7; i++) { const wt = Math.exp(-(i * i) / 14); weights[i + 7] = wt; norm += wt; }
+  for (let i = 0; i < 15; i++) weights[i] /= norm;
+  for (let y = 0; y < sh; y++) {
+    const row = y * sw;
+    for (let x = 0; x < sw; x++) {
+      let sum = 0;
+      if (x >= 7 && x < sw - 7) for (let i = 0; i < 15; i++) sum += weights[i] * src[row + x - 7 + i];
+      else for (let i = -7; i <= 7; i++) sum += weights[i + 7] * src[row + Math.max(0, Math.min(sw - 1, x + i))];
+      tmp[row + x] = sum;
+    }
+  }
+  const acc = new Float64Array(sw);
+  for (let y = 0; y < sh; y++) {
+    acc.fill(0);
+    for (let i = -7; i <= 7; i++) {
+      const wt = weights[i + 7], r = Math.max(0, Math.min(sh - 1, y + i)) * sw;
+      for (let x = 0; x < sw; x++) acc[x] += wt * tmp[r + x];
+    }
+    for (let x = 0; x < sw; x++) dst[y * sw + x] = acc[x];
+  }
+  return {data: dst, sw, sh};
+}
+
+const ALPHA_SHIFT = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1 ? 24 : 0; // where a texel's alpha byte sits in a 32-bit read
+
+/**
  * Which part owns each texel, per layer, grown by the part's reach so a part that moves still finds itself
  * and a solid has room for the wall around its drawing.
  * Returns interleaved (index, material) bytes per layer, plus the bare index maps used for picking.
@@ -206,10 +261,11 @@ export function identMaps(doc, parts, w, h, layers, groundMat) {
       if (f.hiddenBy?.length) { ctx.globalCompositeOperation = 'destination-out'; for (const d of f.hiddenBy) { trace(ctx, d, true); ctx.fill(); } ctx.globalCompositeOperation = 'source-over'; }
     }
     for (const l of p.lines) { ctx.lineWidth = l.w + reach * 2; trace(ctx, l.d, false); ctx.stroke(); }
-    const data = ctx.getImageData(x0, z0, x1 - x0, z1 - z0).data, map = maps[p.layer], pack = packed[p.layer];
-    for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) {
-      if (data[((z - z0) * (x1 - x0) + (x - x0)) * 4 + 3] < 128) continue;
-      const i = z * w + x; map[i] = p.index; pack[i * 2] = p.index; pack[i * 2 + 1] = p.mat;
+    // One 32-bit read per texel instead of four byte reads: the alpha is the top byte on a little-endian machine.
+    const data = new Uint32Array(ctx.getImageData(x0, z0, x1 - x0, z1 - z0).data.buffer), map = maps[p.layer], pack = packed[p.layer], bw = x1 - x0;
+    for (let z = z0, o = 0; z < z1; z++, o += bw) for (let x = 0, i = z * w + x0; x < bw; x++, i++) {
+      if (((data[o + x] >>> ALPHA_SHIFT) & 255) < 128) continue;
+      map[i] = p.index; pack[i * 2] = p.index; pack[i * 2 + 1] = p.mat;
     }
   }
   return {packed, maps};

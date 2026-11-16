@@ -190,7 +190,14 @@ export function tongueFade(outline, q = {}) {
   }
   if (!runs.length) runs.push([...outline, outline[0]]);
   // The piece's own depth: the farthest any point of the outline lies from the drawn edge.
-  const edge = runs.flat(), far = Math.max(...outline.map(p => Math.min(...edge.map(e => Math.hypot(p[0] - e[0], p[1] - e[1])))));
+  const edge = runs.flat();
+  let far = -Infinity;
+  for (const p of outline) {
+    // The nearest edge point by squared distance (no root per pair); one hypot for the winner.
+    let best = Infinity, bx = 0, bz = 0;
+    for (const e of edge) { const dx = p[0] - e[0], dz = p[1] - e[1], d2 = dx * dx + dz * dz; if (d2 < best) { best = d2; bx = dx; bz = dz; } }
+    far = Math.max(far, Math.hypot(bx, bz));
+  }
   const xs = outline.map(p => p[0]), zs = outline.map(p => p[1]), half = Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) / 2;
   // The same stretches with two points in three left out: what the baker strokes for the fade (a wide stroke through every point is slow).
   const coarse = runs.map(r => r.filter((_, i) => i % 3 === 0 || i === r.length - 1));

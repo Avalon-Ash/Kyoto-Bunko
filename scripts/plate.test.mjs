@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {stepSpring, stepDamped, settled} from '../src/studies/toji/plate/spring.js';
 import {PLATES, hasPlate, preparePlate, createLife, partAt, MAX_PARTS, LAYERS, DWELL_MS, STAND_REST} from '../src/studies/toji/plate/parts.js';
 import {KIND, MAT, PLATE, roof, storey, kakezukuri, stoneSteps, stream, shell, steppingStones, corridor, romon, sanmon, karamon, rock} from '../src/studies/toji/plate/vocab.js';
-import {densityFromMask} from '../src/studies/toji/plate/bake.js';
+import {densityFromMask, bakeSoftField} from '../src/studies/toji/plate/bake.js';
 import {buildBox} from '../src/studies/toji/plate/box.js';
 
 // Wards whose ground is already doha.js pieces (suhama tongues, banks) (hill() and gardenGround() no longer exist: every ward has been redone).
@@ -1108,6 +1108,18 @@ test('three: bakeSoftLayer blurs layer 0 alpha at quarter scale cleanly', () => 
   const center = data[Math.floor(sh / 2) * sw + Math.floor(sw / 2)];
   const edge = data[0];
   assert.ok(center > .1 && edge < center * .05, `center ${center} drops toward edge ${edge}`);
+});
+
+test('bake: bakeSoftField is bit for bit three-pack bakeSoftLayer (the faster one holds to the reference)', () => {
+  let seed = 12345;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296;
+  for (const [w, h] of [[64, 40], [100, 63], [256, 158], [1152, 712]]) {
+    const rgba = new Uint8Array(w * h * 4);
+    for (let i = 0; i < rgba.length; i++) rgba[i] = rnd() < .4 ? 0 : Math.floor(rnd() * 256);
+    const a = bakeSoftLayer(rgba, w, h), b = bakeSoftField(rgba, w, h);
+    assert.equal(b.sw, a.sw); assert.equal(b.sh, a.sh);
+    assert.ok(Buffer.from(b.data.buffer).equals(Buffer.from(a.data.buffer)), `${w}x${h}: same floats`);
+  }
 });
 
 test('three: mistGeometryData produces finite subdivided quads for every ward with mist', () => {
