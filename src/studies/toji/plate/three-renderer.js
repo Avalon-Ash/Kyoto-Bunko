@@ -31,11 +31,13 @@ const EYE = [430, 720, 920], TARGET = [0, 40, 0];
 /** How old the box looks unless ?age= says otherwise: 0 is as new, 1 is the Hatsune trousseau as it is today. */
 const AGE_DEFAULT = .85;
 /** ?coat=0..1: the shared tinted-lacquer coat (three-pack COAT, docs/plans/2026-11-16-coat.md). 0, the default, compiles none of it. */
-const COAT_PARAM = typeof location !== 'undefined' ? Number(new URLSearchParams(location.search).get('coat')) : 0;
+const COAT_DEFAULT = 1; // the recommended strength once the user has chosen (docs/agent-runs/2026-11-16-coat.md)
+const COAT_RAW = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('coat') : null;
+const COAT_PARAM = COAT_RAW === null ? COAT_DEFAULT : Number(COAT_RAW);
 const COAT_ON = Number.isFinite(COAT_PARAM) && COAT_PARAM > 0 ? Math.min(1, COAT_PARAM) : 0;
 const COAT_DEFINE = COAT_ON > 0 ? '#define KYOTO_COAT_ON\n' : '';
 /** Scales what lies under the coat (the base's four light terms) by the film's transmittance T. */
-const coatApply = lift => `\n{\n  vec3 kyotoCoatNW = inverseTransformDirection(normal, viewMatrix);\n  vec3 kyotoCoatTT = kyotoCoatPart(kyotoCoatNW, ${lift});\n  reflectedLight.directDiffuse *= kyotoCoatTT; reflectedLight.indirectDiffuse *= kyotoCoatTT;\n  reflectedLight.directSpecular *= kyotoCoatTT; reflectedLight.indirectSpecular *= kyotoCoatTT;\n}`;
+const coatApply = (lift, cls) => `\n{\n  vec3 kyotoCoatNW = inverseTransformDirection(normal, viewMatrix);\n  vec3 kyotoCoatTT = kyotoCoatPart(kyotoCoatNW, ${lift}, ${cls});\n  reflectedLight.directDiffuse *= kyotoCoatTT; reflectedLight.indirectDiffuse *= kyotoCoatTT;\n  reflectedLight.directSpecular *= kyotoCoatTT; reflectedLight.indirectSpecular *= kyotoCoatTT;\n}`;
 const VIEW = normalize(EYE.map((v, i) => v - TARGET[i])), KEY = normalize([-.5, .78, .22]);
 const STRIDE = 10;
 const SHADOW_SOFT = 6; // PCF shadow filter radius in texels for softer window-light penumbra
@@ -132,7 +134,7 @@ export function createThreeRenderer(gl, canvas) {
   const trails = Array.from({length: 20}, () => new THREE.Vector3());
   const shared = {
     uState: {value: stateTexture}, uTilt: {value: new THREE.Matrix3()}, uOpening: {value: 0},
-    uSoft0: {value: dummySoft}, uIdent0: {value: dummyRg}, uFine0: {value: dummyRgba}, uDens: {value: neutralDens}, uContact: {value: dummyRgba}, uDensMean: {value: .5}, uDensView: {value: densMode === 'view' ? 1 : densMode === 'mask' ? 2 : densMode === 'contact' ? 3 : densMode === 'kiri' ? 4 : 0},
+    uSoft0: {value: dummySoft}, uIdent0: {value: dummyRg}, uFine0: {value: dummyRgba}, uDens: {value: neutralDens}, uContact: {value: dummyRgba}, uDensMean: {value: .5}, uDensView: {value: densMode === 'view' ? 1 : densMode === 'mask' ? 2 : densMode === 'contact' ? 3 : densMode === 'kiri' ? 4 : densMode === 'coat' ? 6 : 0},
     uMistFine: {value: dummyRgba}, uMistIdent: {value: dummyRg}, uStamps: {value: stampTex},
     uView: {value: new THREE.Vector3(...VIEW)}, uKey: {value: new THREE.Vector3(...KEY)}, uLamp: {value: new THREE.Vector3(0, 70, 0)},
     uTime: {value: 0}, uNight: {value: 1}, uPresence: {value: 0}, uPx: {value: 1}, uTrails: {value: trails},
@@ -163,6 +165,8 @@ export function createThreeRenderer(gl, canvas) {
     const isRockP = isPart && /^rockPowder/.test(spec.name);
     // Roof faces are gold powder; the rest of MAT.gold on the pieces is leaf laid on wood (three-pack PART_POWDER_GLSL).
     const isCoat = COAT_ON > 0 && spec.name !== 'paper'; // the paper is not lacquered
+    // 0 sunk (the box's inside and tray), 2 inlaid shell and coral, 1 everything else, which lies on the lacquer (three-pack COAT).
+    const coatClass = spec.name === 'inner' || spec.name === 'tray' ? 0 : spec.name === 'aogai' || spec.name === 'coral' ? 2 : 1;
     const isPowder = isPart && spec.name === 'roofPowder', isLeaf = isPart && spec.name === 'gold', isGrain = isPowder || isLeaf;
     material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v4${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}${isRockP ? '-rockp-v1' : ''}${isPowder ? '-powder-v1' : ''}${isLeaf ? '-leaf-v1' : ''}${isCoat ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
@@ -270,10 +274,10 @@ diffuseColor.rgb *= 1. + (kyotoVnoise(vKyotoRest.xz * .23 + vKyotoRest.y * .1) -
   reflectedLight.directSpecular+=material.specularColorBlended*kyotoLobe*K_POW_LOBE*mix(1.,.35,uNight)*kyotoContact;
   float kyotoEaveLit=1.-K_POW_EAVE*smoothstep(.42,1.,vKyotoUv.y);
   reflectedLight.directDiffuse*=kyotoEaveLit; reflectedLight.indirectDiffuse*=kyotoEaveLit;
-  reflectedLight.directSpecular*=kyotoEaveLit; reflectedLight.indirectSpecular*=kyotoEaveLit;` : ''}${isCoat ? coatApply('vLift') : ''}
+  reflectedLight.directSpecular*=kyotoEaveLit; reflectedLight.indirectSpecular*=kyotoEaveLit;` : ''}${isCoat ? coatApply('vLift', coatClass) : ''}
 }`);
       }
-      if (!isPart && isCoat) shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>${coatApply('8.')}`);
+      if (!isPart && isCoat) shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>${coatApply(coatClass === 0 ? '8.' : '16.', coatClass)}`);
     };
     return material;
   };
@@ -315,7 +319,7 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
   float kyotoTrunkGlint = kyotoKiriGlint(kyotoTrunkN, kyotoTrunkTilt, kyotoTrunkKiri, normalize(uKey), normalize(uView), uNight);
   reflectedLight.directSpecular *= mix(vec3(1.), K_KIRI_NIGHT_SPEC_TINT, uNight * kyotoTrunkKiri);
   reflectedLight.directSpecular += ${foil} * kyotoTrunkGlint;
-}${COAT_ON > 0 ? coatApply('vLift') : ''}`)
+}${COAT_ON > 0 ? coatApply('vLift', 1) : ''}`)
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uGlowBase + vGlow * uGlowGain;');
     };
     return material;
@@ -346,7 +350,7 @@ vec2 kyotoGrad = vec2(
 ) * vTree.w / (2. * kyotoE * vTreeScale);
 normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`)
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uGlowBase + vGlow * uGlowGain;');
-      if (COAT_ON > 0) shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>${coatApply('vLift')}`);
+      if (COAT_ON > 0) shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>${coatApply('vLift', 1)}`);
     };
     return material;
   };

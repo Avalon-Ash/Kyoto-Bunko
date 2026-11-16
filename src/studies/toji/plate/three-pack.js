@@ -558,21 +558,35 @@ export const DENSITY = {width: 256, falloff: 80, more: .65, less: .22, refShift:
  * hollows, at the foot of things and under eaves, thin on crowns and raised faces, and never nothing, as the old lacquer on
  * a raised part is still coated. uCoatK is ?coat times the box's age; with it at 0 nothing here runs.
  */
-export const COAT = {color: [.96, .80, .50], index: 1.5, gain: 1.17, shine: .32, shineRough: .1};
+/**
+ * Round two (docs/plans/2026-11-16-coat.md §7): what the coat does depends on whether a thing lies under the lacquer or on it.
+ *   sunk   (nashiji chips, silver hirame, the box's walls and inside)  film all over, the same amber everywhere (COAT.sunk).
+ *   edge   (togidashi: flat inlays, hills, banks, sandbars, mist, water)  the face is ground flush and bare: no colour. The edge
+ *          is wrapped by lacquer: only a ring just inside the outline takes COAT.edge, strongest at the outline, none a little in.
+ *   top    (takamaki-e roofs, rocks, trees, foxes, birds, frames, cut gold, the lid's gold rim)  a thin, cooler film (COAT.top); a hard step.
+ *   faint  (aogai, coral)  inlaid, barely stained.
+ * Colours are what the film leaves a ray crossing it twice at right angles through thickness 1 (OpenPBR coat_color); the absorption is
+ * -ln(C) per unit thickness, along the key and the view, each bent by the index. gain keeps the luminance of the class where it applies.
+ */
+export const COAT = {sunk: [.955, .76, .44], edge: [.50, .28, .10], top: [.985, .93, .80], faint: [.995, .975, .93], sunkGain: 1.2, topGain: 1.03, index: 1.5, shine: .32, shineRough: .1, edgeWidth: [.6, .5]};
+const v3 = c => c.map(v => v.toFixed(3)).join(',');
 export const COAT_GLSL = `
 #ifndef KYOTO_COAT_DEFS
 #define KYOTO_COAT_DEFS
 uniform float uCoatK; uniform vec3 uCoatUp, uCoatV, uCoatL;
-const vec3 K_COAT_A=-log(vec3(${COAT.color.map(v => v.toFixed(3)).join(',')}));
-const float K_COAT_RN2=1./(${(COAT.index * COAT.index).toFixed(3)});
-vec3 kyotoCoatT(float thick,float cv,float cl){
+const vec3 K_COAT_AS=-log(vec3(${v3(COAT.sunk)})), K_COAT_AE=-log(vec3(${v3(COAT.edge)})), K_COAT_AT=-log(vec3(${v3(COAT.top)})), K_COAT_AF=-log(vec3(${v3(COAT.faint)}));
+const float K_COAT_RN2=1./(${(COAT.index * COAT.index).toFixed(3)}), K_COAT_GS=${COAT.sunkGain.toFixed(3)}, K_COAT_GT=${COAT.topGain.toFixed(3)};
+vec3 kyotoCoatT(vec3 A,float thick,float cv,float cl){
   float tv=sqrt(1.-(1.-cv*cv)*K_COAT_RN2),tl=sqrt(1.-(1.-cl*cl)*K_COAT_RN2);
-  return exp(-K_COAT_A*thick*.5*(1./tv+1./tl)*uCoatK)*mix(1.,${COAT.gain.toFixed(3)},step(1e-4,uCoatK));
+  return exp(-A*thick*.5*(1./tv+1./tl)*uCoatK);
 }
-vec3 kyotoCoatPart(vec3 nW,float lift){
+// cls: 0 sunk, 1 top, 2 faint. The thickness follows the form: thick at the foot and on faces turned from the sky, thin high up and on crowns.
+vec3 kyotoCoatPart(vec3 nW,float lift,int cls){
   float up=clamp(dot(nW,uCoatUp),0.,1.);
   float th=mix(1.5,.7,smoothstep(0.,16.,lift))*(.75+.5*(1.-up));
-  return kyotoCoatT(th,clamp(dot(nW,uCoatV),0.,1.),clamp(dot(nW,uCoatL),0.,1.));
+  vec3 A=cls==0?K_COAT_AS:cls==1?K_COAT_AT:K_COAT_AF;
+  float g=cls==0?K_COAT_GS:cls==1?K_COAT_GT:1.;
+  return kyotoCoatT(A,th,clamp(dot(nW,uCoatV),0.,1.),clamp(dot(nW,uCoatL),0.,1.))*mix(1.,g,step(1e-4,uCoatK));
 }
 #endif`;
 const MAKIE_COMMON_GLSL = `
@@ -618,7 +632,7 @@ ivec2 mIdent0(vec2 p){
 float mHash(vec2 p){vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
 vec2 mHash2(vec2 p){vec3 q=fract(vec3(p.xyx)*vec3(.1031,.1030,.0973));q+=dot(q,q.yzx+33.33);return fract((q.xx+q.yz)*q.zy);}
 float mVnoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mHash(i),mHash(i+vec2(1.,0.)),f.x),mix(mHash(i+vec2(0.,1.)),mHash(i+1.),f.x),f.y);}
-vec3 mN, mHk, mHp, mKeyC, mPoolC, mAmbC, mWP; float mThick=1., mAtt, mDk, mDp, mWake=0., mSh=1., mOcc=1., mBand=0., mSheen=0.;
+vec3 mN, mHk, mHp, mKeyC, mPoolC, mAmbC, mWP; float mThick=1., mKS=1., mKE=0., mKT=0., mAtt, mDk, mDp, mWake=0., mSh=1., mOcc=1., mBand=0., mSheen=0.;
 float mPool(){return M_POOL*mix(1.,M_AGE_POOL,uAge);}
 vec3 mLight(){return M_AMB*mAmbC*mOcc+(M_KEY*mDk*mKeyC+mPool()*mAtt*mDp*mPoolC)*mSh;}
 vec3 mSpec(float e){return (M_KEY*pow(max(dot(mN,mHk),0.),e)*mKeyC+mPool()*mAtt*pow(max(dot(mN,mHp),0.),e)*mPoolC)*mSh;}
@@ -712,6 +726,15 @@ float mKiriCluster(vec2 p,vec2 tdir,float e,out vec3 glint){
   }
   glint*=cov;return cov;
 }
+// How far a point is from the inside of a shape's edge, 0 well inside and 1 at the outline: six taps on a ring of radius r around it, each
+// counting if the field there is below lo..hi (outside). Togidashi: the lacquer wraps the edge, so the colour is put on this ring and nowhere else.
+#ifdef KYOTO_COAT_ON
+float mEdgeOut(sampler2D tex,int ch,vec2 p,float r,float lo,float hi){
+  float o=0.;
+  for(int i=0;i<6;i++){float a=float(i)*1.0472+1.3;vec2 q=p+vec2(cos(a),sin(a))*r;vec4 t=texture(tex,mPuv(q));o+=1.-smoothstep(lo,hi,ch==0?t.g:ch==1?t.r:t.a);}
+  return o*.16667;
+}
+#endif
 vec3 mCoat(){return (vec3(1.,.95,.86)*(mSpec(220.)*.42+mSpec(36.)*.10)+mRoom(0.)*.045+mKeyC*mBand*M_BAND_GAIN)*mix(1.,M_AGE_GLOSS*(.45+M_AGE_HAZE*mVnoise(mWP.xz*.035+9.)),uAge);}
 // Nashiji (梨子地), the Hatsune way: the ground is dark lacquer and the gold is in it as flat chips, large, each of its own
 // shape and size, in several golds (mostly orange, some yellow, some reddish, a few pale). They are laid in three layers
@@ -804,7 +827,7 @@ vec3 mHirame(vec3 c,vec2 kp,float dS,float rise){
 vec4 mFinish(vec3 c,float a){
 #ifdef KYOTO_COAT_ON
   if(uCoatK>0.){
-    vec3 T=kyotoCoatT(mThick,clamp(dot(mN,uCoatV),0.,1.),clamp(dot(mN,uCoatL),0.,1.));
+    vec3 T=kyotoCoatT(K_COAT_AS*mKS+K_COAT_AT*mKT+K_COAT_AE*mKE,mThick,clamp(dot(mN,uCoatV),0.,1.),clamp(dot(mN,uCoatL),0.,1.))*mix(1.,K_COAT_GS,mKS*step(1e-4,uCoatK))*mix(1.,K_COAT_GT,mKT*step(1e-4,uCoatK));
     c=c*T+mCoat()*(1.-T)*.3;
   }
 #endif
@@ -841,6 +864,9 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   float corner=smoothstep(.86,1.,min(abs(kp.x)/M_HALF.x,abs(kp.y)/M_HALF.y));
   float worn=uAge*step(6.4,out_)*smoothstep(.46-.22*corner,.86,mVnoise(kp*.045+2.))*.5;
   bc=mix(bc,M_UNDER*(.3+mLight()),worn);
+#ifdef KYOTO_COAT_ON
+  mKS=0.;mKT=1.; // the lip's gold is thin and bright
+#endif
   outgoingLight=mFinish(bc,1.).rgb;
   diffuseColor.a=1.;
 }else{
@@ -881,6 +907,20 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   // A flat inlay (cut foil, sheet, coral) is exactly its own outline: the plain ground runs right up to its edge.
   float inlay=clamp((fine.g-.5)/max(fwidth(fine.g),.004)+.5,0.,1.);
   float dField=texture(uDens,mPuv(kp)).r;
+#ifdef KYOTO_COAT_ON
+  if(uCoatK>0.){
+    // Which kind of coat this pixel has (three-pack COAT): sunk chips, a flush inlay's wrapped edge, or a thin film over something raised.
+    mKS=0.;mKT=1.;mKE=0.;
+    float er=(${COAT.edgeWidth[0].toFixed(2)}+${COAT.edgeWidth[1].toFixed(2)}*uAge)*(.75+.5*mVnoise(kp*.9+3.))*(.8+.4*mThick);
+    if(mat==1){mKS=1.;mKT=0.;}
+    else if(mat==6){mKS=.45;mKT=.55;}
+    else if(mat==2||mat==3||mat==4){mKE=.6*(1.-smoothstep(.01,.14,hs));mKT=1.-mKE;}
+    else if(mat==19||mat==20||mat==23||mat==24){mKE=1.-smoothstep(.02,.2,fine.g);mKT=1.-mKE;}
+    else if(mat==12){float ke=mEdgeOut(uFine0,0,kp,er,.02,.06);mKE=smoothstep(.0,.4,ke);mKT=1.-mKE;}
+    else if(mat==5||mat==7||mat==8||mat==10||mat==11||mat==21||mat==22){float ke=smoothstep(.0,.4,mEdgeOut(uFine0,0,kp,er,.42,.58));mKE=ke*smoothstep(0.,.25,inlay);mKS=(1.-inlay)*(1.-mKE);mKT=inlay*(1.-ke);}
+    else if(mat==9||mat==17){mKT=0.;mKS=0.;mKE=0.;}
+  }
+#endif
   // Maki-bokashi: powder gathers toward things and thins in the open. On an old, darker ground the grading carries
   // further (M_AGE_BOKASHI times as strong at age 1): it is what joins a form to the ground it stands on.
   if(mat==1){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
@@ -1032,7 +1072,9 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(uDensView>2.5)c=vec3(texture(uContact,mPuv(kp)).r*.8);
   else if(uDensView>1.5)c=mat==1?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
   else if(uDensView>.5)c=vec3(dField*.8);
+  if(uDensView>.5){mKS=0.;mKE=0.;mKT=0.;} // dev views are data, not a picture: no coat on them
   outgoingLight=mFinish(c,1.).rgb;
+  if(uDensView>5.5)outgoingLight=vec3(mKS,mKE,mKT); // dev ?dens=coat: sunk red, wrapped edge green, thin film blue
   if(uDensView>3.5&&uDensView<4.5)outgoingLight=vec3(kiriV,0.,(mat>=2&&mat<=4)?1.-kiriV:kiriB*(1.-kiriV)); // dev: red = kirikane, blue = other hill ground (?dens=kiri)
   diffuseColor.a=1.;
 }`;
@@ -1074,7 +1116,7 @@ export const BOX_SIDE_FRAG_GLSL = `
   // The walls darken toward the foot in one long grade, as a box does that has stood on a shelf.
   float low=smoothstep(-70.,-134.,sp.y);
   c=mix(c,c*vec3(.56,.49,.42),low*low*.6*uAge);
-  mThick=.9+.7*low;
+  mThick=.6+1.0*low;
   outgoingLight=mFinish(c*vec3(1.,.86,.62)*.9*K_SIDE_DIM,1.).rgb;
 }`;
 
@@ -1119,6 +1161,12 @@ void main(){
   if(alpha<.01)discard;
   float rise=texelFetch(uState,ivec2(id,0),0).z;
   mWake=0.;mSh=1.;mSetLight(normalize(vKyotoNormal),vKyotoWorld);
+#ifdef KYOTO_COAT_ON
+  if(uCoatK>0.){ // mist is ground flush: bare face, wrapped edge
+    float ke=smoothstep(.0,.4,mEdgeOut(uMistFine,2,vKyotoUv,(${COAT.edgeWidth[0].toFixed(2)}+${COAT.edgeWidth[1].toFixed(2)}*uAge)*(.75+.5*mVnoise(vKyotoUv*.9+3.)),.45,.6));
+    mKS=0.;mKE=ke;mKT=1.-ke;
+  }
+#endif
   // Suyari-gasumi in the Hatsune lids is dense, bright gold (濃梨子地 into flat gold), clearly richer than the ground.
   vec3 c=.5*mNashiji(vKyotoUv,1.6,mix(M_GOLD,M_PALE,.5))+.5*mMetal(vKyotoUv,M_PALE*.95,1.)+.25*mSheet(M_PALE);
   // Long thin strips of grey silver lie in the gold (the Hatsune mist bands alternate the two metals).
