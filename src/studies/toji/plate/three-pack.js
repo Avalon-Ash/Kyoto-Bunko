@@ -288,7 +288,7 @@ export const PART_LIGHT_GLSL = `
 // L1 the pieces darken where they meet the ground; L2 faces turned down catch the gold ground's bounce.
 const float K_CONTACT_MIN=.45, K_CONTACT_H=10., K_BOUNCE=.8;
 // With age the foot is darker still and the ground's bounce is duller.
-const float K_AGE_CONTACT_MIN=.22, K_AGE_BOUNCE=.6;
+const float K_AGE_CONTACT_MIN=.36, K_AGE_BOUNCE=.6;
 const vec3 K_BOUNCE_C=vec3(1.,.72,.36);
 const float K_WIN=.55; // soft window reflection intensity on upward-facing metallic parts
 const float K_WIN_SOFT=.35; // soft window reflection angular width (larger is wider)
@@ -308,6 +308,8 @@ vec3 kyotoKiriGold(){return mix(K_KIRI_GOLD,K_KIRI_GOLD_AGED,uAge);}
 // Silver sulphides with age: K_TARNISH is what is left of it at age 1 (a warm dark grey). k is how exposed the place
 // is to it: 1 in the hollows and the shade, less on ridges and foil that handling keeps rubbed bright.
 const vec3 K_TARNISH=vec3(.46,.42,.36);
+const vec3 K_ROCK_FOOT=vec3(.43,.29,.14); // the aged ground's tone, which a rock keeps at its foot
+const float K_ROCK_FOOT_H=9., K_ROCK_FOOT_AMT=.6; // how high the ground's tone climbs the rock, and how fully it takes it
 vec3 kyotoAgedSilver(vec3 c,float k){return c*mix(vec3(1.),K_TARNISH,clamp(uAge*k,0.,1.));}
 const vec3 K_ROCK_BODY_GOLD=vec3(.36,.22,.06); // dark bronze ground between the gold foil on the lit face of a rock
 const vec3 K_ROCK_BODY_SHADE=vec3(.27,.27,.26); // the ground where the rock turns away from the light: oxidized silver, dark
@@ -502,6 +504,7 @@ const vec3 M_AGE_BODY=vec3(.42,.35,.22), M_AGE_BODY_NIGHT=vec3(.80,.74,.62), M_A
 // The coat no longer mirrors evenly (M_AGE_HAZE: how far its gloss swings from place to place), the lacquer lies a
 // little thicker here and thinner there (M_AGE_MURA: the swing in the ground's value), and where a bank's crown has
 // been rubbed for centuries the red-brown under-lacquer shows through the gold (M_AGE_WEAR, M_UNDER).
+const float M_AGE_BOKASHI=2.4;
 const float M_AGE_HAZE=1.1, M_AGE_MURA=.26, M_AGE_WEAR=.3;
 const vec3 M_UNDER=vec3(.21,.075,.04);
 const vec3 M_CORAL=vec3(.60,.115,.06);
@@ -517,16 +520,16 @@ ivec2 mIdent0(vec2 p){
 float mHash(vec2 p){vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
 vec2 mHash2(vec2 p){vec3 q=fract(vec3(p.xyx)*vec3(.1031,.1030,.0973));q+=dot(q,q.yzx+33.33);return fract((q.xx+q.yz)*q.zy);}
 float mVnoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mHash(i),mHash(i+vec2(1.,0.)),f.x),mix(mHash(i+vec2(0.,1.)),mHash(i+1.),f.x),f.y);}
-vec3 mN, mHk, mHp, mKeyC, mPoolC, mAmbC, mWP; float mAtt, mDk, mDp, mWake=0., mSh=1., mBand=0., mSheen=0.;
+vec3 mN, mHk, mHp, mKeyC, mPoolC, mAmbC, mWP; float mAtt, mDk, mDp, mWake=0., mSh=1., mOcc=1., mBand=0., mSheen=0.;
 float mPool(){return M_POOL*mix(1.,M_AGE_POOL,uAge);}
-vec3 mLight(){return M_AMB*mAmbC+(M_KEY*mDk*mKeyC+mPool()*mAtt*mDp*mPoolC)*mSh;}
+vec3 mLight(){return M_AMB*mAmbC*mOcc+(M_KEY*mDk*mKeyC+mPool()*mAtt*mDp*mPoolC)*mSh;}
 vec3 mSpec(float e){return (M_KEY*pow(max(dot(mN,mHk),0.),e)*mKeyC+mPool()*mAtt*pow(max(dot(mN,mHp),0.),e)*mPoolC)*mSh;}
 vec3 mAgedSilver(vec3 f0,vec2 p,float k){return f0*mix(vec3(1.),M_TARNISH,clamp(uAge*k*(.86+.26*smoothstep(.25,.8,mVnoise(p*.05+17.))),0.,1.));}
-vec3 mAgedLacquer(vec3 c){return c*mix(vec3(1.),mix(M_AGE_BODY,M_AGE_BODY_NIGHT,uNight),uAge)+M_AGE_VEIL*uAge*(mAmbC*.55+mKeyC*mDk*.45*mSh);}
+vec3 mAgedLacquer(vec3 c){return c*mix(vec3(1.),mix(M_AGE_BODY,M_AGE_BODY_NIGHT,uNight),uAge)+M_AGE_VEIL*uAge*(mAmbC*.55*mOcc+mKeyC*mDk*.45*mSh);}
 vec3 mRoom(float rough){
   vec3 r=reflect(-uView,mN);
   float up=smoothstep(-.35,1.,r.y),win=smoothstep(mix(.74,.15,rough),1.,dot(r,uKey));
-  return mAmbC*(.04+.30*up*up)+mKeyC*win*mix(1.15,.5,rough);
+  return (mAmbC*(.04+.30*up*up)+mKeyC*win*mix(1.15,.5,rough))*mix(1.,mOcc,.7);
 }
 void mSetLight(vec3 n,vec3 worldPos){
   mN=n;mWP=worldPos;
@@ -613,10 +616,9 @@ export const MAKIE_GROUND_PARS_GLSL = `
 varying float vGlow; uniform float uGlowBase, uGlowGain;
 uniform sampler2D uState, uFine0, uDens, uContact;
 uniform float uDensView, uDensMean;
-// Age at the foot of things: a dark line of bare lacquer hard against the foot (M_AGE_LINE, within _LINE_W of the
-// field's top), a wider stain of dirt round it (M_AGE_STAIN), and the same crease along the edge of a bank.
-const float M_AGE_LINE=.95, M_AGE_LINE_W=.22, M_AGE_STAIN=.55, M_AGE_CREASE=.55;
-const vec3 M_AGE_DIRT=vec3(.085,.06,.042);
+// Where things stand they shut out the room: the lid gets less of the sky's light there (M_OCC_AMB) and a little
+// less of everything else (M_OCC_ALL). It is light withheld, never a colour laid on, and it fades out with no edge.
+const float M_OCC_AMB=.85, M_OCC_ALL=.16;
 const float M_DENS_MORE=${DENSITY.more.toFixed(3)}, M_DENS_LESS=${DENSITY.less.toFixed(3)};
 varying vec2 vKyotoPlate;
 varying vec3 vKyotoWorld, vKyotoNormal, vKyotoTanX, vKyotoTanZ;
@@ -632,7 +634,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   vec3 bc=out_>7.4?mMetal(kp,M_GOLD*.92,1.):out_>6.4?mMetal(kp,M_GOLD*.6,1.):mNashiji(kp,.9,M_GOLD);
   // The lip is where hands lift the lid: its gold has worn through to the lacquer in patches, most at the corners.
   float corner=smoothstep(.86,1.,min(abs(kp.x)/M_HALF.x,abs(kp.y)/M_HALF.y));
-  float worn=uAge*step(6.4,out_)*smoothstep(.62-.22*corner,.80,mVnoise(kp*.045+2.))*.7;
+  float worn=uAge*step(6.4,out_)*smoothstep(.46-.22*corner,.86,mVnoise(kp*.045+2.))*.5;
   bc=mix(bc,M_UNDER*(.3+mLight()),worn);
   outgoingLight=mFinish(bc,1.).rgb;
   diffuseColor.a=1.;
@@ -661,13 +663,18 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     }
   #endif
   mSh=mix(1.,sh,.86);
+  // Occlusion from the contact field (bake.js): squared twice over so it has no edge anywhere.
+  float occ=texture(uContact,mPuv(kp)).r;occ*=occ*(3.-2.*occ);
+  mOcc=1.-M_OCC_AMB*occ*uAge;mSh*=1.-M_OCC_ALL*occ*uAge;
   mSetLight(normalize(normalize(vKyotoNormal)-grad.x*vKyotoTanX-grad.y*vKyotoTanZ),vKyotoWorld);
   float line=fine.b;vec3 L=mLight();
   float w=smoothstep(.02,.34,hs);
   float dens=.82+.22*mVnoise(kp*.02),kAmt=0.,wN=0.,wM=0.,wS=0.,bigD=0.,bigCell=6.6,bigSq=0.;
   vec3 tint=M_GOLD,f0=M_GOLD,c=vec3(0.);
   float dField=texture(uDens,mPuv(kp)).r;
-  if(mat==1){wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*(dField-uDensMean)/max(1.-uDensMean,.05):1.-M_DENS_LESS*(uDensMean-dField)/max(uDensMean,.05);}
+  // Maki-bokashi: powder gathers toward things and thins in the open. On an old, darker ground the grading carries
+  // further (M_AGE_BOKASHI times as strong at age 1): it is what joins a form to the ground it stands on.
+  if(mat==1){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
   else if(mat==2||mat==3){
     float cloud=mat==3?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
     // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
@@ -739,14 +746,6 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     float wr=smoothstep(.62,.95,hs)*smoothstep(.50,.72,mVnoise(M_R1*kp*.07+5.)*.62+mVnoise(M_R2*kp*.19)*.38)*M_AGE_WEAR*uAge;
     c=mix(c,M_UNDER*(.3+L),wr);
   }
-  if(uAge>0.){
-    // The meshes overhang their own footprints, so only the field's lower half shows round them: stretch it.
-    float ct=smoothstep(0.,.6,texture(uContact,mPuv(kp)).r);
-    float lineC=smoothstep(1.-M_AGE_LINE_W,1.-M_AGE_LINE_W*.35,ct),stain=ct*(.45+.55*ct)*(.7+.6*mVnoise(kp*.09));
-    float crease=smoothstep(.0,.012,hs)*(1.-smoothstep(.012,.07,hs))*step(float(mat),4.5)*step(1.5,float(mat));
-    float dirt=clamp(max(lineC*M_AGE_LINE,crease*M_AGE_CREASE)+stain*M_AGE_STAIN,0.,.85)*uAge;
-    c=mix(c,M_AGE_DIRT*(.35+L),dirt);
-  }
   if(uDensView>2.5)c=vec3(texture(uContact,mPuv(kp)).r*.8);
   else if(uDensView>1.5)c=mat==1?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
   else if(uDensView>.5)c=vec3(dField*.8);
@@ -778,9 +777,9 @@ export const BOX_SIDE_FRAG_GLSL = `
   c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.6)),kv)+M_PALE*kg;
   // Walls face the room, not the window: keep them a warmer, slightly deeper amber than the lid.
   const float K_SIDE_DIM=.82; // dim box walls one step below the lid while keeping rim and edge bright
-  // Dirt gathers toward the foot of the walls, and under the lid's overhang.
-  float low=smoothstep(-96.,-132.,sp.y)*(.75+.5*mVnoise(vec2(sp.x*.02,7.))),under=body*smoothstep(-47.,-36.,sp.y);
-  c=mix(c,c*vec3(.50,.43,.36),clamp(low*.62+under*.4,0.,.8)*uAge);
+  // The walls darken toward the foot in one long grade, as a box does that has stood on a shelf.
+  float low=smoothstep(-70.,-134.,sp.y);
+  c=mix(c,c*vec3(.56,.49,.42),low*low*.6*uAge);
   outgoingLight=mFinish(c*vec3(1.,.86,.62)*.9*K_SIDE_DIM,1.).rgb;
 }`;
 
@@ -827,7 +826,7 @@ void main(){
   // Suyari-gasumi in the Hatsune lids is dense, bright gold (濃梨子地 into flat gold), clearly richer than the ground.
   vec3 c=.5*mNashiji(vKyotoUv,1.6,mix(M_GOLD,M_PALE,.5))+.5*mMetal(vKyotoUv,M_PALE*.95,1.)+.25*mSheet(M_PALE);
   // Long thin strips of grey silver lie in the gold (the Hatsune mist bands alternate the two metals).
-  float sv=smoothstep(.50,.60,mVnoise(vec2(vKyotoUv.x*.012,vKyotoUv.y*.19)+vPartId*3.7));
+  float sv=smoothstep(.40,.68,mVnoise(vec2(vKyotoUv.x*.012,vKyotoUv.y*.19)+vPartId*3.7));
   c=mix(c,mMetal(vKyotoUv,mAgedSilver(M_OXID,vKyotoUv,1.),1.)*.9+.2*mSheet(mAgedSilver(M_SILVER,vKyotoUv,.7)),sv*.9);
   fragColor=mFinish(c,alpha);
 }`;

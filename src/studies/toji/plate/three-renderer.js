@@ -148,7 +148,7 @@ export function createThreeRenderer(gl, canvas) {
     const isRock = isPart && Boolean(spec.rock), isSilverRock = spec.rock === 'silver';
     // Black lacquer on the pieces (walls, plinths) is shin-nuri: polished to a dark mirror.
     const isLacq = isPart && spec.name === 'lacquer';
-    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v3${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}`;
+    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v4${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
@@ -175,7 +175,9 @@ vec3 kyotoRockFoil = kyotoRockSilver ? kyotoAgedSilver(mix(K_ROCK_FOIL_OXID, K_R
 // Old foil is uneven: some squares have dulled, more of them in silver than in gold.
 kyotoRockFoil *= mix(.9 + .2 * kyotoRockTone, kyotoRockSilver ? .62 + .62 * kyotoRockTone : .74 + .42 * kyotoRockTone, uAge);
 diffuseColor.rgb = mix(kyotoAgedSilver(K_ROCK_BODY_SHADE, 1.), kyotoRockSilver ? kyotoAgedSilver(K_ROCK_BODY_SILVER, .8) : K_ROCK_BODY_GOLD, kyotoRockLit);
-diffuseColor.rgb = mix(diffuseColor.rgb, kyotoRockFoil, kyotoRockKiri * K_ROCK_KIRI_COVER);`)
+diffuseColor.rgb = mix(diffuseColor.rgb, kyotoRockFoil, kyotoRockKiri * K_ROCK_KIRI_COVER);
+// The mound rises out of the lid: at its foot it is still the ground's own tone, with no edge between them.
+diffuseColor.rgb = mix(diffuseColor.rgb, K_ROCK_FOOT, (1. - smoothstep(0., K_ROCK_FOOT_H, vLift)) * K_ROCK_FOOT_AMT * uAge);`)
           .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = mix(K_OXID_ROUGH, roughnessFactor, kyotoRockLit);
 roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNight), kyotoRockKiri);`);
