@@ -207,7 +207,9 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
     return material;
   };
   const patchLimbMaterial = (material, spec) => {
-    material.customProgramCacheKey = () => `kyoto-limb-${spec.glow ? 1 : 0}-kiri-v1`;
+    // Wood is silver where the foliage is gold (Hatsune); a tree that flowers in silver keeps gold wood.
+    const silver = spec.name === 'silver', foil = silver ? 'K_ROCK_FOIL_SILVER' : 'K_KIRI_GOLD';
+    material.customProgramCacheKey = () => `kyoto-limb-${spec.glow ? 1 : 0}-${silver ? 's' : 'g'}-kiri-v2`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
@@ -227,12 +229,12 @@ vec3 kyotoTrunkNW = inverseTransformDirection(normalize(vNormal), viewMatrix);
 float kyotoTrunkLit = smoothstep(K_TRUNK_LIT_LO, K_TRUNK_LIT_HI, dot(kyotoTrunkNW, normalize(uKey)));
 vec2 kyotoTrunkTilt;
 float kyotoTrunkKiri = kyotoKiriPattern(vTreeUv, K_TRUNK_KIRI_CELL, kyotoTrunkLit, uPx, kyotoTrunkTilt) * (1. - kyotoBark * K_TRUNK_BARK_MASK);
-diffuseColor.rgb = mix(diffuseColor.rgb, K_M_OXID * K_TRUNK_OXID_SCALE, (1. - kyotoTrunkLit) * K_TRUNK_OXID_STRENGTH);
+diffuseColor.rgb = ${silver ? 'mix(K_TRUNK_SILVER_SHADE, K_TRUNK_SILVER_LIT, kyotoTrunkLit)' : 'mix(diffuseColor.rgb, K_M_OXID * K_TRUNK_OXID_SCALE, (1. - kyotoTrunkLit) * K_TRUNK_OXID_STRENGTH)'};
 diffuseColor.rgb *= 1. - kyotoBark * .45;
-diffuseColor.rgb = mix(diffuseColor.rgb, K_KIRI_GOLD, kyotoTrunkKiri * K_TRUNK_KIRI_COVER);`)
+diffuseColor.rgb = mix(diffuseColor.rgb, ${foil}, kyotoTrunkKiri * K_TRUNK_KIRI_COVER);`)
         .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = mix(roughnessFactor, .85, kyotoBark * .5);
-roughnessFactor = mix(roughnessFactor, K_OXID_ROUGH, (1. - kyotoTrunkLit) * (1. - kyotoTrunkKiri) * K_TRUNK_OXID_STRENGTH);
+roughnessFactor = mix(roughnessFactor, K_OXID_ROUGH, (1. - kyotoTrunkLit) * (1. - kyotoTrunkKiri) * ${silver ? '1.' : 'K_TRUNK_OXID_STRENGTH'});
 roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNight), kyotoTrunkKiri);`)
         .replace('#include <normal_fragment_begin>', NORMAL_FIX)
         .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize(normal - kyotoGrain * .13 * vTreeTanX - cos(vTreeUv.y * .9) * .06 * vTreeTanZ);')
@@ -241,7 +243,7 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
   vec3 kyotoTrunkN = inverseTransformDirection(normal, viewMatrix);
   float kyotoTrunkGlint = kyotoKiriGlint(kyotoTrunkN, kyotoTrunkTilt, kyotoTrunkKiri, normalize(uKey), normalize(uView), uNight);
   reflectedLight.directSpecular *= mix(vec3(1.), K_KIRI_NIGHT_SPEC_TINT, uNight * kyotoTrunkKiri);
-  reflectedLight.directSpecular += K_KIRI_GOLD * kyotoTrunkGlint;
+  reflectedLight.directSpecular += ${foil} * kyotoTrunkGlint;
 }`)
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uGlowBase + vGlow * uGlowGain;');
     };

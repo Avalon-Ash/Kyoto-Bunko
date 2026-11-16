@@ -284,8 +284,10 @@ const vec3 K_ROCK_BODY_SHADE=vec3(.27,.27,.26); // the ground where the rock tur
 const vec3 K_ROCK_BODY_SILVER=vec3(.40,.41,.41); // the ground of a silver rock, lit
 const vec3 K_ROCK_FOIL_SILVER=vec3(.90,.91,.88); // kirigin foil on the lit face
 const vec3 K_ROCK_FOIL_OXID=vec3(.60,.60,.57); // foil where it turns from the light: oxidized silver
-const float K_TRUNK_OXID_SCALE=.76; // oxidized silver brightness on shaded tree trunks relative to K_M_OXID
-const float K_TRUNK_OXID_STRENGTH=.4; // blend weight toward oxidized silver on shaded trunk faces
+const float K_TRUNK_OXID_SCALE=.76; // oxidized silver brightness on shaded gold trunks relative to K_M_OXID
+const float K_TRUNK_OXID_STRENGTH=.4; // blend weight toward oxidized silver on shaded gold trunk faces
+const vec3 K_TRUNK_SILVER_SHADE=vec3(.34,.34,.33); // a trunk's shaded side: oxidized silver
+const vec3 K_TRUNK_SILVER_LIT=vec3(.74,.75,.73); // a trunk's lit side: silver, a little greyer than the foil on it
 const float K_TRUNK_BARK_MASK=.55; // suppress kirikane pieces inside deep bark seams so grain stays readable
 const float K_ROCK_LIT_LO=-.35; // rock N.L threshold where shaded M_OXID begins transitioning to gold
 const float K_ROCK_LIT_HI=.30; // rock N.L threshold where lit gold reaches full strength
@@ -746,5 +748,8 @@ void main(){
   mWake=0.;mSh=1.;mSetLight(normalize(vKyotoNormal),vKyotoWorld);
   // Suyari-gasumi in the Hatsune lids is dense, bright gold (濃梨子地 into flat gold), clearly richer than the ground.
   vec3 c=.5*mNashiji(vKyotoUv,1.6,mix(M_GOLD,M_PALE,.5))+.5*mMetal(vKyotoUv,M_PALE*.95,1.)+.25*mSheet(M_PALE);
+  // Long thin strips of grey silver lie in the gold (the Hatsune mist bands alternate the two metals).
+  float sv=smoothstep(.50,.60,mVnoise(vec2(vKyotoUv.x*.012,vKyotoUv.y*.19)+vPartId*3.7));
+  c=mix(c,mMetal(vKyotoUv,M_OXID,1.)*.9+.2*mSheet(M_SILVER),sv*.9);
   fragColor=mFinish(c,alpha);
 }`;

@@ -6,8 +6,8 @@
 
 | 項目 | 狀態 |
 |---|---|
-| 主線 | `main` 與 `origin/main` 在 `4ed80e3`（2026-11-15）：three.js 蒔繪盤為預設、T3 材質、黑漆壁真塗都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/roadmap-1116`（2026-11-16 從 `main` 開）：開案書 R0–R10 的全部成果都在這裡，**尚未合併 `main`、尚未 push**（各自需要使用者同意；push `main` 會觸發部署）。總表見 [`agent-runs/2026-11-16-overnight-chain.md`](agent-runs/2026-11-16-overnight-chain.md) |
+| 主線 | `main` 與 `origin/main` 在 `6fd2099`（2026-11-16，使用者同意合併與 push，部署成功）：開案書 R0–R10 全部上線。實際 HEAD 以 `git log -1 main` 為準 |
+| 工作分支 | `claude/silver-1116`（從 `main` 開）：銀的補強（樹幹改銀、霞帶裡的銀條）。**尚未合併 `main`、尚未 push**。長鏈總表見 [`agent-runs/2026-11-16-overnight-chain.md`](agent-runs/2026-11-16-overnight-chain.md) |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除。本輪用過的兩個已移除；目前有哪些以 `git worktree list` 為準 |
@@ -31,7 +31,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 |---|---|
 | 資料 | **792 筆**，`validate_data.js --strict` ERROR 0／WARN 0。2026-11-16 查完十一區所有食處（Tabelog）與「世界遺產」「國寶」標籤：退役 17 筆、改區 27 筆。「營業中」的依據是 Tabelog 英文版沒有閉店類標示，不是現場確認。寺社、商店等其他類型的事實查核還沒做 |
 | 首頁文庫 | 十一區文箱，每區一面蒔繪盤；單指盒面移光，長拖換函，雙指捏合／滾輪／快捷鍵放大（上限 3 倍），點蓋／Enter／空白鍵開蓋直入 `DetailView`；月光預設、閒置移光 |
-| 蒔繪盤 | **只有 three.js 一條管線**（`plate/three-renderer.js`＋`three-pack.js`）。舊的自寫 WebGL2 管線、2.5D 浮雕與 `?three=0` 已刪。狐、鳳凰、鶯、銀沙灘與向月台、石垣都是 three 網格，沒有平塗佔位。岩面是菱形切金（受光大而密、背光小而疏），銀岩是銀。地有疏密場（靠近物較密）。九區有依附小景（`plate/<區>.js` 裡帶 `on` 欄位的部件） |
+| 蒔繪盤 | **只有 three.js 一條管線**（`plate/three-renderer.js`＋`three-pack.js`）。舊的自寫 WebGL2 管線、2.5D 浮雕與 `?three=0` 已刪。狐、鳳凰、鶯、銀沙灘與向月台、石垣都是 three 網格，沒有平塗佔位。岩面是菱形切金（受光大而密、背光小而疏），銀岩是銀。地有疏密場（靠近物較密）。九區有依附小景（`plate/<區>.js` 裡帶 `on` 欄位的部件）。**銀的分工**（2026-11-16 對照德川美術館「初音蒔絵文台・硯箱（部分）」照片）：葉是金的樹，幹與枝是銀（背光氧化銀灰、受光淡銀、上面是切銀）；開銀花的櫻保留金幹；霞帶的金裡躺著細長的灰銀條 |
 | 降級 | 沒有 WebGL2、three 載入或啟動失敗、context 遺失、或網址加 `?plate=static` 時，顯示預渲染的靜態圖（`plate/static/` 22 張 webp，十一區 × 日夜），換函與開蓋照常，盒面不動。**盤面有改動就要重拍**：`node scripts/plate-fallback-shots.mjs`（dev server 在 3000） |
 | 全站 UI | 手機優先、深色預設；暖日／月光、語系、減少動態全站共用（色票唯一來源 `src/theme.css`）。卡片有傾斜與柔光（觸控只有按壓回饋）、篩選後新卡片淡入；30 張以上的列表分批渲染（`src/lib/batch-render.ts`） |
 | 背景 | すやり霞＋和紙＋金箔／銀塵、障子格光與卓面光澤（`backdrop.js`）；十一區各自的紋樣與一行短句（`ward-art.js`，2026-11-16 改寫為「地標＋該區另一個重點」） |
