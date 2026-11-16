@@ -465,8 +465,9 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
   assert.match(preparePlate([basePart, {...basePart, id: 'b', kind: KIND.bird}, {...basePart, id: 'c', motionWith: 'b'}]).errors.join(), /motionWith bird/);
   assert.match(preparePlate([{...basePart, rigidGroup: true}, {...basePart, id: 'b', rigidGroup: true}]).errors.join(), /multiple rigidGroup/);
 
-  // Scope fence: part counts per ward. R5a/R5b added the attached scenes to every ward.
-  const expectedCounts = {W_MINAMI: 53, W_UKYO: 25, W_NISHIKYO: 34, W_YAMASHINA: 36, W_FUSHIMI: 40, W_KITA: 30, W_KAMIGYO: 41, W_SAKYO: 34, W_NAKAGYO: 42, W_HIGASHIYAMA: 27, W_SHIMOGYO: 36};
+  // Scope fence: part counts per ward. R5a/R5b added the attached scenes to every ward; patina P3b split the coral
+  // leaves, the fire of the 大, the silver petals and the dew of shell into parts of their own (one part per material).
+  const expectedCounts = {W_MINAMI: 54, W_UKYO: 26, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 40, W_KITA: 30, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 42, W_HIGASHIYAMA: 28, W_SHIMOGYO: 36};
   for (const [ward, build] of Object.entries(PLATES)) {
     const {parts, errors} = preparePlate(build());
     assert.deepEqual(errors, [], ward);
@@ -868,7 +869,7 @@ test('all three ward lanterns migrate to rigidGroup mesh while keeping part coun
 
   const wardLanterns = [
     ['W_NISHIKYO', 34, ['shore-lantern']], // 34: R5b added the Katsura fence
-    ['W_YAMASHINA', 36, ['west-lantern', 'east-lantern']], // 36: R5b added the stair-foot grass
+    ['W_YAMASHINA', 38, ['west-lantern', 'east-lantern']], // 38: R5b added the stair-foot grass, P3b the coral leaves
   ];
   for (const [ward, count, ids] of wardLanterns) {
     const {parts, errors} = preparePlate(PLATES[ward]());

@@ -172,6 +172,8 @@ function mapleLeaf(cx, cz, radius, turn) {
 /**
  * Small shapes inlaid flat in the lid, one part per material. They are ground, so each keeps its outline however
  * small it is: this is where a picture says what the solids are too round to say. Densest at the centre of the drift.
+ * mats: [name, material, every]. The first is the body; each later one takes one piece in `every` (3 if not given),
+ * the last listed winning where two fall on the same piece.
  */
 function scatter(id, cx, cz, rx, rz, count, seed, size, shape, mats) {
   const r = rand(seed), parts = mats.map(([name, mat]) => part(`${id}-${name}`, KIND.still, 0, mat, [cx, cz]));
@@ -179,13 +181,15 @@ function scatter(id, cx, cz, rx, rz, count, seed, size, shape, mats) {
   for (let i = 0; i < count; i++) {
     const a = r() * 6.283, q = Math.pow(r(), .7), R = size * (.75 + r() * .6), m = R + 2;
     const x = clamp(cx + Math.cos(a) * rx * q, PLATE.halfW - m), z = clamp(cz + Math.sin(a) * rz * q, PLATE.halfH - m);
-    parts[i % 3 === 2 ? parts.length - 1 : 0].fills.push({d: shape(x, z, R, r() * 6.283), soft: 0, crisp: 1});
+    let pick = 0;
+    for (let k = 1; k < mats.length; k++) { const every = mats[k][2] ?? 3; if (i % every === every - 1) pick = k; }
+    parts[pick].fills.push({d: shape(x, z, R, r() * 6.283), soft: 0, crisp: 1});
   }
   return parts.filter(p => p.fills.length);
 }
-/** Fallen maple leaves: whole sheets of gold, and one in three silver. */
+/** Fallen maple leaves: whole sheets of gold, one in three silver, and one in five red coral. */
 export function fallenLeaves(id, cx, cz, rx, rz, count, seed, {size = 11} = {}) {
-  return scatter(id, cx, cz, rx, rz, count, seed, size, mapleLeaf, [['gold', MAT.hyomonGold], ['silver', MAT.hyomonSilver]]);
+  return scatter(id, cx, cz, rx, rz, count, seed, size, mapleLeaf, [['gold', MAT.hyomonGold], ['silver', MAT.hyomonSilver], ['coral', MAT.coral, 5]]);
 }
 /** One ginkgo leaf: a fan on a stalk, split at the middle of its rim. */
 function ginkgoLeaf(cx, cz, radius, turn) {
@@ -202,9 +206,9 @@ function petal(cx, cz, radius, turn) {
   const at = (a, len) => [cx + Math.cos(turn + a) * len * radius, cz + Math.sin(turn + a) * len * radius];
   return [at(Math.PI, .9), at(2.2, .75), at(1.1, .95), at(.25, 1.05), at(0, .7), at(-.25, 1.05), at(-1.1, .95), at(-2.2, .75)];
 }
-/** Scattered cherry petals of shell. */
+/** Scattered cherry petals: silver sheet, and one in three of shell. */
 export function petals(id, cx, cz, rx, rz, count, seed, {size = 6} = {}) {
-  return scatter(id, cx, cz, rx, rz, count, seed, size, petal, [['shell', MAT.aogai]]);
+  return scatter(id, cx, cz, rx, rz, count, seed, size, petal, [['silver', MAT.hyomonSilver], ['shell', MAT.aogai]]);
 }
 /** Fallen fruit of the tachibana: small rounds of gold sheet. */
 export function fruits(id, cx, cz, rx, rz, count, seed, {size = 4.5} = {}) {
@@ -532,8 +536,13 @@ export function grassTufts(id, spots, {on, mat = MAT.gold, seed = 1, w = 2.6, sp
   }
   if (!bloom.length) return [grass];
   const flowers = part(`${id}-flower`, KIND.still, 0, MAT.hyomonSilver, bloom[0], {reach: .5, on});
-  for (const [x, z] of bloom) for (const d of five(x, z - 1.2, 2.6, -1.57)) flowers.fills.push({d, soft: 0, crisp: 1});
-  return [grass, flowers];
+  // Each blossom holds a drop of shell at its heart, as dew.
+  const dew = part(`${id}-dew`, KIND.still, 0, MAT.aogai, bloom[0], {reach: .5, on});
+  for (const [x, z] of bloom) {
+    for (const d of five(x, z - 1.2, 2.6, -1.57)) flowers.fills.push({d, soft: 0, crisp: 1});
+    dew.fills.push({d: blob(x, z - 1.2, 1.3, 1.3, 3, 0, 10), soft: 0, crisp: 1});
+  }
+  return [grass, flowers, dew];
 }
 /**
  * A pagoda at a great distance, a flat silhouette of pale gold standing on a ridge (`on`): five stacked eaves and a mast.
@@ -552,23 +561,25 @@ export function farPagoda(id, x, zBase, h, {on} = {}) {
 }
 /**
  * The character 大 laid out in small squares of cut gold on a slope (`on`), as the bonfire on the mountain is: a bar and
- * two legs. cx, cz is the middle of the bar; size is the bar's full width.
+ * two legs, and one square in three of red coral, for the fire. cx, cz is the middle of the bar; size is the bar's full width.
  */
 export function daimonji(id, cx, cz, size, {on, tile = 3.8} = {}) {
   need('daimonji', id, on);
   const p = part(id, KIND.still, 0, MAT.kirikane, [cx, cz], {reach: .5, on}), h = size * .5, s = tile / 2;
+  const fire = part(`${id}-fire`, KIND.still, 0, MAT.coral, [cx, cz], {reach: .5, on});
+  let count = 0;
   const put = (a, b) => {
     const n = Math.max(2, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / (tile * 1.5)));
-    for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); p.fills.push({d: [[x - s, z - s], [x + s, z - s], [x + s, z + s], [x - s, z + s]], soft: 0, crisp: 1}); }
+    for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); (count++ % 3 === 1 ? fire : p).fills.push({d: [[x - s, z - s], [x + s, z - s], [x + s, z + s], [x - s, z + s]], soft: 0, crisp: 1}); }
   };
   put([cx - h, cz], [cx + h, cz]);                    // the bar
   put([cx, cz - h * .55], [cx - h * .95, cz + h]);    // the left-falling leg, begun above the bar
   put([cx, cz + h * .05], [cx + h * .95, cz + h]);    // the right-falling leg
-  return [p];
+  return [p, fire];
 }
 /**
  * A plum beside a roof (`on`): a bare branch of dark line work rising from its foot, and on it blossoms of five
- * silver petals, each with a small round heart (a gold chip until a coral material exists). x, z is the foot; s scales it
+ * silver petals, each with a small round heart of red coral. x, z is the foot; s scales it
  * (1 is about 26 tall); lean -1 mirrors it.
  */
 export function silverPlum(id, x, z, s, {on, lean = 1} = {}) {
@@ -576,7 +587,7 @@ export function silverPlum(id, x, z, s, {on, lean = 1} = {}) {
   const P = (dx, dz) => [x + dx * lean * s, z - dz * s];
   const limb = (pts, w0, w1) => ribbon(pts.map(([a, b]) => P(a, b)), w0 * s, w1 * s);
   const wood = part(id, KIND.still, 0, MAT.lacquer, [x, z], {reach: .5, on}), petals = part(`${id}-blossom`, KIND.still, 0, MAT.hyomonSilver, [x, z], {reach: .5, on});
-  const heart = part(`${id}-heart`, KIND.still, 0, MAT.kirikane, [x, z], {reach: .5, on});
+  const heart = part(`${id}-heart`, KIND.still, 0, MAT.coral, [x, z], {reach: .5, on});
   wood.fills.push({d: limb([[0, 0], [-1.5, 6], [1, 12], [4.5, 17], [8, 21]], 2.4, 1), soft: 0, crisp: .8},
     {d: limb([[1, 12], [-3, 17], [-8, 20]], 1.5, .8), soft: 0, crisp: .8},
     {d: limb([[4, 17], [9, 15], [14, 16]], 1.2, .7), soft: 0, crisp: .8});

@@ -20,7 +20,7 @@ const GROUND_COLOUR = {
   [MAT.ground]: '#c48f42', [MAT.nashijiLight]: '#d4a656', [MAT.mura]: '#d0a252', [MAT.gyobu]: '#c99a48',
   [MAT.gold]: '#e0b050', [MAT.silver]: '#a8a8a4', [MAT.kirikane]: '#f0c860', [MAT.kirigin]: '#c8c8c4',
   [MAT.aogai]: '#6fa8b0', [MAT.hyomonGold]: '#e6b94e', [MAT.hyomonSilver]: '#d0d2ce', [MAT.water]: '#d6a64c',
-  [MAT.kasumi]: '#e6be66', [MAT.lacquer]: '#0b0807', [MAT.lamp]: '#ff9a3c',
+  [MAT.coral]: '#b9412d', [MAT.kasumi]: '#e6be66', [MAT.lacquer]: '#0b0807', [MAT.lamp]: '#ff9a3c',
 };
 
 /**

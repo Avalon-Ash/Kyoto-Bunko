@@ -49,7 +49,8 @@ export function stampedTree(id, x, z, h, lean, seed, species) {
         const a=j*2.399+k*.8, q=j===0?0:.055+ .035*(j%3), px=end[0]+Math.cos(a)*h*q, pz=end[1]+Math.sin(a)*h*q;
         const cell=species==='maple'?(j%2?STAMP.maple5:STAMP.maple7):species==='ginkgo'?STAMP.ginkgo:species==='cherry'?STAMP.blossom:STAMP.citrusLeaf;
         const size=h*(species==='cherry'?.14:species==='maple'?.29:.23)*(.90+r()*.22);
-        stamp(cell,px,pz,size,size,(r()-.5)*1.8,species==='cherry'?(j%7?MAT.silver:MAT.aogai):(j%5?MAT.gold:MAT.nashijiLight));
+        // A cherry flowers in pale sheet silver with one blossom in seven of shell; a maple turns one leaf in seven to red coral.
+        stamp(cell,px,pz,size,size,(r()-.5)*1.8,species==='cherry'?(j%7?MAT.hyomonSilver:MAT.aogai):species==='maple'&&j%7===3?MAT.coral:(j%5?MAT.gold:MAT.nashijiLight));
         if(species==='citrus' && j%3===0) stamp(STAMP.fruit,px+size*.25,pz+size*.32,size*.5,size*.5,0,MAT.gold);
       }
     });
