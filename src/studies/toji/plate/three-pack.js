@@ -394,7 +394,9 @@ void kyotoTreeTransform(vec2 rest, float height, vec3 localN, vec2 along, vec4 o
   vec2 r=rest-anchor, q=anchor+vec2(cs*r.x-sn*r.y,sn*r.x+cs*r.y)+B.xy;
   vec3 up=vec3(0.,ct,st), down=vec3(0.,-st,ct), right=vec3(1.,0.,0.);
   vec3 tx=right*cs+down*sn, tz=-right*sn+down*cs;
-  float gy=groundY(anchor);
+  // Lying, each point rests on the ground under it; standing, on the line the tree stands on (as PART_MOTION_GLSL does).
+  float upF=style.x>0.?smoothstep(.1,.7,A.y):0.;
+  float gy=mix(groundY(q),groundY(vec2(q.x,foot)),upF);
   vec3 p=vec3(q.x,gy+B.z+.6,foot)+down*(q.y-foot)+up*height;
   p.y+=uOpening*360.; p.z-=uOpening*650.;
   vec3 centre=vec3(0.,-48.,0.); p=uTilt*(p-centre)+centre;
@@ -405,7 +407,7 @@ void kyotoTreeTransform(vec2 rest, float height, vec3 localN, vec2 along, vec4 o
   vGlow=A.w;
 }`;
 
-/** Tree limb hinge/sway transform (groundY at tree anchor, +0.6 clearance). */
+/** Tree limb hinge/sway transform (groundY under each vertex, +0.6 clearance). */
 export const TREE_LIMB_MOTION_GLSL = `
 attribute vec4 aOwner; attribute vec4 aStyle;
 ${TREE_MOTION_CORE_GLSL}

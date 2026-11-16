@@ -23,13 +23,9 @@ const GROUND_COLOUR = {
   [MAT.coral]: '#b9412d', [MAT.kasumi]: '#e6be66', [MAT.lacquer]: '#0b0807', [MAT.lamp]: '#ff9a3c',
 };
 
-/**
- * @param {{ward: string, parts: any[], soft: {data: Float32Array, sw: number, sh: number}, ident: Uint8Array,
- *   mw: number, mh: number, a: Float32Array, b: Float32Array, box: {data: Float32Array, lidTop: number, opaque: number}}} pose
- * @returns {THREE.Scene}
- */
-export function plateScene(doc, pose) {
-  const {parts, soft, ident, mw, mh, a, b, box} = pose;
+/** The CPU mirror of the renderer's vertex motion for one pose (treeAtAnchor: the trees as they moved before 2026-11-16); the clip probe (clip-probe.js) measures with it too. */
+export function poseKit(pose) {
+  const {soft, ident, mw, mh, a, b} = pose;
   const sample = (u, v) => {
     const x = Math.min(soft.sw - 1, Math.max(0, u * soft.sw - .5)), y = Math.min(soft.sh - 1, Math.max(0, v * soft.sh - .5));
     const x0 = Math.floor(x), y0 = Math.floor(y), x1 = Math.min(soft.sw - 1, x0 + 1), y1 = Math.min(soft.sh - 1, y0 + 1), fx = x - x0, fy = y - y0;
@@ -73,10 +69,22 @@ export function plateScene(doc, pose) {
     const theta = A[1] * style[0], ct = Math.cos(theta), st = Math.sin(theta), cs = Math.cos(A[0]), sn = Math.sin(A[0]);
     const r = [rest[0] - anchor[0], rest[1] - anchor[1]], q = [anchor[0] + cs * r[0] - sn * r[1] + B[0], anchor[1] + sn * r[0] + cs * r[1] + B[1]];
     const up = [0, ct, st], down = [0, -st, ct], tx = [cs, down[1] * sn, down[2] * sn], tz = [-sn, down[1] * cs, down[2] * cs];
-    const gy = groundY(anchor[0], anchor[1]), d = q[1] - foot;
+    const upF = style[0] > 0 ? smooth(.1, .7, A[1]) : 0, gy = pose.treeAtAnchor ? groundY(anchor[0], anchor[1]) : groundY(q[0], q[1]) + (groundY(q[0], foot) - groundY(q[0], q[1])) * upF, d = q[1] - foot;
     const p = [q[0] + down[0] * d + up[0] * height, gy + B[2] + .6 + down[1] * d + up[1] * height, foot + down[2] * d + up[2] * height];
     return {p, n: norm([0, 1, 2].map(k => tx[k] * localN[0] + up[k] * localN[1] + tz[k] * localN[2]))};
   };
+
+  return {groundY, groundNormal, partVertex, treeVertex};
+}
+
+/**
+ * @param {{ward: string, parts: any[], soft: {data: Float32Array, sw: number, sh: number}, ident: Uint8Array,
+ *   mw: number, mh: number, a: Float32Array, b: Float32Array, box: {data: Float32Array, lidTop: number, opaque: number}}} pose
+ * @returns {THREE.Scene}
+ */
+export function plateScene(doc, pose) {
+  const {parts, soft, ident, mw, mh, a, b, box} = pose;
+  const {groundY, groundNormal, partVertex, treeVertex} = poseKit(pose);
 
   const scene = new THREE.Scene();
   const physical = (spec, extra = {}) => new THREE.MeshPhysicalMaterial({

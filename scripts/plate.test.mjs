@@ -1153,9 +1153,11 @@ test('three: tree limbs and stamps regroup by material without losing a vertex o
   }
 });
 
-test('three: tree motion shaders use anchor groundY', () => {
-  assert.ok(TREE_LIMB_MOTION_GLSL.includes(GROUND_GLSL) && TREE_LIMB_MOTION_GLSL.includes('groundY(anchor)'));
-  assert.ok(TREE_STAMP_MOTION_GLSL.includes(GROUND_GLSL) && TREE_STAMP_MOTION_GLSL.includes('groundY(anchor)'));
+test('three: tree motion shaders rest each vertex on the ground under it, as parts do', () => {
+  for (const glsl of [TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL]) {
+    assert.ok(glsl.includes(GROUND_GLSL) && glsl.includes('groundY(q)') && glsl.includes('groundY(vec2(q.x,foot))'));
+    assert.ok(!glsl.includes('groundY(anchor)'), 'a tree is no longer one flat plane at its anchor height');
+  }
 });
 
 test('R2: no part above layer 0 is left to be painted on the lid: each is a mesh, a tree, or mist', () => {

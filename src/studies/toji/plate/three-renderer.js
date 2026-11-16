@@ -133,6 +133,9 @@ export function createThreeRenderer(gl, canvas) {
     uAge: {value: ageParam === null || Number.isNaN(Number(ageParam)) ? AGE_DEFAULT : Math.min(1, Math.max(0, Number(ageParam)))},
   };
   if (import.meta.env.DEV) window.__kyotoPlateUniforms = shared; // scripts/plate-shot.mjs flips uDensView to mask the lid
+  // scripts/plate-clip.mjs reads the settled pose of the ward on screen and measures interpenetration (clip-probe.js).
+  if (import.meta.env.DEV) window.__kyotoPlatePose = () => ({ward: plate.ward, parts: plate.parts, soft: plate.soft, ident: plate.ident, mw: plate.mw, mh: plate.mh, a: Float32Array.from(life.a), b: Float32Array.from(life.b)});
+  if (import.meta.env.DEV) window.__kyotoPlateProbe = opts => import('./clip-probe.js').then(m => m.probeClip(window.__kyotoPlatePose(), opts));
 
   const flake = own(bakeFlakeNormal(doc));
   const NORMAL_FIX = THREE.ShaderChunk.normal_fragment_begin.replace('gl_FrontFacing ? 1.0 : - 1.0', '1.0');
