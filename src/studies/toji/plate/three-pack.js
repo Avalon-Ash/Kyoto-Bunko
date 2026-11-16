@@ -283,6 +283,8 @@ export const PART_LIGHT_GLSL = `
 // Live-view stand-ins for what the path-traced reference shows (docs/agent-runs/2026-11-14-threert-reference.md):
 // L1 the pieces darken where they meet the ground; L2 faces turned down catch the gold ground's bounce.
 const float K_CONTACT_MIN=.45, K_CONTACT_H=10., K_BOUNCE=.8;
+// With age the foot is darker still and the ground's bounce is duller.
+const float K_AGE_CONTACT_MIN=.22, K_AGE_BOUNCE=.6;
 const vec3 K_BOUNCE_C=vec3(1.,.72,.36);
 const float K_WIN=.55; // soft window reflection intensity on upward-facing metallic parts
 const float K_WIN_SOFT=.35; // soft window reflection angular width (larger is wider)
@@ -290,13 +292,12 @@ const float K_WIN_SOFT=.35; // soft window reflection angular width (larger is w
 // room it shows, and the window's sharpness and strength in it.
 const float K_LACQ_MIRROR=.3, K_LACQ_MIN=.35, K_LACQ_GROUND=.9, K_LACQ_WIN=.8, K_LACQ_WIN_EXP=40.;
 const vec3 K_LACQ_ROOM=vec3(.05,.045,.04);
-uniform mat3 uTilt; uniform float uNight; uniform vec3 uView, uKey;
+uniform mat3 uTilt; uniform float uNight, uAge; uniform vec3 uView, uKey;
 varying float vLift;`;
 
 /** Shared diamond-halftone kirikane & gold/oxidized-silver helpers for tree trunks and rock bodies. */
 export const PART_KIRIKANE_GLSL = `
 const vec3 K_M_OXID=vec3(.66,.66,.64); // oxidized silver-grey on shaded faces (matches M_OXID)
-uniform float uAge;
 const vec3 K_KIRI_GOLD=vec3(.92,.62,.14); // bright cut-gold foil color for halftone kirikane pieces
 const vec3 K_KIRI_GOLD_AGED=vec3(.80,.66,.40); // the same foil gone pale and flat with age
 vec3 kyotoKiriGold(){return mix(K_KIRI_GOLD,K_KIRI_GOLD_AGED,uAge);}
@@ -468,6 +469,8 @@ void kyotoGround(vec3 aPos, vec3 aNormal, out vec3 outPos, out vec3 outNormal){
  * The base density is unchanged where the field equals the ward's own mean (uDensMean, measured when it is baked), so
  * a ward with a lot of open ground is not dimmed overall and a crowded one is not brightened. Dev only: ?dens=off skips the bake, ?dens=view paints the field itself, ?dens=mask paints plain ground magenta.
  */
+/** The contact field (bake.js bakeContactField): texels across the lid, and how far from a foot it reaches, in plate units. */
+export const CONTACT = {width: 512, falloff: 18};
 export const DENSITY = {width: 256, falloff: 80, more: .65, less: .22, refShift: .06};
 
 const MAKIE_COMMON_GLSL = `
@@ -591,8 +594,12 @@ vec4 mFinish(vec3 c,float a){
 /** Fragment declarations injected into groundMaterial (MeshPhysicalMaterial). */
 export const MAKIE_GROUND_PARS_GLSL = `
 varying float vGlow; uniform float uGlowBase, uGlowGain;
-uniform sampler2D uState, uFine0, uDens;
+uniform sampler2D uState, uFine0, uDens, uContact;
 uniform float uDensView, uDensMean;
+// Age at the foot of things: a dark line of bare lacquer hard against the foot (M_AGE_LINE, within _LINE_W of the
+// field's top), a wider stain of dirt round it (M_AGE_STAIN), and the same crease along the edge of a bank.
+const float M_AGE_LINE=.95, M_AGE_LINE_W=.22, M_AGE_STAIN=.55, M_AGE_CREASE=.55;
+const vec3 M_AGE_DIRT=vec3(.085,.06,.042);
 const float M_DENS_MORE=${DENSITY.more.toFixed(3)}, M_DENS_LESS=${DENSITY.less.toFixed(3)};
 varying vec2 vKyotoPlate;
 varying vec3 vKyotoWorld, vKyotoNormal, vKyotoTanX, vKyotoTanZ;
@@ -705,7 +712,16 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,M_OXID,1.)*.85+M_SILVER*line*(.1+.3*L),shore*.7);
     c=mix(c,wtr,m);
   }
-  if(uDensView>1.5)c=mat==1?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
+  if(uAge>0.){
+    // The meshes overhang their own footprints, so only the field's lower half shows round them: stretch it.
+    float ct=smoothstep(0.,.6,texture(uContact,mPuv(kp)).r);
+    float lineC=smoothstep(1.-M_AGE_LINE_W,1.-M_AGE_LINE_W*.35,ct),stain=ct*(.45+.55*ct)*(.7+.6*mVnoise(kp*.09));
+    float crease=smoothstep(.0,.012,hs)*(1.-smoothstep(.012,.07,hs))*step(float(mat),4.5)*step(1.5,float(mat));
+    float dirt=clamp(max(lineC*M_AGE_LINE,crease*M_AGE_CREASE)+stain*M_AGE_STAIN,0.,.85)*uAge;
+    c=mix(c,M_AGE_DIRT*(.35+L),dirt);
+  }
+  if(uDensView>2.5)c=vec3(texture(uContact,mPuv(kp)).r*.8);
+  else if(uDensView>1.5)c=mat==1?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
   else if(uDensView>.5)c=vec3(dField*.8);
   outgoingLight=mFinish(c,1.).rgb;
   diffuseColor.a=1.;

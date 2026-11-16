@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {PLATE, MAT, KIND, rand} from './vocab.js';
 import {PLATES, LAYERS, preparePlate, createLife, partAt} from './parts.js';
-import {paintLayer, identMaps, bakeDensityField} from './bake.js';
+import {paintLayer, identMaps, bakeDensityField, bakeContactField} from './bake.js';
 import {blankStats} from './fillers.js';
 import {buildBox, FITTINGS} from './box.js';
 import {bakeStamps} from './stamps.js';
@@ -19,7 +19,7 @@ import {createCord, cordTube} from './cord.js';
 import {stepSpring} from './spring.js';
 import {groundPoint, normalize, trailIntensity} from '../geometry.js';
 import {
-  MATERIALS, agedSpec, BOX_MATERIALS, GROUND_LID, STATE_WIDTH, STATE_HEIGHT, packLifeState,
+  MATERIALS, agedSpec, CONTACT, BOX_MATERIALS, GROUND_LID, STATE_WIDTH, STATE_HEIGHT, packLifeState,
   meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox,
   bakeSoftLayer, mistGeometryData, PART_MOTION_GLSL, PART_LIGHT_GLSL, PART_KIRIKANE_GLSL, BOX_MOTION_GLSL, BOX_GROUND_GLSL, BOX_GROUND_DEPTH_GLSL,
   TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, DENSITY,
@@ -116,7 +116,7 @@ export function createThreeRenderer(gl, canvas) {
   const dummyRgba = own(new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType)); dummyRgba.needsUpdate = true;
   const dummyRg = own(new THREE.DataTexture(new Uint8Array([0, 0]), 1, 1, THREE.RGFormat, THREE.UnsignedByteType)); dummyRg.unpackAlignment = 1; dummyRg.needsUpdate = true;
   const dummySoft = own(new THREE.DataTexture(new Uint16Array([0]), 1, 1, THREE.RedFormat, THREE.HalfFloatType)); dummySoft.unpackAlignment = 1; dummySoft.needsUpdate = true;
-  // Dev only: ?dens=off leaves the ground's powder at its flat density (and skips the bake), ?dens=view paints the field, ?dens=mask paints plain ground magenta (for measuring).
+  // Dev only: ?dens=off leaves the ground's powder at its flat density (and skips the bake), ?dens=view paints the field, ?dens=mask paints plain ground magenta (for measuring), ?dens=contact paints the contact field.
   const densMode = import.meta.env.DEV ? new URLSearchParams(location.search).get('dens') : null;
   // ?age=0..1 sets how old the box looks (0 is as new); every ageing effect is scaled by it.
   const ageParam = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('age') : null;
@@ -126,7 +126,7 @@ export function createThreeRenderer(gl, canvas) {
   const trails = Array.from({length: 20}, () => new THREE.Vector3());
   const shared = {
     uState: {value: stateTexture}, uTilt: {value: new THREE.Matrix3()}, uOpening: {value: 0},
-    uSoft0: {value: dummySoft}, uIdent0: {value: dummyRg}, uFine0: {value: dummyRgba}, uDens: {value: neutralDens}, uDensMean: {value: .5}, uDensView: {value: densMode === 'view' ? 1 : densMode === 'mask' ? 2 : 0},
+    uSoft0: {value: dummySoft}, uIdent0: {value: dummyRg}, uFine0: {value: dummyRgba}, uDens: {value: neutralDens}, uContact: {value: dummyRgba}, uDensMean: {value: .5}, uDensView: {value: densMode === 'view' ? 1 : densMode === 'mask' ? 2 : densMode === 'contact' ? 3 : 0},
     uMistFine: {value: dummyRgba}, uMistIdent: {value: dummyRg}, uStamps: {value: stampTex},
     uView: {value: new THREE.Vector3(...VIEW)}, uKey: {value: new THREE.Vector3(...KEY)}, uLamp: {value: new THREE.Vector3(0, 70, 0)},
     uTime: {value: 0}, uNight: {value: 1}, uPresence: {value: 0}, uPx: {value: 1}, uTrails: {value: trails},
@@ -183,7 +183,7 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
         shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>
 {
   // L1: contact darkness, strongest at the foot, gone by K_CONTACT_H plate units up.
-  float kyotoContact=mix(K_CONTACT_MIN,1.,smoothstep(0.,K_CONTACT_H,vLift));
+  float kyotoContact=mix(mix(K_CONTACT_MIN,K_AGE_CONTACT_MIN,uAge),1.,smoothstep(0.,K_CONTACT_H,vLift));
   reflectedLight.indirectDiffuse*=kyotoContact;
   reflectedLight.indirectSpecular*=kyotoContact;
   reflectedLight.directDiffuse*=mix(1.,kyotoContact,.5);
@@ -191,7 +191,7 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
   vec3 kyotoUp=normalize(uTilt*vec3(0.,1.,0.));
   vec3 kyotoNW=inverseTransformDirection(normal,viewMatrix);
   float kyotoDown=.5-.5*dot(kyotoNW,kyotoUp); // hemisphere: walls see half the ground, eaves all of it
-  vec3 kyotoBounce=K_BOUNCE_C*K_BOUNCE*kyotoDown*mix(1.,.45,uNight)*kyotoContact;
+  vec3 kyotoBounce=K_BOUNCE_C*K_BOUNCE*mix(1.,K_AGE_BOUNCE,uAge)*kyotoDown*mix(1.,.45,uNight)*kyotoContact;
   reflectedLight.indirectDiffuse+=material.diffuseContribution*kyotoBounce;
   reflectedLight.indirectSpecular+=material.specularColorBlended*kyotoBounce;
   // Soft window reflection in the key-light direction for upward-facing metallic faces (e.g. gold roofs).
@@ -223,7 +223,7 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
         .replace('#include <beginnormal_vertex>', 'vec3 kyotoP, objectNormal, kyotoTx, kyotoTz; kyotoLimb(position, normal, kyotoP, objectNormal, kyotoTx, kyotoTz);')
         .replace('#include <begin_vertex>', 'vec3 transformed = kyotoP; vTreeUv = uv; vBark = aStyle.z; vTreeTanX = normalize(normalMatrix * kyotoTx); vTreeTanZ = normalize(normalMatrix * kyotoTz);');
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', `#include <common>\nvarying float vGlow;\nvarying vec2 vTreeUv;\nvarying float vBark;\nvarying vec3 vTreeTanX, vTreeTanZ;\nuniform float uGlowBase, uGlowGain, uNight, uPx;\nuniform vec3 uView, uKey;\n${PART_KIRIKANE_GLSL}`)
+        .replace('#include <common>', `#include <common>\nvarying float vGlow;\nvarying vec2 vTreeUv;\nvarying float vBark;\nvarying vec3 vTreeTanX, vTreeTanZ;\nuniform float uGlowBase, uGlowGain, uNight, uPx, uAge;\nuniform vec3 uView, uKey;\n${PART_KIRIKANE_GLSL}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
 float kyotoGrain = sin(vTreeUv.x * 2.5 + .5 * sin(vTreeUv.y * .31));
 float kyotoRow = floor(vTreeUv.y / 6.5);
@@ -519,6 +519,14 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
         densTex.minFilter = densTex.magFilter = THREE.LinearFilter; densTex.unpackAlignment = 1; densTex.needsUpdate = true;
         textures.push(densTex);
       }
+      // Where things stand on the lid: age gathers dirt there. Not baked for a box as new.
+      let contactTex = dummyRgba;
+      if (shared.uAge.value > 0) {
+        const cw = CONTACT.width, ch = Math.round(cw * PLATE.halfH / PLATE.halfW);
+        contactTex = new THREE.DataTexture(bakeContactField(doc, parts, cw, ch, CONTACT.falloff), cw, ch, THREE.RedFormat, THREE.UnsignedByteType);
+        contactTex.minFilter = contactTex.magFilter = THREE.LinearFilter; contactTex.unpackAlignment = 1; contactTex.needsUpdate = true;
+        textures.push(contactTex);
+      }
       buildMs += performance.now() - t;
       yield;
 
@@ -572,7 +580,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       yield;
 
       t = performance.now();
-      const uniforms = {uFine0: fine0Tex, uSoft0: soft0Tex, uIdent0: ident0Tex, uDens: densTex};
+      const uniforms = {uFine0: fine0Tex, uSoft0: soft0Tex, uIdent0: ident0Tex, uDens: densTex, uContact: contactTex};
       const mistParts = parts.filter(p => p.kind === KIND.mist);
       if (mistParts.length) {
         paintLayer(ctx, w, h, mistParts.map(p => ({...p, layer: 1})), 1);
@@ -644,7 +652,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     if (wardGroup) scene.remove(wardGroup);
     shared.uFine0.value = shared.uMistFine.value = dummyRgba;
     shared.uIdent0.value = shared.uMistIdent.value = dummyRg;
-    shared.uSoft0.value = dummySoft; shared.uDens.value = neutralDens; shared.uDensMean.value = .5;
+    shared.uSoft0.value = dummySoft; shared.uDens.value = neutralDens; shared.uContact.value = dummyRgba; shared.uDensMean.value = .5;
     wardGroup = null; plate = null; life = null;
   }
 
@@ -654,6 +662,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     shared.uSoft0.value = entry.uniforms.uSoft0;
     shared.uIdent0.value = entry.uniforms.uIdent0;
     shared.uDens.value = entry.uniforms.uDens;
+    shared.uContact.value = entry.uniforms.uContact;
     shared.uDensMean.value = entry.densMean;
     shared.uMistFine.value = entry.uniforms.uMistFine ?? dummyRgba;
     shared.uMistIdent.value = entry.uniforms.uMistIdent ?? dummyRg;

@@ -108,8 +108,37 @@ export function bakeDensityField(doc, parts, w, h, falloff) {
   return densityFromMask(mask, w, h, falloff);
 }
 
+/**
+ * Where raised things meet the lid (0..1): 1 along the foot, falling in a straight line to 0 at `falloff` plate units.
+ * A part that stands up touches the lid only along its foot line, as wide as whatever of it reaches down there; a
+ * mound (a rock) touches it all round its outline. Flat inlays, in-ground banks, water, mist and birds touch nothing:
+ * the shader finds the banks' own edges in the relief. Dirt and the dark line of bare lacquer gather here with age.
+ */
+export function bakeContactField(doc, parts, w, h, falloff) {
+  const scratch = doc.createElement('canvas'); scratch.width = w; scratch.height = h;
+  const ctx = scratch.getContext('2d', {willReadFrequently: true});
+  if (!ctx) return new Uint8Array(w * h);
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+  toUnits(ctx, w, h);
+  ctx.fillStyle = ctx.strokeStyle = '#fff'; ctx.lineCap = 'round'; ctx.lineWidth = 1.6;
+  for (const p of parts) {
+    if (p.hinge > 0 && p.kind !== KIND.bird && !p.attach) {
+      // The span of everything that comes within two units of the foot line.
+      let x0 = Infinity, x1 = -Infinity;
+      for (const f of p.fills) for (const [x, z] of f.d) if (z > p.foot - 2) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
+      if (x0 > x1) continue;
+      ctx.beginPath(); ctx.moveTo(x0, p.foot); ctx.lineTo(x1, p.foot); ctx.stroke();
+    } else if (p.kind === KIND.rock) {
+      for (const f of p.fills) { trace(ctx, f.d, true); ctx.fill(); }
+    }
+  }
+  const rgba = ctx.getImageData(0, 0, w, h).data, mask = new Float32Array(w * h);
+  for (let i = 0; i < mask.length; i++) mask[i] = rgba[i * 4] / 255;
+  return densityFromMask(mask, w, h, falloff, false);
+}
+
 /** The canvas-free half of bakeDensityField: spreads weights (0..1 per texel) into the 0..255 field. Pure, so node can test it. */
-export function densityFromMask(mask, w, h, falloff) {
+export function densityFromMask(mask, w, h, falloff, soften = true) {
   const out = new Uint8Array(w * h), v = Float32Array.from(mask);
   // Grey-scale dilation with a linear fall per unit of distance: two chamfer sweeps (8 neighbours).
   const unit = PLATE.halfW * 2 / w, side = unit / falloff, diag = side * 1.4142;
@@ -124,6 +153,7 @@ export function densityFromMask(mask, w, h, falloff) {
     if (x < w - 1) relax(i, i + 1, side);
     if (z < h - 1) { relax(i, i + w, side); if (x < w - 1) relax(i, i + w + 1, diag); if (x > 0) relax(i, i + w - 1, diag); }
   }
+  if (!soften) { for (let i = 0; i < v.length; i++) out[i] = Math.round(Math.min(1, Math.max(0, v[i])) * 255); return out; }
   for (let i = 0; i < v.length; i++) { const t = Math.min(1, Math.max(0, v[i])); v[i] = t * t * (3 - 2 * t); }
   // Three box passes per axis stand in for a gaussian, so the cone's tip and foot lose their creases.
   const tmp = new Float32Array(w * h), R = 3;
