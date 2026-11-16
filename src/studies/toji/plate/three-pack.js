@@ -1179,7 +1179,15 @@ void main(){
   int id=int(texelFetch(uMistIdent,clamp(ivec2((vKyotoUv+M_HALF)/(2.*M_HALF)*vec2(sz)),ivec2(0),sz-1),0).r*255.+.5);
   if(id==0||id!=int(vPartId+.5))discard;
   vec4 fine=texture(uMistFine,mPuv(vKyotoUv));
-  float alpha=clamp((fine.a-.5)/max(fwidth(fine.a),.006)+.5,0.,1.)*.82;
+  // The band is sprinkled, not cut: its coverage is taken over a few units round the pixel, so that it thins toward its edge, and the
+  // powder's own grain decides where the last of it lies (no line anywhere round it).
+  float cov=fine.a*2.;
+  cov+=texture(uMistFine,mPuv(vKyotoUv+vec2(3.,0.))).a+texture(uMistFine,mPuv(vKyotoUv-vec2(3.,0.))).a+texture(uMistFine,mPuv(vKyotoUv+vec2(0.,3.))).a+texture(uMistFine,mPuv(vKyotoUv-vec2(0.,3.))).a;
+  cov+=texture(uMistFine,mPuv(vKyotoUv+vec2(2.1,2.1))).a+texture(uMistFine,mPuv(vKyotoUv-vec2(2.1,2.1))).a+texture(uMistFine,mPuv(vKyotoUv+vec2(2.1,-2.1))).a+texture(uMistFine,mPuv(vKyotoUv-vec2(2.1,-2.1))).a;
+  cov+=texture(uMistFine,mPuv(vKyotoUv+vec2(1.4,0.))).a+texture(uMistFine,mPuv(vKyotoUv-vec2(1.4,0.))).a+texture(uMistFine,mPuv(vKyotoUv+vec2(0.,1.4))).a+texture(uMistFine,mPuv(vKyotoUv-vec2(0.,1.4))).a;
+  cov/=14.;
+  float grain=mVnoise(vKyotoUv*1.7+vPartId*5.)*.6+mVnoise(vKyotoUv*.35+vPartId)*.4;
+  float core=smoothstep(.5,.92,cov),alpha=smoothstep(.22+.2*grain,.58+.22*grain,cov)*.92;
   vec2 lip=1.-smoothstep(M_HALF-5.,M_HALF-1.,abs(vKyotoMeta));
   alpha*=lip.x*lip.y;
   if(alpha<.01)discard;
@@ -1192,10 +1200,11 @@ void main(){
   }
 #endif
   // Suyari-gasumi in the Hatsune lids is dense, bright gold (濃梨子地 into flat gold), clearly richer than the ground.
-  vec3 c=.5*mNashiji(vKyotoUv,1.6,mix(M_GOLD,M_PALE,.5))+.5*mMetal(vKyotoUv,M_PALE*.95,1.)+.25*mSheet(M_PALE);
-  // Long thin strips of grey silver lie in the gold (the Hatsune mist bands alternate the two metals).
-  float sv=smoothstep(.40,.68,mVnoise(vec2(vKyotoUv.x*.012,vKyotoUv.y*.19)+vPartId*3.7));
-  c=mix(c,mMetal(vKyotoUv,mAgedSilver(M_OXID,vKyotoUv,1.),1.)*.9+.2*mSheet(mAgedSilver(M_SILVER,vKyotoUv,.7)),sv*.9);
+  // Thin at its edge it is single flakes on the lacquer; toward its middle the powder closes into pale gold.
+  vec3 c=mix(mNashiji(vKyotoUv,mix(1.9,2.9,core),mix(M_GOLD,M_PALE,.25)),mMetal(vKyotoUv,mix(M_GOLD,M_PALE,.5),1.),.1+.12*core)*vec3(1.12,1.04,.9);
+  // A few long thin strips of pale silver lie in the gold (the Hatsune mist bands carry the two metals): a thread, never the band's colour.
+  float sv=smoothstep(.74,.84,mVnoise(vec2(vKyotoUv.x*.012,vKyotoUv.y*.55)+vPartId*3.7))*core;
+  c=mix(c,mMetal(vKyotoUv,mAgedSilver(M_SILVER,vKyotoUv,.45),1.)*.95+.15*mSheet(mAgedSilver(M_SILVER,vKyotoUv,.5)),sv*.6);
   fragColor=mFinish(c,alpha);
   if(uDensView>4.5)fragColor=vec4(0.,1.,1.,alpha); // dev layers mask: mist is a dense-nashiji face
 }`;
