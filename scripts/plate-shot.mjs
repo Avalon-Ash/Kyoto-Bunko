@@ -62,6 +62,23 @@ for (const job of jobs) {
   // PLATE_CPU=4 slows the page's CPU fourfold before PLATE_EVAL runs (for frame-time readings).
   if (process.env.PLATE_CPU) await send('Emulation.setCPUThrottlingRate', {rate: Number(process.env.PLATE_CPU)});
   if (process.env.PLATE_EVAL) console.log(name, 'eval', await evalJs(process.env.PLATE_EVAL));
+  if (process.env.PLATE_KIRI) {
+    // Dev view 4 (?dens=kiri): kirikane pixels red, the rest of the bank ground (materials 2-4) blue, all else black. Prints red / (red + blue).
+    const clip = {x: Math.max(0, r[0] + r[4]), y: Math.max(0, r[1] + r[5]), width: r[2], height: r[3], scale: 1};
+    await evalJs(`window.__kyotoPlateUniforms.uDensView.value = 4`);
+    await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x, y}); await sleep(500);
+    const km = await send('Page.captureScreenshot', {format: 'png', clip});
+    await evalJs(`window.__kyotoPlateUniforms.uDensView.value = 0`);
+    writeFileSync(join(outDir, `${name}-kiri.png`), Buffer.from(km.result.data, 'base64'));
+    const kiri = await evalJs(`(async () => {
+      const i = new Image(); i.src = 'data:image/png;base64,' + ${JSON.stringify(km.result.data)}; await i.decode();
+      const c = new OffscreenCanvas(i.width, i.height), g = c.getContext('2d'); g.drawImage(i, 0, 0); const d = g.getImageData(0, 0, i.width, i.height).data;
+      let red = 0, blue = 0;
+      for (let k = 0; k < d.length; k += 4) { if (d[k + 1] < 40 && d[k] + d[k + 2] > 120) { red += d[k] / 255; blue += d[k + 2] / 255; } }
+      return JSON.stringify({kiri: Math.round(red), bank: Math.round(red + blue), share: Math.round(red / Math.max(red + blue, 1) * 1000) / 10});
+    })()`);
+    console.log(name, 'kiri', kiri);
+  }
   if (process.env.PLATE_TONE) {
     // The lid's pixels: paint plain ground magenta and the rest of the lid green (the dev mask), then take each row from
     // its first to its last masked pixel, so the parts standing on the lid count too.

@@ -571,18 +571,53 @@ float mFlake(vec2 p,float cell,float size,float dens,float sq,float spread,out v
   glint=mix(avg*broad*.55,cov*gl*2.6,vis);
   return mix(avg,cov,vis);
 }
-// Kirikane as a diamond halftone (Hatsune trunks, rocks and banks): tiny gold squares turned 45 degrees on a regular
-// lattice. Each piece grows with amount, so the pieces themselves draw light and shadow: large and close on the lit
-// faces and the rims, shrinking away into the hollows and the shaded side.
-float mKiri(vec2 p,float cell,float amount,out vec3 glint){
-  vec2 q=mat2(.7071,-.7071,.7071,.7071)*p/cell,id=floor(q),j=mHash2(id)-.5,f=fract(q)-.5-j*.2;
-  float sz=.28*sqrt(clamp(amount,0.,1.))*(.65+.7*mHash(id+5.1))*step(mHash(id+9.7),.15+amount*1.3);
-  float aa=max(uPx,.05)/cell*.75,cov=(1.-smoothstep(sz-aa,sz+aa,max(abs(f.x),abs(f.y))))*step(.02,sz);
-  float vis=smoothstep(1.3,3.2,cell/max(uPx,.05));
-  vec3 nf=normalize(mN+vec3(j.x,0.,j.y)*.5);
-  vec3 gl=(M_KEY*.5*pow(max(dot(nf,mHk),0.),60.)*mKeyC+M_POOL*mAtt*pow(max(dot(nf,mHp),0.),60.)*mPoolC)*mSh;
-  glint=cov*gl*2.4*vis;
-  return mix(4.*sz*sz,cov,vis);
+// Gyobu nashiji (刑部梨子地): large, irregular flakes of gold sunk in the lacquer, flat, each its own shape and way round.
+// They are the inset cells of a jittered Voronoi mosaic, so none touches or covers another and there is no lattice;
+// dP and dC (how dense the flakes are here, and at the flake's own centre) thin them smoothly: the flake shrinks, then
+// the ones that are left out vanish. Size runs about 2.5 to 5 plate units.
+const float M_GY_CELL=5.5;
+float mVd=0.; // distance (in cells) from the last mVoro point to its seed
+float mVoro(vec2 q,out vec2 id,out vec2 cen){
+  vec2 g=floor(q),f=fract(q),mr=vec2(0.),mg=vec2(0.);float md=9.;
+  for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){vec2 o=vec2(float(i),float(j)),r=o+mHash2(g+o)*.86+.07-f;float d=dot(r,r);if(d<md){md=d;mr=r;mg=o;}}
+  float bd=9.;
+  for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){vec2 o=mg+vec2(float(i),float(j)),r=o+mHash2(g+o)*.86+.07-f,dv=r-mr;float l=dot(dv,dv);if(l>1e-5)bd=min(bd,dot(.5*(mr+r),dv)*inversesqrt(l));}
+  id=g+mg;cen=id+mHash2(id)*.86+.07;mVd=sqrt(md);return bd;
+}
+float mGyobuCov(vec2 p,float bd,vec2 id,float dP,float dC){
+  float gap=.08+(1.-clamp(dP,0.,1.))*.34+.16*mHash(id+6.1),aa=max(uPx,.05)*.75/M_GY_CELL;
+  // Corners are rounded off (the far reaches of a cell lose ground first) and the edge is roughened.
+  float wob=(mVnoise(p*.9+id*3.1)-.5)*.22+(mVnoise(p*2.3+id)-.5)*.08-.2*mVd;
+  return step(mHash(id+2.9),clamp(dC*.96,0.,1.))*smoothstep(gap-aa,gap+aa,bd+wob);
+}
+// Kirikane as an accent (the Hatsune hills carry it only along their lit ridges and edges): small squares laid in short
+// rows, three to nine to a group, along the edge, with open ground between the groups. e (0..1) is how much of an edge
+// this is; the squares shrink to nothing as it falls. tdir runs along the edge. A group is a row of slots, one square to
+// a slot, so each pixel only has to ask which slot of each nearby group it is in.
+float mKiriCluster(vec2 p,vec2 tdir,float e,out vec3 glint){
+  const float CL=21.,PITCH=2.9;
+  vec2 g=floor(p/CL),nrm=vec2(-tdir.y,tdir.x);
+  float cov=0.,aa=max(uPx,.05)*.75;glint=vec3(0.);
+  if(e<.02)return 0.;
+  for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){
+    vec2 id=g+vec2(float(i),float(j));
+    if(mHash(id+4.7)>.55)continue;
+    vec2 c=(id+.2+.6*mHash2(id))*CL,d=p-c;
+    float n=3.+floor(mHash(id+9.1)*7.),s=dot(d,tdir)/PITCH+n*.5,k=floor(s);
+    if(k<0.||k>=n)continue;
+    vec2 hk=mHash2(id*7.+k+3.1);
+    float u0=(s-k-.5)*PITCH,v0=dot(d,nrm)-(hk.y-.5)*.7-(k-n*.5)*(mHash(id+1.3)-.5)*.3;
+    float ca=cos((hk.x-.5)*.5),sa=sin((hk.x-.5)*.5);
+    vec2 q=vec2(ca*u0-sa*v0,sa*u0+ca*v0);
+    float sz=mix(.8,1.2,hk.x)*smoothstep(.2,.65,e);
+    float cv=(1.-smoothstep(sz-aa,sz+aa,max(abs(q.x),abs(q.y))))*step(.02,sz);
+    if(cv>cov){
+      cov=cv;
+      vec3 nf=normalize(mN+vec3(hk.x-.5,0.,hk.y-.5)*.5);
+      glint=(M_KEY*.5*pow(max(dot(nf,mHk),0.),60.)*mKeyC+M_POOL*mAtt*pow(max(dot(nf,mHp),0.),60.)*mPoolC)*mSh*2.4;
+    }
+  }
+  glint*=cov;return cov;
 }
 vec3 mCoat(){return (vec3(1.,.95,.86)*(mSpec(220.)*.42+mSpec(36.)*.10)+mRoom(0.)*.045+mKeyC*mBand*M_BAND_GAIN)*mix(1.,M_AGE_GLOSS*(.45+M_AGE_HAZE*mVnoise(mWP.xz*.035+9.)),uAge);}
 vec3 mNashiji(vec2 p,float dens,vec3 tint){
@@ -608,6 +643,16 @@ vec3 mMetal(vec2 p,vec3 f0,float rise){
 }
 vec3 mSheet(vec3 f0){return f0*(.05+.18*mLight()+mRoom(.12)*.8)+mix(f0,vec3(1.),.5)*(mSpec(160.)*1.5+mSpec(18.)*.18);}
 vec3 mKiriColor(vec3 foil){return mSheet(foil)*.6+foil*(.16+.95*mLight());}
+vec3 mGyobuShade(vec2 id,out vec3 glint){
+  vec2 r=mHash2(id+3.3);float hv=mHash(id+8.8);
+  vec3 foil=mix(M_GOLD,M_PALE,.35+.45*hv),L=mLight();
+  vec3 nf=normalize(mN+vec3(r.x-.5,0.,r.y-.5)*.3);
+  vec3 col=foil*vec3(1.,.82,.5)*(.12+.95*L)*(.84+.32*hv)+mSheet(foil)*.26*mix(1.,.3,uAge);
+  // Old flakes have gone dull, and a few have darkened.
+  col*=1.-.4*uAge*step(.84,mHash(id+1.7));
+  glint=foil*(M_KEY*.45*pow(max(dot(nf,mHk),0.),70.)*mKeyC+M_POOL*mAtt*pow(max(dot(nf,mHp),0.),70.)*mPoolC)*mSh*2.*mix(1.,.4,uAge);
+  return col;
+}
 vec4 mFinish(vec3 c,float a){
   c*=1.25;float l=max(dot(c,vec3(.3,.55,.15)),1e-4),t=l/(1.+l*.42);
   c=mix(c*(t/l),vec3(t),smoothstep(.9,2.6,l)*.55);c=min(c,vec3(1.));
@@ -673,7 +718,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   mSetLight(normalize(normalize(vKyotoNormal)-grad.x*vKyotoTanX-grad.y*vKyotoTanZ),vKyotoWorld);
   float line=fine.b;vec3 L=mLight();
   float w=smoothstep(.02,.34,hs);
-  float dens=.82+.22*mVnoise(kp*.02),kAmt=0.,wN=0.,wM=0.,wS=0.,bigD=0.,bigCell=6.6,bigSq=0.;
+  float dens=.82+.22*mVnoise(kp*.02),kAmt=0.,wN=0.,wM=0.,wS=0.,bigD=0.,bigCell=6.6,bigSq=0.,kiriV=0.;
   vec3 tint=M_GOLD,f0=M_GOLD,c=vec3(0.);
   // A flat inlay (cut foil, sheet, coral) is exactly its own outline: the plain ground runs right up to its edge.
   float inlay=clamp((fine.g-.5)/max(fwidth(fine.g),.004)+.5,0.,1.);
@@ -684,14 +729,14 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(mat==2||mat==3){
     float cloud=mat==3?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
     // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
-    wM=smoothstep(.06,.62,hs)*(.30+.25*cloud);wN=1.-wM;dens=mix(dens,1.25,smoothstep(.02,.3,hs)*(1.-wM));
+    wM=smoothstep(.06,.62,hs)*(.30+.25*cloud)*.2;wN=1.-wM;dens=mix(dens,1.25,smoothstep(.02,.3,hs)*(1.-wM));
     kAmt=smoothstep(.01,.09,hs)*.85;
     f0=mix(M_GOLD,M_PALE,.55);tint=mix(M_GOLD,M_PALE,.35*w);rise=max(rise,.75);c=M_PALE*line*(.14+.6*L)*w;
   }
-  else if(mat==4){wN=1.;dens=mix(dens,1.05,w);bigD=.22*w;bigCell=4.;kAmt=smoothstep(.01,.09,hs)*.85;c=M_PALE*line*(.12+.5*L)*w;}
+  else if(mat==4){wN=1.;dens=mix(dens,1.05,w);kAmt=smoothstep(.01,.09,hs)*.85;c=M_PALE*line*(.12+.5*L)*w;}
   else if(mat==5){wM=1.;c=M_PALE*line*(.12+.6*L)*mix(.5,1.,rise);}
   // Flat silver stands for white things (sand, petals): it dulls but stays pale. Raised and shaded silver goes dark.
-  else if(mat==6){wM=1.;f0=mAgedSilver(M_SILVER,kp,.3);}
+  else if(mat==6){wN=1.;dens=.95;}
   else if(mat==7){wM=inlay;wN=1.-inlay;f0=M_GOLD*.9;rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_PALE*line*(.22+.6*L)*inlay;}
   else if(mat==8){wM=inlay;wN=1.-inlay;f0=mAgedSilver(mix(M_SILVER,M_GOLD,.25)*.9,kp,.35);rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_SILVER*line*(.22+.6*L)*inlay;}
   else if(mat==9||mat==12){wN=1.;}
@@ -720,9 +765,43 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     // into the plain ground.
     float g=clamp(.08+.85*rim+.6*max(face,0.)-.25*max(-face,0.),0.,1.);
     c=mix(c,mNashiji(kp,mix(1.,2.4,smoothstep(.1,.75,g)),mix(M_GOLD,M_PALE,.3)),kAmt*smoothstep(.02,.4,g)*.92);
-    vec3 kg;float kv=mKiri(kp,4.6,kAmt*smoothstep(.35,1.,g),kg);
+    {
+      // Gyobu nashiji: the face of the bank is large irregular flakes in the lacquer, denser toward the crown, thinning down the slope.
+      vec2 gid,gcen;float gbd=mVoro(M_R2*kp/M_GY_CELL,gid,gcen);
+      float hC=texture(uSoft0,mPuv(transpose(M_R2)*(gcen*M_GY_CELL))).r;
+      float dN=.8+.4*mVnoise(kp*.03);
+      float gcov=mGyobuCov(kp,gbd,gid,smoothstep(.01,.10,hs)*mix(.82,1.,smoothstep(.1,.45,hs))*dN,smoothstep(.01,.10,hC)*mix(.82,1.,smoothstep(.1,.45,hC)));
+      vec3 gg,gcol=mGyobuShade(gid,gg);
+      c=mix(c,gcol,gcov)+gg*gcov;
+    }
+    vec2 td=normalize(vec2(-gs.y,gs.x)+vec2(.012,0.));
+    vec3 kg;float kv=mKiriCluster(kp,td,smoothstep(.35,1.,g)*kAmt/.85,kg);
     // Old foil has gone flat: it is still the lightest thing on the bank, but it no longer flashes.
     c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.75))*mix(1.15,.74,uAge),kv)+M_PALE*kg*mix(1.,.4,uAge);
+    kiriV=kv;
+  }
+  if(mat==6){
+    // Silver hirame ground: coarse silver flakes of two sizes lie close under the lacquer, each a little brighter or
+    // darker than its neighbours. Toward the garden's edge they thin and the gold nashiji shows between them, then alone.
+    float inn=1.;
+    for(int k=0;k<8;k++){float a=float(k)*.7854;vec2 dv=vec2(cos(a),sin(a));inn+=float(mIdent0(kp+dv*5.).x==id)+float(mIdent0(kp+dv*10.).x==id)+float(mIdent0(kp+dv*16.).x==id);}
+    float dS=smoothstep(.45,.9,inn/25.+(mVnoise(kp*.25)-.5)*.16);
+    vec2 id1,c1,id2,c2;
+    float b1=mVoro(M_R3*kp/2.3,id1,c1),b2=mVoro(M_R1*kp/1.25+7.3,id2,c2);
+    float a1=max(uPx,.05)*.75/2.3,a2=max(uPx,.05)*.75/1.25;
+    float g1=.09+(1.-dS)*.40+.04*mHash(id1+6.1),g2=.10+(1.-dS)*.40+.04*mHash(id2+6.1);
+    float v1=step(mHash(id1+2.9),min(dS*1.2,1.))*smoothstep(g1-a1,g1+a1,b1+(mVnoise(kp*.9)-.5)*.1);
+    float v2=step(mHash(id2+2.9),min(dS*1.2,1.))*smoothstep(g2-a2,g2+a2,b2+(mVnoise(kp*1.3+4.)-.5)*.1);
+    float cv=max(v1,v2*(1.-v1)),pick=v1>.5?1.:0.;
+    vec2 fid=pick>.5?id1:id2;
+    float fh=mHash(fid+8.8);vec2 fr=mHash2(fid+3.3);
+    vec3 fs0=mAgedSilver(M_SILVER*1.1,kp,.3)*(1.-.12*uAge*step(.86,mHash(fid+1.7)));
+    vec3 sc=mMetal(kp,fs0,rise)*(.98+.40*fh);
+    vec3 snf=normalize(mN+vec3(fr.x-.5,0.,fr.y-.5)*.3);
+    sc+=mix(fs0,vec3(1.),.4)*(M_KEY*.5*pow(max(dot(snf,mHk),0.),48.)*mKeyC+M_POOL*mAtt*pow(max(dot(snf,mHp),0.),48.)*mPoolC)*mSh*mix(1.,.4,uAge);
+    // Between the flakes the ground is the same silver, a shade down, so the grain is in the flakes and not in dark joints.
+    c=mix(c,mMetal(kp,mAgedSilver(M_SILVER*.85,kp,.3),rise)*1.12,dS*.92);
+    c=mix(c,sc,cv);
   }
   if(mat==9){
     vec2 r=mHash2(floor(kp/2.3));
@@ -756,6 +835,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(uDensView>1.5)c=mat==1?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
   else if(uDensView>.5)c=vec3(dField*.8);
   outgoingLight=mFinish(c,1.).rgb;
+  if(uDensView>3.5)outgoingLight=vec3(kiriV,0.,(mat>=2&&mat<=4)?1.-kiriV:0.); // dev: red = kirikane, blue = other hill ground (?dens=kiri)
   diffuseColor.a=1.;
 }`;
 
@@ -764,7 +844,9 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
 export const BOX_SIDE_VERT_GLSL = `varying vec2 vKyotoSide; varying vec3 vKyotoSideW, vKyotoSideN;`;
 export const BOX_SIDE_PARS_GLSL = `
 varying vec2 vKyotoSide; varying vec3 vKyotoSideW, vKyotoSideN;
-${MAKIE_COMMON_GLSL}`;
+${MAKIE_COMMON_GLSL}
+float mSideBank(vec2 s){return s.y-(-92.+20.*mVnoise(vec2(s.x*.011,1.3))+9.*mVnoise(vec2(s.x*.043,4.1)));}
+float mSideG(vec2 s){float b=mSideBank(s);return (1.-smoothstep(-1.5,1.5,b))*step(s.y,-35.)*(1.-smoothstep(0.,26.,-b));}`;
 export const BOX_SIDE_FRAG_GLSL = `
 {
   vec2 sp=vKyotoSide;
@@ -779,7 +861,15 @@ export const BOX_SIDE_FRAG_GLSL = `
   c+=M_PALE*(1.-smoothstep(0.,.9,abs(bank)))*body*(.06+.3*mLight());
   float g=land*(1.-smoothstep(0.,26.,-bank));
   c=mix(c*(1.-.12*land),mNashiji(sp,mix(1.,2.4,smoothstep(.1,.75,g)),mix(M_GOLD,M_PALE,.3)),smoothstep(.02,.4,g)*.9);
-  vec3 kg;float kv=mKiri(sp,4.2,smoothstep(.4,1.,g)*.85,kg);
+  {
+    vec2 gid,gcen;float gbd=mVoro(M_R2*sp/M_GY_CELL,gid,gcen);
+    float gc=mSideG(transpose(M_R2)*(gcen*M_GY_CELL));
+    float gcov=mGyobuCov(sp,gbd,gid,land*mix(.2,.92,g),mix(.2,.92,gc))*land;
+    vec3 gg,gcol=mGyobuShade(gid,gg);
+    c=mix(c,gcol,gcov)+gg*gcov;
+  }
+  vec2 td=normalize(vec2(1.,(mSideBank(sp-vec2(1.,0.))-mSideBank(sp+vec2(1.,0.)))*.5));
+  vec3 kg;float kv=mKiriCluster(sp,td,smoothstep(.4,1.,g),kg);
   c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.6)),kv)+M_PALE*kg;
   // Walls face the room, not the window: keep them a warmer, slightly deeper amber than the lid.
   const float K_SIDE_DIM=.82; // dim box walls one step below the lid while keeping rim and edge bright

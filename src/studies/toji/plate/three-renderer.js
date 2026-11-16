@@ -126,7 +126,7 @@ export function createThreeRenderer(gl, canvas) {
   const trails = Array.from({length: 20}, () => new THREE.Vector3());
   const shared = {
     uState: {value: stateTexture}, uTilt: {value: new THREE.Matrix3()}, uOpening: {value: 0},
-    uSoft0: {value: dummySoft}, uIdent0: {value: dummyRg}, uFine0: {value: dummyRgba}, uDens: {value: neutralDens}, uContact: {value: dummyRgba}, uDensMean: {value: .5}, uDensView: {value: densMode === 'view' ? 1 : densMode === 'mask' ? 2 : densMode === 'contact' ? 3 : 0},
+    uSoft0: {value: dummySoft}, uIdent0: {value: dummyRg}, uFine0: {value: dummyRgba}, uDens: {value: neutralDens}, uContact: {value: dummyRgba}, uDensMean: {value: .5}, uDensView: {value: densMode === 'view' ? 1 : densMode === 'mask' ? 2 : densMode === 'contact' ? 3 : densMode === 'kiri' ? 4 : 0},
     uMistFine: {value: dummyRgba}, uMistIdent: {value: dummyRg}, uStamps: {value: stampTex},
     uView: {value: new THREE.Vector3(...VIEW)}, uKey: {value: new THREE.Vector3(...KEY)}, uLamp: {value: new THREE.Vector3(0, 70, 0)},
     uTime: {value: 0}, uNight: {value: 1}, uPresence: {value: 0}, uPx: {value: 1}, uTrails: {value: trails},
