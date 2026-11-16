@@ -74,7 +74,7 @@ function floorOf(spec, kind) {
 }
 
 export async function similar(ward) {
-  const mod = await import(`../src/studies/toji/plate/${{W_FUSHIMI: 'fushimi', W_NAKAGYO: 'nakagyo'}[ward]}.js`);
+  const mod = await import(`../src/studies/toji/plate/${{W_FUSHIMI: 'fushimi', W_NAKAGYO: 'nakagyo', W_HIGASHIYAMA: 'higashiyama', W_KITA: 'kita'}[ward]}.js`);
   const {parts} = preparePlate(PLATES[ward]());
   const tong = [], bank = [], rocks = [];
   for (const p of parts) {

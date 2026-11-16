@@ -7,7 +7,10 @@ import {densityFromMask} from '../src/studies/toji/plate/bake.js';
 import {buildBox} from '../src/studies/toji/plate/box.js';
 
 // Wards whose ground is already doha.js pieces (suhama tongues, banks) and not hill() or gardenGround(); more join as the other wards are redone.
-const dohaWards = new Set(['W_NAKAGYO', 'W_FUSHIMI']);
+const dohaWards = new Set(['W_NAKAGYO', 'W_FUSHIMI', 'W_HIGASHIYAMA', 'W_KITA']);
+// The wards redone in the nine-wards run (docs/plans/2026-11-16-nine-wards.md): a far mountain, a shore and the rocks they already had (not yet redone), so
+// the cluster, piece-count, silver-share and rock-total ranges of the scattered pilot are not asked of them.
+const nineWards = new Set(['W_HIGASHIYAMA', 'W_KITA']);
 const p3bWards = ['W_KITA', 'W_UKYO', 'W_NISHIKYO', 'W_SAKYO', 'W_KAMIGYO', 'W_SHIMOGYO', 'W_NAKAGYO', 'W_YAMASHINA'];
 const inside = ([x, z], polygon) => {
   let hit = false;
@@ -61,7 +64,7 @@ test('P3b ground fields reserve about a third of the lid and all eight wards are
     // doha pilot wards (docs/plans/2026-11-16-doha.md): a rock is one crag cluster (a large crag, a small one, pebbles), three or four to a ward; the rest of the lid is bare nashiji by doha.js's own fence.
     const rocks = parts.filter(p => p.kind === KIND.rock && !(p.id === 'ishigaki')).length, doha = dohaWards.has(ward);
     assert.ok(mist >= 2 && mist <= 4, `${ward} has two to four mist bands`);
-    assert.ok(doha ? rocks >= 3 && rocks <= 20 : rocks >= 1 && rocks <= 3, `${ward} has ${doha ? 'three to twenty' : 'one to three'} rocks`);
+    assert.ok(doha && !nineWards.has(ward) ? rocks >= 3 && rocks <= 20 : rocks >= 1 && rocks <= 3, `${ward} has ${doha && !nineWards.has(ward) ? 'three to twenty' : 'one to three'} rocks`);
     // Sample the source silhouettes, not shadows or material brightness. Thin line work is not a ground field.
     let bare = 0, total = 0;
     for (let x = -356; x < 360; x += 8) for (let z = -226; z < 230; z += 8) {
@@ -478,7 +481,7 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
 
   // Scope fence: part counts per ward. R5a/R5b added the attached scenes to every ward; patina P3b split the coral
   // leaves, the fire of the 大, the silver petals and the dew of shell into parts of their own (one part per material).
-  const expectedCounts = {W_MINAMI: 54, W_UKYO: 26, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 46, W_KITA: 30, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 45, W_HIGASHIYAMA: 28, W_SHIMOGYO: 36};
+  const expectedCounts = {W_MINAMI: 54, W_UKYO: 26, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 46, W_KITA: 32, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 45, W_HIGASHIYAMA: 31, W_SHIMOGYO: 36};
   for (const [ward, build] of Object.entries(PLATES)) {
     const {parts, errors} = preparePlate(build());
     assert.deepEqual(errors, [], ward);
@@ -1491,29 +1494,30 @@ import {measureDoha} from './plate-doha-measure.mjs';
 import {similar} from './plate-doha-similar.mjs';
 import {bankGeom, tongueGeom, mountain, JITTER} from '../src/studies/toji/plate/doha.js';
 import {meshRock} from '../src/studies/toji/plate/rock-mesh.js';
-const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5]};
+const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5], W_HIGASHIYAMA: [2, 2], W_KITA: [0, 0]}; // Kita's two rocks are not named rock-*, so the measure does not count them
 for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition numbers`, () => {
   const m = measureDoha(ward);
   // Nakagyo is one shore of four long banks (plan §11.2): the cluster, piece-count, size and straight-run ranges are for the scattered wards.
-  const shore = ward === 'W_NAKAGYO';
+  const shore = ward === 'W_NAKAGYO' || nineWards.has(ward);
   if (!shore) assert.ok(m.clusters >= 2 && m.clusters <= 4, `clusters ${m.clusters}`);
   if (!shore) for (const [c, n] of Object.entries(m.piecesPerCluster)) assert.ok(n >= 3 && n <= 7, `${c}: ${n} pieces`);
-  else assert.ok(m.pieces >= 2 && m.pieces <= 4, `shore pieces ${m.pieces}`);
+  else if (!nineWards.has(ward)) assert.ok(m.pieces >= 2 && m.pieces <= 4, `shore pieces ${m.pieces}`);
+  else assert.ok(m.pieces >= 6 && m.pieces <= 12 && m.farHeads >= 3, `mountain heads ${m.farHeads} and shore pieces ${m.pieces - m.farHeads}`);
   for (const [c, n] of Object.entries(m.rocksPerCluster)) assert.ok(n <= 5, `${c}: ${n} rocks`);
   const [lo, hi] = rockTotals[ward];
   assert.ok(m.rocks >= lo && m.rocks <= hi, `${m.rocks} rocks, not ${lo}-${hi}`);
   if (!shore) assert.ok(m.largestPiece <= 4, `largest piece ${m.largestPiece}%`);
-  assert.ok(m.piecesAndRocksShare >= 20 && m.piecesAndRocksShare <= 35, `taken ${m.piecesAndRocksShare}%`);
+  assert.ok(m.piecesAndRocksShare >= (nineWards.has(ward) ? 15 : 20) && m.piecesAndRocksShare <= 35, `taken ${m.piecesAndRocksShare}%`);
   assert.ok(m.bareShare >= 35 && m.bareConnectedShare >= 70, `bare ${m.bareShare}%, connected ${m.bareConnectedShare}%`);
   if (!shore) assert.ok(m.silverPieces >= 33.3, `silver ${m.silverPieces}% (far mountains excepted)`);
-  if (!shore) assert.ok(m.longestStraight <= 30, `straight run ${m.longestStraight}`);
+  if (!shore || nineWards.has(ward)) assert.ok(m.longestStraight <= 30, `straight run ${m.longestStraight}`);
   const {parts} = preparePlate(PLATES[ward]());
   for (const id of ['palace-ground', 'inari-yama', 'ridge-far', 'bank-near', 'bank-gate']) assert.ok(!parts.some(p => p.id === id), `${ward} no longer has ${id}`);
 });
 test('doha: no piece or rock of a pilot ward is a copy of another (plate-doha-similar.mjs)', async () => {
   for (const ward of dohaWards) {
     const r = await similar(ward);
-    for (const kind of ['tongues', 'banks', 'rocks']) if (r[kind]) assert.ok(r[kind].d >= r.threshold[kind], `${ward} ${kind}: ${r[kind].a} and ${r[kind].b} differ by ${r[kind].d.toFixed(3)}, under ${r.threshold[kind]}`);
+    for (const kind of nineWards.has(ward) ? ['tongues', 'banks'] : ['tongues', 'banks', 'rocks']) if (r[kind]) assert.ok(r[kind].d >= r.threshold[kind], `${ward} ${kind}: ${r[kind].a} and ${r[kind].b} differ by ${r[kind].d.toFixed(3)}, under ${r.threshold[kind]}`);
   }
 });
 test('doha: Inari-yama is one far mountain: no rocks on it, a low ridge, no cut gold, and a rock stands in the near land only', () => {
