@@ -1,11 +1,14 @@
 // 伏見区・稲荷. A diagonal, not a centre: the great torii in the near corner, the two-storey gate behind it, and
 // a line of gates climbing the mountain to the far corner. The fox keeps the other near corner.
 // The sky above the gate and the ground between the fox and the climb stay empty nashiji.
-// The ground is banks (doha.js): small pieces laid one on another, gold and silver, the nearer over the farther, with
-// rocks on their crests. Four clusters: the mountain the gates climb, a far ridge, the bank under the great torii, and the
-// bank under the two-storey gate.
+// The ground (doha.js) is drawn piece by piece, every outline written here as control points:
+//   the mountain  Inari-yama, ONE body of five rounded heads that overlap, in the far-mountain (toyama) manner; its foot is
+//                 dissolved by the mist that cuts across its flank. No rocks on it.
+//   the far range three low heads at the far left, the same way.
+//   the near land quiet tongues of sand under the great torii, the two-storey gate and the fox: the shore is a soft curve.
+//   the rocks     only in the near land, each against something: see ROCKS.
 import {MAT, suyari, rock, branchPine as pine, bird, shell, torii, romon, fox, pawPrints, steppingStones, lantern} from './vocab.js';
-import {banks, bankPoint} from './doha.js';
+import {mountain, tongues} from './doha.js';
 
 /** Five gates up the slope, each smaller than the one before and clear of its neighbours. */
 function climb() {
@@ -14,67 +17,89 @@ function climb() {
   return steps.flatMap(([x, z], i) => torii(`gate-${i}`, x, z, .74 - i * .075));
 }
 
-// Banks, far to near (a later one lies over an earlier one). x, z: the middle of the ridge; len along it; depth: how far the wedge runs down.
+// Toyama maki-e (far mountain): each head is one smooth ridge, [x, z] from its left foot to its right: a main peak and a shoulder or
+// two, never the same either side. Flat fine powder, brightest on the ridge and thinning down to the ground; a nearer head's ridge
+// lies bright over the faded foot of the one behind. Gold, or a paler cooler blue-gold. Far to near.
 const MOUNTAIN = [
-  {x: 278, z: -196, len: 164, depth: 58, turn: .04, tone: 'gold', seed: 11, kiri: [.2, .8]},
-  {x: 140, z: -172, len: 144, depth: 54, turn: -.05, tone: 'silver', seed: 12},
-  {x: 250, z: -148, len: 172, depth: 64, turn: .03, tone: 'gold', seed: 13},
-  {x: 102, z: -118, len: 134, depth: 58, turn: .08, tone: 'silver', seed: 14},
-  {x: 286, z: -98, len: 144, depth: 60, turn: -.05, tone: 'silver', seed: 15},
-  {x: 188, z: -80, len: 174, depth: 62, turn: .04, tone: 'gold', seed: 16},
-  {x: 290, z: -40, len: 124, depth: 50, turn: 0, tone: 'gold', seed: 17},
+  // 1 (blue-gold, the one in another metal) the farthest, back left: a single full arc, its peak a little left of the middle
+  {ridge: [[-20, -130], [20, -174], [70, -206], [120, -216], [170, -202], [210, -170], [236, -130]], depth: 76, tone: 'blue', seed: 11},
+  // 2 (gold) behind on the right and the largest: the arc climbs slowly and drops steeply at the right
+  {ridge: [[150, -120], [200, -176], [258, -214], [310, -222], [348, -196], [362, -150]], depth: 82, tone: 'gold', seed: 12},
+  // 3 (gold) in front on the left: a broad head, nearly flat on top, falling away to the right
+  {ridge: [[10, -96], [50, -130], [100, -152], [150, -150], [196, -124], [226, -92]], depth: 80, tone: 'gold', seed: 13},
+  // 4 (gold) in front on the right: a small round head with its peak toward the right
+  {ridge: [[200, -84], [214, -104], [232, -112], [246, -130], [272, -140], [300, -136], [330, -116], [358, -88]], depth: 70, tone: 'gold', seed: 14},
 ];
 const FAR = [
-  {x: -276, z: -182, len: 172, depth: 50, turn: .04, tone: 'gold', seed: 21},
-  {x: -150, z: -158, len: 144, depth: 46, turn: -.05, tone: 'silver', seed: 22},
-  {x: -318, z: -140, len: 104, depth: 38, turn: .06, tone: 'silver', seed: 24},
-  {x: -250, z: -126, len: 152, depth: 44, turn: .03, tone: 'gold', seed: 23, kiri: [.25, .75]},
-  {x: -160, z: -106, len: 112, depth: 38, turn: -.04, tone: 'gold', seed: 25},
+  {ridge: [[-358, -100], [-326, -120], [-290, -136], [-258, -160], [-232, -186], [-214, -184], [-196, -150]], depth: 72, tone: 'blue', seed: 21},
+  {ridge: [[-250, -96], [-232, -150], [-214, -176], [-196, -170], [-176, -140], [-150, -126], [-120, -108]], depth: 66, tone: 'gold', seed: 22},
+  {ridge: [[-358, -84], [-342, -120], [-324, -126], [-312, -110], [-296, -120], [-276, -104], [-266, -90]], depth: 50, tone: 'gold', seed: 23},
 ];
-const TORII_BANK = [
-  {x: -290, z: 146, len: 134, depth: 54, turn: -.04, tone: 'silver', seed: 31},
-  {x: -170, z: 148, len: 134, depth: 54, turn: .05, tone: 'gold', seed: 32},
-  {x: -232, z: 170, len: 184, depth: 54, turn: .02, tone: 'gold', seed: 33},
-  {x: -6, z: 192, len: 140, depth: 36, turn: -.05, tone: 'silver', seed: 34},
+// The near land. Each outline is written round the piece, one point per bend of the shore.
+const COURT = [
+  // under the two-storey gate: a small silver islet on the left, the wide gold ground the gate stands on, a small gold crescent on the right
+  {at: [-318, 26], p: [[-26, -4], [-12, -12], [8, -10], [22, 0], [26, 10], [8, 14], [-10, 12], [-24, 8]], tone: 'silver', seed: 31},
+  {at: [-250, 46], p: [[-96, 6], [-78, -8], [-52, -12], [-30, -22], [-4, -16], [22, -24], [50, -14], [76, -10], [98, 4], [82, 16], [56, 14], [34, 24], [8, 20], [-20, 26], [-48, 18], [-70, 22]], tone: 'gold', seed: 32, kiri: [.52, .74]},
+  {at: [-160, 48], p: [[-30, -10], [-16, -12], [0, -4], [16, -2], [32, -10], [40, -4], [28, 8], [10, 12], [-8, 10], [-24, 6], [-36, 0]], tone: 'gold', seed: 33},
+  // under the great torii: a small silver spit, a medium gold boomerang, and the big gold ground
+  {at: [-296, 166], p: [[-34, 0], [-14, -10], [10, -12], [34, -6], [46, 2], [28, 8], [6, 10], [-14, 14], [-30, 10]], tone: 'silver', seed: 34},
+  {at: [-150, 166], p: [[-52, -8], [-34, -12], [-14, -4], [4, 4], [26, 6], [44, 2], [56, 10], [46, 18], [24, 16], [2, 14], [-20, 10], [-42, 6]], tone: 'gold', seed: 35},
+  {at: [-222, 198], p: [[-128, 8], [-112, -8], [-92, -13], [-74, -24], [-50, -20], [-30, -14], [-6, -26], [22, -22], [44, -12], [70, -17], [98, -8], [124, 4], [104, 16], [78, 19], [56, 27], [30, 22], [2, 26], [-28, 19], [-58, 24], [-90, 18], [-112, 19]], tone: 'gold', seed: 36, kiri: [.1, .3]},
 ];
-const GATE_BANK = [
-  {x: -290, z: 2, len: 124, depth: 48, turn: -.03, tone: 'gold', seed: 41},
-  {x: -196, z: 10, len: 124, depth: 48, turn: .05, tone: 'silver', seed: 42},
-  {x: -246, z: 30, len: 154, depth: 42, turn: .02, tone: 'gold', seed: 43},
-  {x: -326, z: 36, len: 92, depth: 34, turn: .04, tone: 'silver', seed: 44},
-];
-/** [cluster, piece, f along the ridge, dz below it, w, h, seed, mat]: a rock on a crest; resolved to a point below. */
-export const ROCKS_SPEC = [
-  ['MOUNTAIN', 0, null, .86, 4, 24, 15, 5], ['MOUNTAIN', 2, null, .08, 4, 15, 10, 8, 'MAT.kirigin'], ['MOUNTAIN', 4, null, .88, 4, 14, 10, 6], ['MOUNTAIN', 5, null, .12, 4, 14, 10, 7, 'MAT.kirigin'],
-  ['FAR', 0, null, .9, 4, 18, 12, 9, 'MAT.kirigin'], ['FAR', 3, null, .1, 4, 14, 10, 3],
-  ['TORII_BANK', 3, null, .55, 4, 20, 13, 4, 'MAT.kirigin'], ['TORII_BANK', 0, null, .19, 4, 14, 10, 7], ['TORII_BANK', 3, null, .95, 4, 14, 10, 1, 'MAT.kirigin'],
-  ['GATE_BANK', 0, null, .12, 4, 17, 11, 9], ['GATE_BANK', 1, null, .9, 4, 14, 10, 5, 'MAT.kirigin'],
+const FOX = [
+  {at: [104, 186], p: [[-36, 2], [-20, -6], [-4, -12], [14, -10], [30, -2], [22, 6], [6, 8], [-12, 14], [-28, 10]], tone: 'silver', seed: 41},
+  {at: [176, 208], p: [[-80, 2], [-62, -10], [-40, -12], [-24, -6], [-8, -14], [14, -22], [40, -16], [64, -8], [80, 2], [62, 12], [40, 10], [22, 18], [-4, 22], [-30, 18], [-56, 16]], tone: 'gold', seed: 42},
+  {at: [250, 184], p: [[-16, 0], [-8, -8], [6, -8], [16, 0], [10, 8], [-4, 10], [-14, 6]], tone: 'silver', seed: 43},
 ];
 
-/** The clusters, for the measuring and placing scripts. */
-const PIECES = {MOUNTAIN, FAR, TORII_BANK, GATE_BANK};
+// Rocks: only in the near land, each against something. Outline and peaks are relative to (x, z); w, h its half extents.
+// on: what it stands on or leans against; why: the reason it is there. No rock on the mountain.
+export const ROCKS = [
+  // at the east post of the great torii: a broad low stone with a second, lower summit on its right
+  {id: 'torii-foot', x: -147, z: 212, w: 10, h: 8, seed: 6, height: 9,
+    outline: [[-10, 3], [-8, -3], [-4, -7], [2, -6], [6, -8], [10, -2], [10, 4], [4, 7], [-5, 7]],
+    peaks: [{x: -2, z: -1, rx: 9, rz: 7, h: .85}, {x: 6, z: -3, rx: 5, rz: 5, h: .55}],
+    on: 'the east post of the great torii, on the big gold ground', why: 'a stone at the foot of a post, where the torii is planted'},
+  // at the foot of the two-storey gate: two lobes with a notch between
+  {id: 'romon-step', x: -178, z: 52, w: 15, h: 9, seed: 7, height: 12,
+    outline: [[-14, 3], [-11, -6], [-4, -9], [0, -4], [4, -3], [8, -10], [14, -5], [15, 3], [6, 8], [-5, 8]],
+    peaks: [{x: -7, z: -3, rx: 8, rz: 7, h: 1}, {x: 9, z: -4, rx: 6, rz: 6, h: .75}],
+    on: 'the small gold ground east of the two-storey gate, at its foot', why: 'the stone the steps of the gate rest on'},
+  // by the fox seat: a tall stone leaning to the left
+  {id: 'fox-seat', x: 206, z: 218, w: 19, h: 10, seed: 9, height: 12, foil: .85,
+    outline: [[-18, 5], [-14, -2], [-6, -10], [2, -12], [8, -8], [14, -2], [20, 4], [10, 8], [-6, 8]],
+    peaks: [{x: -4, z: -5, rx: 9, rz: 9, h: 1}, {x: 12, z: 0, rx: 8, rz: 6, h: .5}],
+    on: 'the shore of the fox ground, east of its stone seat', why: 'a stone by the seat: the fox sits among stones'},
+  // and a low flat pebble next to it
+  {id: 'fox-seat-s', x: 240, z: 224, w: 10, h: 8, seed: 8, height: 8,
+    outline: [[-8, 4], [-3, -8], [4, -10], [10, 0], [6, 6], [-3, 8]],
+    peaks: [{x: 1, z: -2, rx: 7, rz: 7, h: 1}],
+    on: 'beside the large one', why: 'the small one of the pair'},
+];
+
+/** The clusters, for the measuring and checking scripts. */
+const PIECES = {MOUNTAIN, FAR, COURT, FOX};
 export {PIECES};
 
 export function fushimi() {
   return [
-    // Layer 0: the mountain the gates climb, a far ridge, and the banks the great torii and the two-storey gate stand on.
-    ...banks('inari', MOUNTAIN),
-    ...banks('ridge-far', FAR),
-    ...banks('bank-near', TORII_BANK),
-    ...banks('bank-gate', GATE_BANK),
+    // Layer 0: Inari-yama, the far range, and the near land.
+    ...mountain('inari', MOUNTAIN),
+    ...mountain('range-far', FAR),
+    ...tongues('court', COURT),
+    ...tongues('fox-land', FOX),
     ...shell('shell', [[-128, 132, 5, 8], [58, 122, 4.2, 2], [176, 58, 4.6, 5], [268, -12, 4, 3]]),
     // The approach: stones of cut silver under the gates, so the eye climbs with them.
     ...steppingStones('sando', [[-47, 154, 7], [-17, 153, 7], [14, 153, 7], [45, 112, 6.5], [76, 71, 6.5], [104, 34, 6], [132, -3, 6], [158, -36, 5.5], [181, -69, 5.5], [204, -98, 5], [224, -127, 5]]),
     // The fox's own trail, in cut silver, from the gates to its stone.
     ...pawPrints('trail', [[34, 126], [56, 136], [80, 142], [104, 152], [128, 158], [146, 168]]),
-    // Slot 1: mist and rocks. A rock stands on a bank's crest: one large, the rest small.
+    // Slot 1: mist, then the rocks. The mist across the mountain's flank dissolves its foot.
     ...suyari('mist-sky', -372, -128, -196, 15, 6),
     ...suyari('mist-gate', -372, -214, -96, 13, 12),
     ...suyari('mist-foot', 78, 336, 92, 14, 4),
-    ...ROCKS_SPEC.flatMap(([set, i, , f, dz, w, h, seed, mat], k) => {
-      const [x, z] = bankPoint(PIECES[set][i], f);
-      return rock(`rock-${k}`, x, z + dz, w, h, seed, mat ? {mat: MAT.kirigin} : {});
-    }),
+    ...suyari('mist-flank', 20, 346, -118, 12, 9),
+    ...ROCKS.flatMap(({id, x, z, w, h, seed, outline, peaks, height, lines, foil, silver}) =>
+      rock(`rock-${id}`, x, z, w, h, seed, {outline, peaks, height, lines, foil, ...(silver ? {mat: MAT.kirigin} : {})})),
     // Slot 2: the gates, the fox and the trunks. These stand up from the lid.
     ...torii('torii', -232, 204, 1.22, {cap: true}),
     // A stone lantern at the great torii's west foot, outside the post: the way in. Only this side has room: between the
@@ -89,4 +114,3 @@ export function fushimi() {
     ...bird('uguisu', [[-77.76, 173.28, 1, 'pine-a', 10], [266.22, 160.00, -1, 'pine-b', 10]]),
   ];
 }
-

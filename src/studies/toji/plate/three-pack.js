@@ -29,6 +29,8 @@ export const MATERIALS = {
   [MAT.bankGold]: {name: 'bankGold', color: '#c29a46', paint: '#b8903a', metalness: .85, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5},
   [MAT.bankSilver]: {name: 'bankSilver', color: '#9c9a92', paint: '#8e8c85', metalness: .85, roughness: .4, clearcoat: .3, clearcoatRoughness: .1, flake: .3},
   [MAT.sandGold]: {name: 'sandGold', color: '#d6ad55', paint: '#cfa44a', metalness: .9, roughness: .4, clearcoat: .4, clearcoatRoughness: .1, flake: .3},
+  [MAT.toyamaGold]: {name: 'toyamaGold', color: '#d9b865', paint: '#cfa850', metalness: .85, roughness: .5, clearcoat: .3, clearcoatRoughness: .1, flake: .1},
+  [MAT.toyamaBlue]: {name: 'toyamaBlue', color: '#cdbf86', paint: '#c0b374', metalness: .85, roughness: .5, clearcoat: .3, clearcoatRoughness: .1, flake: .1},
   [MAT.sandSilver]: {name: 'sandSilver', color: '#a9a8a0', paint: '#9b9a93', metalness: .85, roughness: .35, clearcoat: .3, clearcoatRoughness: .1, flake: .3},
   [MAT.silver]: {name: 'silver', aged: {color: '#d9d6cc', roughness: .27, metalness: .7, clearcoat: .2, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#e6e8e4', paint: '#d8dad6', metalness: 1, roughness: .2, clearcoat: .3, clearcoatRoughness: .08, flake: .3},
   [MAT.kirikane]: {name: 'kirikane', aged: {color: '#dcc892', roughness: .52}, color: '#f2c65e', paint: '#e0b650', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12},
@@ -769,7 +771,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   ivec2 im=mIdent0(kp);int id=im.x,mat=im.y;
   float rise=texelFetch(uState,ivec2(id,0),0).z,glow=texelFetch(uState,ivec2(id,0),0).w;
   vec4 fine=texture(uFine0,mPuv(kp));float hs=texture(uSoft0,mPuv(kp)).r;
-  float eS=3.,sH=M_SWELL*mix(.3,1.,rise),cH=(mat==19||mat==20)?M_BANK_CH:2.4,lH=.7,eC=max(uPx*.9,.55);
+  float eS=3.,sH=M_SWELL*mix(.3,1.,rise),cH=(mat==19||mat==20)?M_BANK_CH:(mat==23||mat==24)?7.:2.4,lH=.7,eC=max(uPx*.9,.55);
   vec4 st=vec4(texture(uSoft0,mPuv(kp+vec2(eS,0.))).r,texture(uSoft0,mPuv(kp-vec2(eS,0.))).r,
                texture(uSoft0,mPuv(kp+vec2(0.,eS))).r,texture(uSoft0,mPuv(kp-vec2(0.,eS))).r);
   vec2 gs=vec2(st.x-st.y,st.z-st.w)/(2.*eS)*sH;
@@ -822,6 +824,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(mat==11){wS=inlay;wN=1.-inlay;f0=mAgedSilver(M_SILVER,kp,.3);}
   else if(mat==13){wS=.82;wM=.18;f0=M_GOLD;tint=M_GOLD;}
   else if(mat>=19&&mat<=22){wN=mat<21?1.:1.-inlay;}
+  else if(mat==23||mat==24){wN=1.;}
   else if(mat==17){wN=1.-inlay;c=(M_CORAL*(.12+.70*L)+mCoat()*.55)*inlay;}
   else if(mat==14)c=M_LACQ*(.8+1.4*L)+mCoat()*2.2+M_GOLD*line*(.16+.80*L)*mix(.5,1.,rise);
   else c=mix(vec3(.10,.06,.025)*(.4+.5*L),vec3(1.,.62,.22)*1.15,glow)+M_LACQ;
@@ -870,6 +873,15 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     }
     c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.8))*mix(1.5,1.,uAge)+M_PALE*.12*kiri,kiri);
     kiriV=kiri;
+  }
+  if(mat==23||mat==24){
+    // Toyama (a far mountain, niku-ai togidashi): the ridge is a raised, hard edge (a step where it lies over the head behind it, and the
+    // ground is ground down to the same level a little below); fine powder, densest and brightest on it, thinning evenly down the slope until
+    // it is the ground's own. No flake, no cut gold, no grain but the powder's. Powder is laid on or left off; no dark is mixed in.
+    float Ht=fine.g,a=pow(smoothstep(.0,.55,Ht),.7),ridgeV=smoothstep(.8,1.,Ht);
+    vec3 pw=mat==23?mix(M_GOLD,M_PALE,.85)*1.08:mix(M_PALE,vec3(.9,.96,.82),.6);
+    vec3 pwd=mix(mNashiji(kp,mix(1.1,2.8,Ht),pw),mMetal(kp,pw,.8),.18+.5*ridgeV);
+    c=mix(c,pwd*(.98+.5*ridgeV),a*.98);
   }
   if(kAmt>0.){
     // Halftone kirikane on banks: light-facing slopes and the rim of the bank get the big pieces.

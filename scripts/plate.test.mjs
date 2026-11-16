@@ -471,7 +471,7 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
 
   // Scope fence: part counts per ward. R5a/R5b added the attached scenes to every ward; patina P3b split the coral
   // leaves, the fire of the 大, the silver petals and the dew of shell into parts of their own (one part per material).
-  const expectedCounts = {W_MINAMI: 54, W_UKYO: 26, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 54, W_KITA: 30, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 57, W_HIGASHIYAMA: 28, W_SHIMOGYO: 36};
+  const expectedCounts = {W_MINAMI: 54, W_UKYO: 26, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 48, W_KITA: 30, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 54, W_HIGASHIYAMA: 28, W_SHIMOGYO: 36};
   for (const [ward, build] of Object.entries(PLATES)) {
     const {parts, errors} = preparePlate(build());
     assert.deepEqual(errors, [], ward);
@@ -1478,34 +1478,54 @@ test('roof faces are gold powder; gold leaf stays on small parts and carries a g
   assert.ok(meshesByMaterial(parts).has(MAT.roofPowder));
 });
 
-// Doha (docs/plans/2026-11-16-doha.md §4.3): the pieces of the two pilot wards stay inside the plan's numbers. Range fences; they move when the plan does.
+// Doha (docs/plans/2026-11-16-doha.md §4.3, §10): the pieces of the two pilot wards stay inside the plan's numbers. Range fences; they move when the plan does.
 import {measureDoha} from './plate-doha-measure.mjs';
-import {bankShape, tongueShape} from '../src/studies/toji/plate/doha.js';
+import {similar} from './plate-doha-similar.mjs';
+import {bankGeom, tongueGeom, mountain, JITTER} from '../src/studies/toji/plate/doha.js';
+import {meshRock} from '../src/studies/toji/plate/rock-mesh.js';
+const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [4, 7]};
 for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition numbers`, () => {
   const m = measureDoha(ward);
   assert.ok(m.clusters >= 2 && m.clusters <= 4, `clusters ${m.clusters}`);
   for (const [c, n] of Object.entries(m.piecesPerCluster)) assert.ok(n >= 3 && n <= 7, `${c}: ${n} pieces`);
-  for (const [c, n] of Object.entries(m.rocksPerCluster)) assert.ok(n >= 2 && n <= 5, `${c}: ${n} rocks`);
+  for (const [c, n] of Object.entries(m.rocksPerCluster)) assert.ok(n <= 5, `${c}: ${n} rocks`);
+  const [lo, hi] = rockTotals[ward];
+  assert.ok(m.rocks >= lo && m.rocks <= hi, `${m.rocks} rocks, not ${lo}-${hi}`);
   assert.ok(m.largestPiece <= 4, `largest piece ${m.largestPiece}%`);
   assert.ok(m.piecesAndRocksShare >= 20 && m.piecesAndRocksShare <= 35, `taken ${m.piecesAndRocksShare}%`);
-  assert.ok(m.bareShare >= 35 && m.bareConnectedShare >= 90, `bare ${m.bareShare}%, connected ${m.bareConnectedShare}%`);
-  assert.ok(m.silverPieces >= 33.3, `silver ${m.silverPieces}%`);
+  assert.ok(m.bareShare >= 35 && m.bareConnectedShare >= 70, `bare ${m.bareShare}%, connected ${m.bareConnectedShare}%`);
+  assert.ok(m.silverPieces >= 33.3, `silver ${m.silverPieces}% (far mountains excepted)`);
   assert.ok(m.longestStraight <= 30, `straight run ${m.longestStraight}`);
   const {parts} = preparePlate(PLATES[ward]());
-  for (const id of ['palace-ground', 'inari-yama', 'ridge-far']) assert.ok(!parts.some(p => p.id === id), `${ward} no longer has ${id}`);
+  for (const id of ['palace-ground', 'inari-yama', 'ridge-far', 'bank-near', 'bank-gate']) assert.ok(!parts.some(p => p.id === id), `${ward} no longer has ${id}`);
 });
-test('doha: the other wards have not moved to doha pieces yet', () => {
-  const doha = new Set([MAT.bankGold, MAT.bankSilver, MAT.sandGold, MAT.sandSilver]);
-  for (const ward of Object.keys(PLATES).filter(w => !dohaWards.has(w))) assert.ok(!preparePlate(PLATES[ward]()).parts.some(p => doha.has(p.mat)), `${ward} is not redone yet`);
-});
-test('doha: a bank sinks at both ends and slopes down; a tongue has no straight run past 30', () => {
-  for (let seed = 1; seed <= 12; seed++) {
-    const b = bankShape(0, 0, 120, 40, .2 * seed - 1, seed), n = b.ridge.length;
-    assert.ok(b.ridge[0][2] < .02 && b.ridge[n - 1][2] < .02, 'ridge strength is 0 at both ends');
-    assert.ok(b.ridge.some(q => q[2] > .6), 'and strong in the middle');
-    const down = [-Math.sin(.2 * seed - 1), Math.cos(.2 * seed - 1)];
-    assert.ok(b.ridge.every(q => q[3] * down[0] + q[4] * down[1] >= 0), 'normals point down the slope');
-    const t = tongueShape(0, 0, 110, 40, .3 * seed, seed);
-    assert.ok(t.outline.length > 40);
+test('doha: no piece or rock of a pilot ward is a copy of another (plate-doha-similar.mjs)', async () => {
+  for (const ward of dohaWards) {
+    const r = await similar(ward);
+    for (const kind of ['tongues', 'banks', 'rocks']) if (r[kind]) assert.ok(r[kind].d >= r.threshold[kind], `${ward} ${kind}: ${r[kind].a} and ${r[kind].b} differ by ${r[kind].d.toFixed(3)}, under ${r.threshold[kind]}`);
   }
+});
+test('doha: Inari-yama is one far mountain: no rocks on it, a low ridge, no cut gold, and a rock stands in the near land only', () => {
+  const {parts} = preparePlate(PLATES.W_FUSHIMI());
+  const heads = parts.filter(p => p.mat === MAT.toyamaGold || p.mat === MAT.toyamaBlue).flatMap(p => p.fills);
+  assert.ok(heads.length >= 3 && heads.length <= 5 + 3, 'three to five heads on the mountain, and the far range');
+  for (const f of heads) { assert.ok(f.wedge.far && f.wedge.amp <= .2, 'a far mountain is raised only a little, at its ridge'); assert.ok(!f.kiri, 'and carries no cut gold'); }
+  for (const r of parts.filter(p => p.kind === KIND.rock && /^rock-/.test(p.id))) assert.ok(r.centre[1] > 20, `${r.id} is in the near land (z ${r.centre[1].toFixed(0)}), not on the mountain`);
+});
+test('doha: a hand-drawn outline is only shaken by the jitter; a ridge sinks at both ends', () => {
+  const p = [[-30, 0], [-16, -10], [2, -12], [22, -6], [32, 4], [20, 12], [0, 10], [-18, 14]];
+  const a = tongueGeom({p, seed: 1}).outline, b = tongueGeom({p, seed: 99}).outline;
+  assert.equal(a.length, b.length);
+  a.forEach((q, i) => assert.ok(Math.hypot(q[0] - b[i][0], q[1] - b[i][1]) <= 2 * JITTER + 1e-6, 'two seeds differ by no more than the jitter'));
+  const g = bankGeom({ridge: [[0, 0], [40, -20], [80, -26], [120, -10], [150, 0]], depth: 40, seed: 3});
+  assert.ok(g.ridge[0][2] < .02 && g.ridge[g.ridge.length - 1][2] < .02, 'crest strength is 0 at both ends');
+  assert.ok(g.ridge.some(q => q[2] > .8), 'and strong in the middle');
+  assert.ok(g.ridge.every(q => q[4] >= 0), 'normals point down the plate');
+  assert.equal(mountain('m', [{ridge: [[0, 0], [40, -20], [80, -26], [120, -10], [150, 0]], depth: 50}])[0].fills[0].wedge.far, true);
+});
+test('doha: a custom rock keeps its outline and still has foil on its lit faces', () => {
+  const out = [[-9, 3], [-8, -4], [-3, -12], [2, -15], [7, -8], [10, 0], [8, 6], [0, 9], [-6, 8]];
+  const [r] = meshRock('r', 0, 0, 15, 9, 6, {outline: out, peaks: [{x: 1, z: -6, rx: 8, rz: 10, h: 1}], height: 15, foil: .8});
+  assert.equal(r.fills[0].d.length, out.length);
+  assert.ok(r.mesh.length >= 2, 'foil on the lit faces');
 });

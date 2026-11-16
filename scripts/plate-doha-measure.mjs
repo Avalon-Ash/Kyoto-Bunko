@@ -7,7 +7,13 @@ import {MAT} from '../src/studies/toji/plate/mat.js';
 import {KIND, PLATE} from '../src/studies/toji/plate/vocab.js';
 
 const W = PLATE.halfW * 2, H = PLATE.halfH * 2, LID = W * H;
-const PIECE_MATS = new Set([MAT.bankGold, MAT.bankSilver, MAT.sandGold, MAT.sandSilver]);
+const PIECE_MATS = new Set([MAT.bankGold, MAT.bankSilver, MAT.sandGold, MAT.sandSilver, MAT.toyamaGold, MAT.toyamaBlue]);
+/** What of a bank can be seen: the crest and the wedge down to where its height is 15% (0.62 of its depth); below that it is ground. */
+export const visible = f => {
+  if (!f.wedge) return f.d;
+  const {ridge, depth, rear = 0} = f.wedge;
+  return [...ridge.map(p => [p[0], p[1] - rear * Math.min(1, p[2] * 3)]), ...ridge.map(p => [p[0], p[1] + depth * (p[5] ?? 1) * .62]).reverse()];
+};
 const area = d => Math.abs(d.reduce((s, [x, z], i) => { const [x2, z2] = d[(i + 1) % d.length]; return s + x * z2 - x2 * z; }, 0)) / 2;
 
 /** Fills a polygon into a Uint8Array grid (1 unit per cell) by scanlines at cell centres. */
@@ -48,7 +54,7 @@ export function measureDoha(ward) {
   if (errors.length) throw new Error(errors.join('; '));
   const pieces = [], rocks = [];
   for (const p of parts) {
-    if (PIECE_MATS.has(p.mat)) for (const f of p.fills) pieces.push({cluster: p.group, silver: p.mat === MAT.bankSilver || p.mat === MAT.sandSilver, area: area(f.d), d: f.d, ridge: f.wedge?.ridge, hasKiri: Boolean(f.kiri)});
+    if (PIECE_MATS.has(p.mat)) for (const f of p.fills) pieces.push({cluster: p.group, silver: p.mat === MAT.bankSilver || p.mat === MAT.sandSilver, area: area(visible(f)), d: visible(f), outline: f.d, ridge: f.wedge?.ridge, hasKiri: Boolean(f.kiri), far: Boolean(f.wedge?.far)});
     else if (p.kind === KIND.rock && p.mesh && /^rock-/.test(p.id)) rocks.push({id: p.id, area: p.fills.reduce((s, f) => s + area(f.d), 0), d: p.fills[0].d, centre: p.centre});
   }
   const clusters = [...new Set(pieces.map(p => p.cluster))];
@@ -82,7 +88,7 @@ export function measureDoha(ward) {
     }
     biggest = Math.max(biggest, n);
   }
-  const straight = Math.max(0, ...pieces.map(q => longestStraight(q.d)), ...pieces.filter(q => q.ridge).map(q => longestStraight(q.ridge, false)), ...parts.filter(p => p.kind === KIND.rock && /^rock-/.test(p.id)).flatMap(p => p.fills.map(f => longestStraight(f.d))));
+  const straight = Math.max(0, ...pieces.map(q => q.ridge ? longestStraight(q.ridge, false) : longestStraight(q.d)), ...parts.filter(p => p.kind === KIND.rock && /^rock-/.test(p.id)).flatMap(p => p.fills.map(f => longestStraight(f.d))));
   return {
     ward, clusters: clusters.length,
     piecesPerCluster: Object.fromEntries(clusters.map(c => [c, pieces.filter(q => q.cluster === c).length])),
@@ -96,7 +102,9 @@ export function measureDoha(ward) {
     piecesAndRocksShare: +(takenCells / LID * 100).toFixed(1),
     bareShare: +(bare / LID * 100).toFixed(1),
     bareConnectedShare: +(biggest / Math.max(total, 1) * 100).toFixed(1),
-    silverPieces: +(pieces.filter(q => q.silver).length / pieces.length * 100).toFixed(1),
+    // Far mountains (toyama) are gold or blue-gold, never silver (docs/plans/2026-11-16-doha.md §10.7): the silver share is over the rest.
+    silverPieces: +(pieces.filter(q => q.silver).length / Math.max(1, pieces.filter(q => !q.far).length) * 100).toFixed(1),
+    farHeads: pieces.filter(q => q.far).length,
     longestStraight: +straight.toFixed(1),
     kiriPieces: pieces.filter(q => q.hasKiri).length,
   };

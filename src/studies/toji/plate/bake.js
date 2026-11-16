@@ -12,34 +12,40 @@ const trace = (ctx, d, close) => {
 const toUnits = (ctx, w, h) => ctx.setTransform(w / (PLATE.halfW * 2), 0, 0, h / (PLATE.halfH * 2), w / 2, h / 2);
 
 /**
- * A bank's wedge (doha.js): its height falls from 1 at the ridge to 0 at depth along the normal, painted as linear-gradient
- * strips along the ridge and radial fans at its corners, kept by 'lighten' (the highest wins) and clipped to the bank's outline.
- * The G channel carries the height itself (the shader's relief and the colour's fade); R carries it times f.wedge.amp (the soft
- * swell the geometry is raised by). The ridge's own strength (env) scales both, so a bank's crest dies out at its ends.
+ * A bank's wedge (doha.js): its height falls from 1 at the ridge to 0 at `depth` straight down the plate (toward the viewer),
+ * painted as linear-gradient strips one beside the next, kept by 'lighten' (the highest wins) and clipped to the bank's outline.
+ * Straight down, not along the ridge's normal: strips that share their vertical edges leave no gap on a bend and no crease
+ * where offsets would meet, so a rounded head stays one smooth body. Its sides slope because the crest's strength (env) falls
+ * toward both ends. The G channel carries the height itself (the shader's relief and the colour's fade); R carries it times
+ * f.wedge.amp (the soft swell the geometry is raised by).
  */
 function paintWedge(ctx, f) {
-  const {depth, amp} = f.wedge;
-  // Every other ridge vertex (the ends kept): the strips are 7 units long at most and the corners are fanned, so nothing shows.
-  const ridge = f.wedge.ridge.filter((_, i, a) => i % 2 === 0 || i === a.length - 1);
-  const stops = (g, k) => { for (const [t, h] of WEDGE_PROFILE) g.addColorStop(t, 'rgb(' + Math.round(255 * Math.min(1, amp * h * k)) + ',' + Math.round(255 * h * k) + ',0)'); };
+  const {depth, amp, rear = 0, profile = WEDGE_PROFILE} = f.wedge, ridge = f.wedge.ridge;
+  const stops = (g, k) => { for (const [t, h] of profile) g.addColorStop(t, 'rgb(' + Math.round(255 * Math.min(1, amp * h * k)) + ',' + Math.round(255 * h * k) + ',0)'); };
   ctx.save();
   trace(ctx, f.d, true); ctx.clip();
   ctx.globalCompositeOperation = 'lighten';
+  const SUB = 3;
   for (let i = 0; i < ridge.length - 1; i++) {
-    const [ax, az, ae, nx, nz] = ridge[i], [bx, bz, be] = ridge[i + 1], k = (ae + be) / 2;
-    if (k < .015) continue;
-    const tl = Math.hypot(bx - ax, bz - az) || 1, ex = (bx - ax) / tl * 1.2, ez = (bz - az) / tl * 1.2;
-    const g = ctx.createLinearGradient((ax + bx) / 2, (az + bz) / 2, (ax + bx) / 2 + nx * depth, (az + bz) / 2 + nz * depth);
-    stops(g, k); ctx.fillStyle = g;
-    ctx.beginPath(); ctx.moveTo(ax - ex, az - ez); ctx.lineTo(bx + ex, bz + ez); ctx.lineTo(bx + ex + nx * depth, bz + ez + nz * depth); ctx.lineTo(ax - ex + nx * depth, az - ez + nz * depth); ctx.closePath(); ctx.fill();
-    if (i === 0) continue;
-    // The corner at this vertex: a fan between the two segments' normals, so the wedge has no gap where the ridge turns.
-    const [px, pz, pe, mx, mz] = ridge[i - 1];
-    if (mx * nx + mz * nz > .995) continue;
-    const r = ctx.createRadialGradient(ax, az, 0, ax, az, depth);
-    stops(r, Math.max(ae, pe)); ctx.fillStyle = r;
-    ctx.beginPath(); ctx.moveTo(ax, az); ctx.lineTo(ax + mx * depth, az + mz * depth); ctx.lineTo(ax + (mx + nx) * depth * .52, az + (mz + nz) * depth * .52); ctx.lineTo(ax + nx * depth, az + nz * depth); ctx.closePath(); ctx.fill();
-    void px; void pz;
+    const [ax, az, ae, , , ad = 1] = ridge[i], [bx, bz, be, , , bd = 1] = ridge[i + 1];
+    if (Math.max(ae, be) < .015) continue;
+    for (let s = 0; s < SUB; s++) {
+      const t0 = s / SUB, t1 = (s + 1) / SUB, x0 = ax + (bx - ax) * t0, x1 = ax + (bx - ax) * t1, z0 = az + (bz - az) * t0, z1 = az + (bz - az) * t1;
+      const k = ae + (be - ae) * (t0 + t1) / 2, d0 = depth * (ad + (bd - ad) * t0), d1 = depth * (ad + (bd - ad) * t1);
+      if (k < .01) continue;
+      const zt = (z0 + z1) / 2, dm = (d0 + d1) / 2, xm = (x0 + x1) / 2;
+      const g = ctx.createLinearGradient(xm, zt, xm, zt + dm);
+      stops(g, k); ctx.fillStyle = g;
+      // A hair wider than the strip, so that antialiasing leaves no seam between neighbours.
+      ctx.beginPath(); ctx.moveTo(x0 - .3, z0); ctx.lineTo(x1 + .3, z1); ctx.lineTo(x1 + .3, z1 + d1); ctx.lineTo(x0 - .3, z0 + d0); ctx.closePath(); ctx.fill();
+      if (rear > 0) {
+        // The back of a rounded crest: up from the ridge the height eases down to nothing over `rear` units.
+        const rr = rear * Math.min(1, ((ae + be) / 2) * 3), gr = ctx.createLinearGradient(xm, zt - rr, xm, zt);
+        for (const [u, h] of [[0, 0], [.3, .08], [.62, .42], [1, 1]]) gr.addColorStop(u, 'rgb(' + Math.round(255 * Math.min(1, amp * h * k)) + ',' + Math.round(255 * h * k) + ',0)');
+        ctx.fillStyle = gr;
+        ctx.beginPath(); ctx.moveTo(x0 - .3, z0 - rr); ctx.lineTo(x1 + .3, z1 - rr); ctx.lineTo(x1 + .3, z1 + .5); ctx.lineTo(x0 - .3, z0 + .5); ctx.closePath(); ctx.fill();
+      }
+    }
   }
   ctx.restore();
 }
@@ -189,6 +195,24 @@ export function bakeContactField(doc, parts, w, h, falloff) {
       ctx.beginPath(); ctx.moveTo(x0, p.foot); ctx.lineTo(x1, p.foot); ctx.stroke();
     } else if (p.kind === KIND.rock) {
       for (const f of p.fills) { trace(ctx, f.d, true); ctx.fill(); }
+    } else if (p.kind === KIND.hill) {
+      // Doha pieces: where one lies over another it shades the one under it. A tongue's whole edge; a bank's ridge, laid a little
+      // back up the slope behind it (so it is the head behind that darkens, not the crest). Half strength: a crease, not a hole.
+      ctx.save(); ctx.strokeStyle = 'rgb(150,150,150)'; ctx.lineWidth = 3.4; ctx.globalCompositeOperation = 'lighten';
+      for (const f of p.fills) {
+        if (f.tongue) { trace(ctx, f.d, true); ctx.stroke(); }
+        else if (f.wedge) {
+          ctx.beginPath(); let pen = false;
+          for (const [x, z, e] of f.wedge.ridge) {
+            if (e < .3) { pen = false; continue; }
+            const X = x, Z = z - 2.6;
+            if (pen) ctx.lineTo(X, Z); else ctx.moveTo(X, Z);
+            pen = true;
+          }
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
     }
   }
   const rgba = ctx.getImageData(0, 0, w, h).data, mask = new Float32Array(w * h);

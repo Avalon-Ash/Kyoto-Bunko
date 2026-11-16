@@ -62,22 +62,32 @@ function barycentricXZ(px, pz, a, b, c) {
   return [l0, l1, l2];
 }
 
+// Where the key light comes from over a rock (up, from the left, a little toward the viewer), for foil that is laid on the lit faces only.
+const FOIL_LIGHT = unit([-.45, .78, .44]);
+
 /**
  * Explicit-mesh high-makie rock: sculpted 8-facet rounded mound with an upper-left secondary peak,
  * two carved ridge lines, and a dense mosaic of square kirikane/kirigin foil tiles lifted ~0.1 off
  * the surface along its normal.
  */
-export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1} = {}) {
+export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1, outline, peaks, height, lines, foil} = {}) {
   if (typeof id !== 'string' || !id) throw new Error(`meshRock: invalid id ${id}`);
   if (![cx, cz, w, h, seed].every(Number.isFinite) || !(w > 0) || !(h > 0)) {
     throw new Error(`meshRock(${id}): invalid geometry parameters`);
   }
 
-  const r = rand(seed), n = 8, d = [];
-  for (let i = 0; i < n; i++) {
-    const t = i / n * 6.283 - Math.PI * .9, k = .72 + r() * .38, lower = Math.sin(t) > 0 ? .55 : 1;
+  // outline: [[dx, dz]] round the rock from its centre (any count over 4, star-shaped about the centre), instead of the
+  // eight-point ring; peaks: [{x, z, rx, rz, h}] the summits (h a share of the height), instead of one main and one side peak;
+  // lines: [[[dx, dz]...]] the carved grooves; height: the crown's height; foil: only where the face turns to the light at
+  // least this much (0..1; one tile or more always), instead of every upward face. With none of them: the original rock.
+  const r = rand(seed), custom = Boolean(outline);
+  let d = [];
+  if (custom) d = outline.map(([x, z]) => [cx + x, cz + z]);
+  else for (let i = 0; i < 8; i++) {
+    const t = i / 8 * 6.283 - Math.PI * .9, k = .72 + r() * .38, lower = Math.sin(t) > 0 ? .55 : 1;
     d.push([cx + Math.cos(t) * w * k, cz + Math.sin(t) * h * k * lower]);
   }
+  const n = d.length;
 
   const p = {
     id, kind: KIND.rock, group: id, order: 0, layer, mat, reach: 4, thick: 0, bias: 0,
@@ -85,10 +95,11 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1}
   };
   p.fills.push({d, soft: .35, crisp: .7});
   p.fills.push({d: d.map(([x, z]) => [cx + (x - cx) * .55 - w * .1, cz + (z - cz) * .5 - h * .12]), soft: .5, crisp: 1});
-  const line1 = [d[1], [cx - w * .1, cz - h * .1], d[5]];
-  const line2 = [d[3], [cx + w * .2, cz], d[6]];
-  p.lines.push({d: line1, w: .7, amp: .8});
-  p.lines.push({d: line2, w: .6, amp: .6});
+  const line1 = custom ? null : [d[1], [cx - w * .1, cz - h * .1], d[5]];
+  const line2 = custom ? null : [d[3], [cx + w * .2, cz], d[6]];
+  const grooves = custom ? (lines ?? []).map(l => l.map(([x, z]) => [cx + x, cz + z])) : [line1, line2];
+  grooves.forEach((l, i) => p.lines.push({d: l, w: custom ? .65 : i ? .6 : .7, amp: custom ? .7 : i ? .6 : .8}));
+  const distLines = (x, z) => grooves.reduce((m, l) => Math.min(m, distPoly(x, z, l)), Infinity);
 
   const rel = d.map(([x, z]) => [x - cx, z - cz]);
   const sectorCoord = (x, z) => {
@@ -111,13 +122,24 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1}
     return {u: bestU, s: bestS, f: bestF};
   };
 
-  const H = clamp(Math.min(w, h) * .78 + 4.5, 16, 21);
+  const H = height ?? clamp(Math.min(w, h) * .78 + 4.5, 16, 21);
   // Broad upper-left shoulder matching p.fills[1] and clean rock-ridge terraces along line1/line2.
   const mx = cx + w * .04, mz = cz + h * .02;
   const sx = cx - w * .17, sz = cz - h * .14;
   const rockY = (x, z) => {
     const {u, s, f} = sectorCoord(x, z);
     if (u >= 1) return 0;
+    if (peaks) {
+      let top = 0;
+      for (const k of peaks) {
+        const du = Math.hypot((x - cx - k.x) / k.rx, (z - cz - k.z) / k.rz);
+        if (du < 1) top = Math.max(top, H * k.h * Math.pow(1 - Math.pow(du, 2.2), .65));
+      }
+      const dome = Math.pow(Math.max(0, 1 - Math.pow(u, 2.4)), .62);
+      let gr = 0;
+      for (const l of grooves) { const dl = distPoly(x, z, l); if (dl < 1.4) gr += Math.pow(1 - dl / 1.4, 1.5) * .75; }
+      return Math.max(0, Math.max(top * smoothstep(1, .6, u), H * .2 * dome) - gr * smoothstep(.96, .74, u));
+    }
     const baseDome = Math.pow(Math.max(0, 1 - Math.pow(u, 2.4)), .62);
     // Broad tilted shoulder steps per face instead of tight radial pinches.
     const facetTilt = .95 + .07 * Math.sin(s * 2.1 + seed) + .04 * Math.sin((f - .5) * Math.PI);
@@ -273,7 +295,8 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1}
 
       const hit = sampleMesh(tx, tz);
       if (!hit || hit.u > .91 || hit.nrm[1] < .35) continue;
-      if (Math.min(distPoly(tx, tz, line1), distPoly(tx, tz, line2)) < .45) continue;
+      if (distLines(tx, tz) < .45) continue;
+      if (foil !== undefined && dot(hit.nrm, FOIL_LIGHT) < foil) continue;
 
       const N0 = hit.nrm;
       const ca = Math.cos(gridAngle + rotJit), sa = Math.sin(gridAngle + rotJit);
@@ -294,7 +317,7 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1}
       let ok = true;
       for (const c of probe) {
         const ch = sampleMesh(c[0], c[2]);
-        if (!ch || Math.min(distPoly(c[0], c[2], line1), distPoly(c[0], c[2], line2)) < .15) { ok = false; break; }
+        if (!ch || distLines(c[0], c[2]) < .15) { ok = false; break; }
         hitsC.push([c[0], ch.y, c[2]]);
       }
       if (!ok) continue;
@@ -317,7 +340,7 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1}
       let minS = Infinity, maxS = -Infinity;
       for (let k = 0; k < 5; k++) {
         const ch = k === 0 ? hit : sampleMesh(baseCorners[k - 1][0], baseCorners[k - 1][2]);
-        if (!ch || (k > 0 && Math.min(distPoly(baseCorners[k - 1][0], baseCorners[k - 1][2], line1), distPoly(baseCorners[k - 1][0], baseCorners[k - 1][2], line2)) < .15)) {
+        if (!ch || (k > 0 && distLines(baseCorners[k - 1][0], baseCorners[k - 1][2]) < .15)) {
           ok = false; break;
         }
         const refY = k === 0 ? midCenter[1] : baseCorners[k - 1][1];

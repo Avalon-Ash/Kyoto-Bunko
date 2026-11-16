@@ -52,6 +52,14 @@ for (const job of jobs) {
   await sleep(120);
   await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x, y});
   if (Number(zoom) > 1) { await send('Input.dispatchMouseEvent', {type: 'mouseWheel', x, y, deltaX: 0, deltaY: -Math.log(Number(zoom)) / .01, modifiers: 2}); await sleep(900); }
+  // PLATE_CENTER=1 drags the view so the point the zoom was anchored on (fx,fy) comes to the middle of the canvas: a group is then centred.
+  if (process.env.PLATE_CENTER && Number(zoom) > 1) {
+    const cx = r[0] + r[2] / 2, cy = r[1] + r[3] / 2;
+    await send('Input.dispatchMouseEvent', {type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1});
+    for (let s = 1; s <= 10; s++) await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x: x + (cx - x) * s / 10, y: y + (cy - y) * s / 10, buttons: 1});
+    await send('Input.dispatchMouseEvent', {type: 'mouseReleased', x: cx, y: cy, button: 'left', buttons: 0, clickCount: 1});
+    await sleep(900); x = cx; y = cy;
+  }
   // PLATE_LIGHT=fx,fy rests the light elsewhere after the zoom, so a close view of a roof is not under the light's own pool.
   if (process.env.PLATE_LIGHT) { const [lx, ly] = process.env.PLATE_LIGHT.split(',').map(Number); x = r[0] + r[2] * lx; y = r[1] + r[3] * ly; await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x, y}); await sleep(300); }
   await sleep(2800);
