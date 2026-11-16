@@ -19,7 +19,9 @@ const inside = ([x, z], polygon) => {
 };
 
 /** rock-<name>[-s] belongs to the group <name> (or to its other rock): laid against it on purpose, so the two may touch. */
-const belongsTo = (a, b) => [[a, b], [b, a]].some(([r, g]) => /^rock-/.test(r) && (r.startsWith(`rock-${g}`) || (/^rock-/.test(g) && r.replace(/-s$/, '') === g.replace(/-s$/, ''))));
+// A crag may also stand against something its name does not say (docs/plans/2026-11-16-doha.md §11.3: a rock lies against what it leans on; the rock is not moved off it to pass a test).
+const LEANS_ON = {'rock-torii-foot': ['pine-a'], 'rock-fox-seat': ['kitsune', 'pine-b']};
+const belongsTo = (a, b) => [[a, b], [b, a]].some(([r, g]) => /^rock-/.test(r) && (r.startsWith(`rock-${g}`) || LEANS_ON[r]?.includes(g) || (/^rock-/.test(g) && r.replace(/-s$/, '') === g.replace(/-s$/, ''))));
 test('P3b compositions keep their margins and both bird feet on a solid carrier', () => {
   for (const ward of p3bWards.filter(hasPlate)) {
     const {parts} = preparePlate(PLATES[ward]());
@@ -56,10 +58,10 @@ test('P3b ground fields reserve about a third of the lid and all eight wards are
     assert.ok(hasPlate(ward), `${ward} has its own plate`);
     const parts = PLATES[ward](), fills = parts.flatMap(p => p.fills.map(f => f.d));
     const mist = parts.filter(p => p.kind === KIND.mist).length;
-    // doha pilot wards (docs/plans/2026-11-16-doha.md): rocks stand on the pieces, two to five to a cluster; the rest of the lid is bare nashiji by doha.js's own fence.
+    // doha pilot wards (docs/plans/2026-11-16-doha.md): a rock is one crag cluster (a large crag, a small one, pebbles), three or four to a ward; the rest of the lid is bare nashiji by doha.js's own fence.
     const rocks = parts.filter(p => p.kind === KIND.rock && !(p.id === 'ishigaki')).length, doha = dohaWards.has(ward);
     assert.ok(mist >= 2 && mist <= 4, `${ward} has two to four mist bands`);
-    assert.ok(doha ? rocks >= 4 && rocks <= 20 : rocks >= 1 && rocks <= 3, `${ward} has ${doha ? 'four to twenty' : 'one to three'} rocks`);
+    assert.ok(doha ? rocks >= 3 && rocks <= 20 : rocks >= 1 && rocks <= 3, `${ward} has ${doha ? 'three to twenty' : 'one to three'} rocks`);
     // Sample the source silhouettes, not shadows or material brightness. Thin line work is not a ground field.
     let bare = 0, total = 0;
     for (let x = -356; x < 360; x += 8) for (let z = -226; z < 230; z += 8) {
@@ -476,7 +478,7 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
 
   // Scope fence: part counts per ward. R5a/R5b added the attached scenes to every ward; patina P3b split the coral
   // leaves, the fire of the 大, the silver petals and the dew of shell into parts of their own (one part per material).
-  const expectedCounts = {W_MINAMI: 54, W_UKYO: 26, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 47, W_KITA: 30, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 47, W_HIGASHIYAMA: 28, W_SHIMOGYO: 36};
+  const expectedCounts = {W_MINAMI: 54, W_UKYO: 26, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 46, W_KITA: 30, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 45, W_HIGASHIYAMA: 28, W_SHIMOGYO: 36};
   for (const [ward, build] of Object.entries(PLATES)) {
     const {parts, errors} = preparePlate(build());
     assert.deepEqual(errors, [], ward);

@@ -21,7 +21,7 @@ const GROUND_COLOUR = {
   [MAT.gold]: '#e0b050', [MAT.silver]: '#a8a8a4', [MAT.kirikane]: '#f0c860', [MAT.kirigin]: '#c8c8c4',
   [MAT.aogai]: '#6fa8b0', [MAT.hyomonGold]: '#e6b94e', [MAT.hyomonSilver]: '#d0d2ce', [MAT.water]: '#d6a64c',
   [MAT.coral]: '#b9412d', [MAT.kasumi]: '#e6be66', [MAT.lacquer]: '#0b0807', [MAT.lamp]: '#ff9a3c',
-  [MAT.bankGold]: '#cfa24e', [MAT.bankSilver]: '#a8a8a2', [MAT.rockGold]: '#e2c27c', [MAT.rockSilver]: '#d6d9d2', [MAT.toyamaGold]: '#d9b865', [MAT.toyamaBlue]: '#cdbf86', [MAT.sandGold]: '#dcb45a', [MAT.sandSilver]: '#b4b4ae',
+  [MAT.bankGold]: '#cfa24e', [MAT.bankSilver]: '#a8a8a2', [MAT.rockGold]: '#e2c27c', [MAT.rockSilver]: '#d6d9d2', [MAT.rockOlive]: '#c4b46e', [MAT.rockLine]: '#f0d98c', [MAT.toyamaGold]: '#d9b865', [MAT.toyamaBlue]: '#cdbf86', [MAT.sandGold]: '#dcb45a', [MAT.sandSilver]: '#b4b4ae',
 };
 
 /** The CPU mirror of the renderer's vertex motion for one pose (treeAtAnchor: the trees as they moved before 2026-11-16); the clip probe (clip-probe.js) measures with it too. */

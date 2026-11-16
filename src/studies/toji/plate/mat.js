@@ -10,4 +10,6 @@ export const MAT = {ground: 1, nashijiLight: 2, mura: 3, gyobu: 4, gold: 5, silv
   // Toyama (far mountain) maki-e: a flat fine powder, brightest at the ridge and thinning to nothing down the slope; gold or a paler, cooler blue-gold.
   toyamaGold: 23, toyamaBlue: 24,
   // Doha rocks (pilot wards only): one raised form of fine pale powder, gold or silver, with grooves along its grain; no cut-gold squares.
-  rockGold: 25, rockSilver: 26};
+  rockGold: 25, rockSilver: 26,
+  // The crags (the two pilot wards): a blue-gold body (pale olive gold) and the fine pale-gold lines drawn over their faces.
+  rockOlive: 27, rockLine: 28};

@@ -7,8 +7,9 @@
 //   the far range three low heads at the far left, the same way.
 //   the near land quiet tongues of sand under the great torii, the two-storey gate and the fox: the shore is a soft curve.
 //   the rocks     only in the near land, each against something: see ROCKS.
-import {MAT, suyari, rock, branchPine as pine, bird, shell, torii, romon, fox, pawPrints, steppingStones, lantern} from './vocab.js';
+import {suyari, branchPine as pine, bird, shell, torii, romon, fox, pawPrints, steppingStones, lantern} from './vocab.js';
 import {mountain, tongues} from './doha.js';
+import {meshCrag} from './crag-mesh.js';
 
 /** Five gates up the slope, each smaller than the one before and clear of its neighbours. */
 function climb() {
@@ -52,33 +53,53 @@ const FOX = [
   {at: [250, 184], p: [[-16, 0], [-8, -8], [6, -8], [16, 0], [10, 8], [-4, 10], [-14, 6]], tone: 'silver', seed: 43},
 ];
 
-// Rocks: only in the near land, each against something. Outline and peaks are relative to (x, z); w, h its half extents.
-// on: what it stands on or leans against; why: the reason it is there. No rock on the mountain.
+// Rocks (docs/plans/2026-11-16-doha.md §15.1): only in the near land, each cluster against something. A cluster is one large crag of
+// three or four blocks (a ridge each: [dx, dz, height, radius]; a block listed later lies in front of the one before), one or two small
+// crags beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is
+// relative to (x, z). on: what it stands against; why: the reason it is there. No rock on the mountain.
 export const ROCKS = [
-  // at the east post of the great torii: a broad low stone, two summits, grooves running down off the higher
-  {id: 'torii-foot', x: -147, z: 212, w: 11, h: 8, seed: 6, height: 10,
-    outline: [[-11,4],[-9,-2],[-6,-6],[-2,-5],[1,-8],[6,-7],[10,-1],[11,5],[4,7],[-5,8]],
-    peaks: [{x: -3, z: -2, rx: 9, rz: 7, h: .85}, {x: 6, z: -3, rx: 5, rz: 5, h: .55}],
-    lines: [[[-3,-4],[-5,0],[-8,5]], [[6,-5],[8,0],[9,4]], [[1,-3],[1,2],[0,6]]],
-    on: 'the east post of the great torii, on the big gold ground', why: 'a stone at the foot of a post, where the torii is planted'},
-  // at the foot of the two-storey gate: the large stone, craggy, a notch between two crowns
-  {id: 'romon-step', x: -178, z: 52, w: 16, h: 10, seed: 7, height: 14,
-    outline: [[-16,4],[-14,-3],[-9,-6],[-7,-11],[-2,-9],[0,-4],[3,-5],[6,-12],[11,-9],[13,-3],[16,2],[10,8],[1,7],[-8,9]],
-    peaks: [{x: -8, z: -4, rx: 8, rz: 8, h: 1}, {x: 9, z: -5, rx: 6, rz: 7, h: .75}],
-    lines: [[[-8,-6],[-9,0],[-12,6]], [[-6,-5],[-3,0],[-1,6]], [[9,-7],[11,-2],[13,3]], [[7,-6],[5,0],[6,5]]],
+  // between the east post of the great torii and the root of the pine: a broad stone, a high spine at the back, a lower crown in front
+  {id: 'torii-foot', x: -139, z: 211, scale: 1.15,
+    crags: [
+      {seed: 3, blocks: [
+        {mat: 'olive', ridge: [[-8, -6, 16, 8], [0, -8, 20, 8], [10, -5, 14, 6]], strata: {ang: -.9, period: 4.4, amp: 0.65, w: 1.1}},
+        {mat: 'silver', ridge: [[-17, -2, 11, 6], [-13, -7, 14, 5]], q: .85},
+        {mat: 'olive', ridge: [[-5, 2, 10, 6], [4, 3, 12, 6]], strata: {ang: .6, period: 3.6, amp: 0.5, w: 1}},
+        {mat: 'gold', ridge: [[10, 4, 8, 4.5], [13, 0, 10, 4]]},
+        {mat: 'silver', ridge: [[-9, 8, 5, 4], [0, 9, 6, 4.5]], q: .8},
+      ], grooves: [{p: [[-10, 0], [-2, 1], [7, 0]], w: 2.4, depth: 2.2}]},
+      {at: [-24, -6], blocks: [{mat: 'silver', ridge: [[0, 0, 5, 4], [4, 1, 6, 3.4]]}]},
+    ],
+    lines: [[[1, -8], [0, -3], [-2, 2], [-4, 6]], [[5, -7], [6, -2], [8, 2], [10, 5]], [[-4, -6], [-8, -2], [-10, 3]], [[-13, -6], [-15, -1], [-17, 4]], [[-1, 4], [2, 6], [6, 7]], [[16, 0], [17, 4], [17, 7]]],
+    pebbles: [[-13, 11, 3.4, 2, .9, .2, 'silver'], [4, 13, 2.4, 1.6, .7, -.3, 'olive'], [14, 10, 3, 1.9, .8, .1, 'silver'], [-30, 1, 2.2, 1.5, .6, 0, 'olive']],
+    on: 'the east post of the great torii and the root of the pine, on the big gold ground', why: 'a stone where the torii post and the pine both plant their feet, the stone that holds the ground between them'},
+  // at the foot of the two-storey gate: two crowns with a deep notch between, a small stone at its side
+  {id: 'romon-step', x: -166, z: 47, scale: 1.2,
+    crags: [
+      {seed: 7, blocks: [
+        {mat: 'olive', ridge: [[-12, -4, 15, 7], [-6, -8, 20, 7], [-1, -5, 14, 6]], strata: {ang: 1.2, period: 4, amp: 0.6, w: 1}},
+        {mat: 'gold', ridge: [[8, -6, 15, 6], [14, -2, 11, 6]], strata: {ang: -.5, period: 3.8, amp: 0.5, w: 1}},
+        {mat: 'silver', ridge: [[-12, 3, 8, 6], [-3, 6, 7, 6]], q: .85},
+        {mat: 'olive', ridge: [[3, 3, 9, 5], [11, 3, 10, 5]]},
+      ], grooves: [{p: [[2, -12], [2, -4], [3, 2]], w: 3, depth: 4}]},
+      {at: [30, 5], blocks: [{mat: 'olive', ridge: [[0, 0, 8, 5], [4, 2, 6, 4]]}, {mat: 'silver', ridge: [[-3, 4, 4, 3.5]]}]},
+    ],
+    lines: [[[-6, -9], [-8, -4], [-11, 1], [-13, 5]], [[-3, -8], [-2, -2], [-1, 4]], [[9, -7], [11, -2], [13, 2]], [[14, -3], [16, 1]], [[-9, 5], [-4, 8], [2, 8]], [[30, 0], [32, 3], [34, 6]]],
+    kiri: [{at: [-9, -2], cols: 2, rows: 3, turn: .2}],
+    pebbles: [[-21, 9, 3, 1.8, .8, .1, 'silver'], [15, 11, 3.6, 2, .9, -.2, 'olive'], [24, 0, 2.2, 1.5, .6, .4, 'silver'], [-20, -3, 2, 1.4, .6, 0, 'olive']],
     on: 'the small gold ground east of the two-storey gate, at its foot', why: 'the stone the steps of the gate rest on'},
-  // by the fox seat: the large stone, tall at the left and leaning
-  {id: 'fox-seat', x: 206, z: 218, w: 19, h: 11, seed: 9, height: 13,
-    outline: [[-19,6],[-17,-1],[-12,-5],[-8,-12],[-2,-9],[2,-13],[7,-8],[12,-6],[17,0],[20,5],[11,9],[-1,8],[-10,10]],
-    peaks: [{x: -6, z: -6, rx: 10, rz: 9, h: 1}, {x: 12, z: -1, rx: 8, rz: 6, h: .5}],
-    lines: [[[-6,-8],[-7,-1],[-10,6]], [[-2,-7],[1,0],[3,7]], [[12,-3],[14,1],[16,5]], [[-12,-4],[-15,1],[-17,5]]],
+  // by the fox seat: a long spine that rises from the left, one steep crown, and falls away to the right; a gold lobe in front, a silver shoulder at the left
+  {id: 'fox-seat', x: 227, z: 212, scale: 1.1,
+    crags: [
+      {seed: 11, blocks: [
+        {mat: 'olive', ridge: [[-20, 1, 10, 8], [-12, -4, 17, 8], [-5, -7, 21, 6.5], [2, -5, 15, 5.2], [8, -1, 10, 4.2], [12, 4, 6, 3]], strata: {ang: .2, period: 4.2, amp: .6, w: 1.1}},
+        {mat: 'silver', ridge: [[-24, 5, 7, 5], [-16, 7, 8, 5]], q: .85},
+        {mat: 'gold', ridge: [[-6, 5, 7, 5], [2, 6, 6, 4]], strata: {ang: -1, period: 3.4, amp: .45, w: 1}},
+      ]},
+    ],
+    lines: [[[-6, -9], [-8, -4], [-10, 0], [-12, 4]], [[-2, -8], [0, -3], [1, 3]], [[5, -8], [8, -3], [10, 1]], [[-21, 3], [-22, 6]], [[7, 5], [10, 7], [13, 7]]],
+    pebbles: [[-28, 9, 2.6, 1.7, .7, .2, 'silver'], [12, 10, 3.2, 1.9, .8, -.1, 'olive'], [-2, 11, 2.2, 1.4, .6, .3, 'silver']],
     on: 'the shore of the fox ground, east of its stone seat', why: 'a stone by the seat: the fox sits among stones'},
-  // and a small flat pebble next to it
-  {id: 'fox-seat-s', silver: true, x: 240, z: 224, w: 10, h: 7, seed: 8, height: 5,
-    outline: [[-9,3],[-5,-5],[2,-6],[9,-1],[7,5],[-1,6]],
-    peaks: [{x: 0, z: -1, rx: 9, rz: 6, h: 1}],
-    lines: [[[-1,-3],[1,1],[2,4]]],
-    on: 'beside the large stone, at the seat', why: 'the small one of the pair: a chip off the large'},
 ];
 
 /** The clusters, for the measuring and checking scripts. */
@@ -101,8 +122,7 @@ export function fushimi() {
     ...suyari('mist-sky', -372, -128, -222, 15, 6),
     ...suyari('mist-gate', -372, -190, -40, 13, 12),
     ...suyari('mist-foot', 78, 336, 92, 14, 4),
-    ...ROCKS.flatMap(({id, x, z, w, h, seed, outline, peaks, height, lines, foil, silver}) =>
-      rock(`rock-${id}`, x, z, w, h, seed, {outline, peaks, height, lines, foil, mat: silver ? MAT.rockSilver : MAT.rockGold})),
+    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
     // Slot 2: the gates, the fox and the trunks. These stand up from the lid.
     ...torii('torii', -232, 204, 1.22, {cap: true}),
     // A stone lantern at the great torii's west foot, outside the post: the way in. Only this side has room: between the

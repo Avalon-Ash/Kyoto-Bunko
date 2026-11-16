@@ -31,7 +31,9 @@ export const MATERIALS = {
   [MAT.sandGold]: {name: 'sandGold', color: '#d6ad55', paint: '#cfa44a', metalness: .9, roughness: .4, clearcoat: .4, clearcoatRoughness: .1, flake: .3},
   [MAT.toyamaGold]: {name: 'toyamaGold', color: '#d9b865', paint: '#cfa850', metalness: .85, roughness: .5, clearcoat: .3, clearcoatRoughness: .1, flake: .1},
   [MAT.rockGold]: {name: 'rockPowderGold', color: '#e2c27c', paint: '#d2b068', metalness: .8, roughness: .5, clearcoat: .25, clearcoatRoughness: .15, flake: .15},
-  [MAT.rockSilver]: {name: 'rockPowderSilver', color: '#d6d9d2', paint: '#c8ccc4', metalness: .85, roughness: .46, clearcoat: .2, clearcoatRoughness: .15, flake: .15},
+  [MAT.rockSilver]: {name: 'rockPowderSilver', color: '#b9b8ae', paint: '#aeada4', metalness: .85, roughness: .52, clearcoat: .1, clearcoatRoughness: .15, flake: .15},
+  [MAT.rockOlive]: {name: 'rockPowderOlive', color: '#bdae78', paint: '#ae9f6a', metalness: .8, roughness: .5, clearcoat: .25, clearcoatRoughness: .15, flake: .15},
+  [MAT.rockLine]: {name: 'rockPowderLine', color: '#f0d98c', paint: '#e6cf80', metalness: .9, roughness: .4, clearcoat: .2, clearcoatRoughness: .15, flake: .1},
   [MAT.toyamaBlue]: {name: 'toyamaBlue', color: '#cdbf86', paint: '#c0b374', metalness: .85, roughness: .5, clearcoat: .3, clearcoatRoughness: .1, flake: .1},
   [MAT.sandSilver]: {name: 'sandSilver', color: '#a9a8a0', paint: '#9b9a93', metalness: .85, roughness: .35, clearcoat: .3, clearcoatRoughness: .1, flake: .3},
   [MAT.silver]: {name: 'silver', aged: {color: '#d9d6cc', roughness: .27, metalness: .7, clearcoat: .2, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#e6e8e4', paint: '#d8dad6', metalness: 1, roughness: .2, clearcoat: .3, clearcoatRoughness: .08, flake: .3},
@@ -918,10 +920,12 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     // ground is ground down to the same level a little below); fine powder, densest and brightest on it, thinning evenly down the slope until
     // it is the ground's own. No flake, no cut gold, no grain but the powder's. Powder is laid on or left off; no dark is mixed in.
     float Ht=fine.g,a=smoothstep(.0,.85,Ht),ridgeV=smoothstep(.45,1.,Ht),edgeV=smoothstep(.6,1.,Ht);
-    vec3 pw=mat==23?mix(M_GOLD,M_PALE,.8):vec3(.80,.93,.96);
+    // A silver head (24) is made the way a gold one is: opaque pale silver powder, a warm neutral, thinning from the ridge to the ground. Its ridge is a line of gold.
+    vec3 pw=mat==23?mix(M_GOLD,M_PALE,.8):vec3(.96,.92,.84);
     vec3 pwd=mNashiji(kp,mix(1.4,2.5,Ht),pw)*mix(1.55,2.1,ridgeV);
-    if(mat==24)pwd=mix(pwd*.55,mMetal(kp,vec3(.8,.87,.9),.9)*1.25,.7);
-    c=mix(c,pwd,a)+mMetal(kp,pw,.9)*.9*edgeV;
+    // Silver is laid thick: opaque over most of the face (the ground's flakes do not show through), and only the last of the slope thins into the ground.
+    if(mat==24){pwd=mix(mMetal(kp,pw*.9,.9)*1.22,pwd*1.05,.3);a=1.-pow(1.-smoothstep(.0,.5,Ht),2.2);}
+    c=mix(c,pwd,a)+(mat==24?mMetal(kp,M_GOLD*1.25,1.)*2.2*smoothstep(.55,.9,Ht):mMetal(kp,pw,.9)*.9*edgeV);
   }
   if(kAmt>0.){
     // Halftone kirikane on banks: light-facing slopes and the rim of the bank get the big pieces.
