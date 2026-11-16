@@ -28,6 +28,8 @@ import {
 } from './three-pack.js';
 
 const EYE = [430, 720, 920], TARGET = [0, 40, 0];
+/** How old the box looks unless ?age= says otherwise: 0 is as new, 1 is the Hatsune trousseau as it is today. */
+const AGE_DEFAULT = .7;
 const VIEW = normalize(EYE.map((v, i) => v - TARGET[i])), KEY = normalize([-.5, .78, .22]);
 const STRIDE = 10;
 const SHADOW_SOFT = 6; // PCF shadow filter radius in texels for softer window-light penumbra
@@ -116,6 +118,8 @@ export function createThreeRenderer(gl, canvas) {
   const dummySoft = own(new THREE.DataTexture(new Uint16Array([0]), 1, 1, THREE.RedFormat, THREE.HalfFloatType)); dummySoft.unpackAlignment = 1; dummySoft.needsUpdate = true;
   // Dev only: ?dens=off leaves the ground's powder at its flat density (and skips the bake), ?dens=view paints the field, ?dens=mask paints plain ground magenta (for measuring).
   const densMode = import.meta.env.DEV ? new URLSearchParams(location.search).get('dens') : null;
+  // ?age=0..1 sets how old the box looks (0 is as new); every ageing effect is scaled by it.
+  const ageParam = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('age') : null;
   const neutralDens = own(new THREE.DataTexture(new Uint8Array([128]), 1, 1, THREE.RedFormat, THREE.UnsignedByteType)); neutralDens.unpackAlignment = 1; neutralDens.needsUpdate = true;
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const stampTex = own(bakeStampTexture(doc, maxAniso));
@@ -126,7 +130,9 @@ export function createThreeRenderer(gl, canvas) {
     uMistFine: {value: dummyRgba}, uMistIdent: {value: dummyRg}, uStamps: {value: stampTex},
     uView: {value: new THREE.Vector3(...VIEW)}, uKey: {value: new THREE.Vector3(...KEY)}, uLamp: {value: new THREE.Vector3(0, 70, 0)},
     uTime: {value: 0}, uNight: {value: 1}, uPresence: {value: 0}, uPx: {value: 1}, uTrails: {value: trails},
+    uAge: {value: ageParam === null || Number.isNaN(Number(ageParam)) ? AGE_DEFAULT : Math.min(1, Math.max(0, Number(ageParam)))},
   };
+  if (import.meta.env.DEV) window.__kyotoPlateUniforms = shared; // scripts/plate-shot.mjs flips uDensView to mask the lid
 
   const flake = own(bakeFlakeNormal(doc));
   const NORMAL_FIX = THREE.ShaderChunk.normal_fragment_begin.replace('gl_FrontFacing ? 1.0 : - 1.0', '1.0');

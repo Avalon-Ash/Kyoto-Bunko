@@ -3,6 +3,8 @@
 // job = name:steps:theme:WxH:zoom:fx,fy   steps: signed cabinet steps from Minami; theme: night|day, plus "-still"
 // to press pause first; zoom 1..3; fx,fy: where the light rests, as fractions of the canvas. See docs/MAKIE_PLATE_HANDOFF.md §7.
 // PLATE_SHOT_QUERY=?plate=static node scripts/plate-shot.mjs …  shoots the still-picture fallback instead of three.js.
+// PLATE_TONE=1 also prints each shot's tone over the lid's own pixels (three.js only): luminance percentiles, median
+// saturation, and the share of bright and dark pixels, all in percent. docs/plans/2026-11-16-patina.md §5 uses them.
 import {spawn} from 'node:child_process';
 import {writeFileSync, mkdirSync} from 'node:fs';
 import {join} from 'node:path';
@@ -57,6 +59,38 @@ for (const job of jobs) {
   const shot = await send('Page.captureScreenshot', {format: 'png', clip: {x: Math.max(0, r[0] + r[4]), y: Math.max(0, r[1] + r[5]), width: r[2], height: r[3], scale: 1}});
   writeFileSync(join(outDir, `${name}.png`), Buffer.from(shot.result.data, 'base64'));
   console.log(name, info);
+  if (process.env.PLATE_TONE) {
+    // The lid's pixels: paint plain ground magenta and the rest of the lid green (the dev mask), then take each row from
+    // its first to its last masked pixel, so the parts standing on the lid count too.
+    const clip = {x: Math.max(0, r[0] + r[4]), y: Math.max(0, r[1] + r[5]), width: r[2], height: r[3], scale: 1};
+    await evalJs(`window.__kyotoPlateUniforms.uDensView.value = 2`);
+    await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x, y}); await sleep(500);
+    const mask = await send('Page.captureScreenshot', {format: 'png', clip});
+    await evalJs(`window.__kyotoPlateUniforms.uDensView.value = 0`);
+    const tone = await evalJs(`(async () => {
+      const load = async b64 => { const i = new Image(); i.src = 'data:image/png;base64,' + b64; await i.decode();
+        const c = new OffscreenCanvas(i.width, i.height), g = c.getContext('2d'); g.drawImage(i, 0, 0); return g.getImageData(0, 0, i.width, i.height); };
+      const a = await load(${JSON.stringify(shot.result.data)}), m = await load(${JSON.stringify(mask.result.data)});
+      const L = [], S = [];
+      for (let y = 0; y < a.height; y++) {
+        let x0 = -1, x1 = -1;
+        for (let x = 0; x < a.width; x++) {
+          const k = (y * a.width + x) * 4, R = m.data[k], G = m.data[k + 1], B = m.data[k + 2];
+          if ((R > 150 && B > 150 && G < 90) || (G > 150 && R < 90 && B < 90)) { if (x0 < 0) x0 = x; x1 = x; }
+        }
+        for (let x = x0; x0 >= 0 && x <= x1; x++) {
+          const k = (y * a.width + x) * 4, R = a.data[k] / 255, G = a.data[k + 1] / 255, B = a.data[k + 2] / 255, mx = Math.max(R, G, B);
+          L.push(.2126 * R + .7152 * G + .0722 * B); S.push(mx > 0 ? (mx - Math.min(R, G, B)) / mx : 0);
+        }
+      }
+      if (!L.length) return 'no lid pixels';
+      const pct = (v, p) => Math.round([...v].sort((p, q) => p - q)[Math.floor((v.length - 1) * p)] * 100);
+      const share = f => Math.round(L.filter(f).length / L.length * 1000) / 10;
+      return JSON.stringify({pixels: L.length, L5: pct(L, .05), L25: pct(L, .25), L50: pct(L, .5), L75: pct(L, .75), L95: pct(L, .95),
+        S50: pct(S, .5), bright: share(v => v > .75), dark: share(v => v < .22)});
+    })()`);
+    console.log(name, 'tone', tone);
+  }
 }
 if (logs.length) console.log('CONSOLE:', [...new Set(logs)].slice(0, 12).join('\n'));
 await send('Target.closeTarget', {targetId: target.id}).catch(() => {});
