@@ -20,6 +20,8 @@ const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a
 /** The shape of a bank's wedge: [distance from the ridge / depth, height], read by bake.js (painted) and the shader. */
 export const WEDGE_PROFILE = [[0, 1], [.06, .82], [.2, .55], [.45, .24], [.75, .06], [1, 0]];
 /** The fade of a far mountain's powder down from its ridge: [distance from the ridge / depth, density]. Long and even; it ends in the ground. */
+/** How far below the chord of its two ends a far head's dome is closed, as a share of its depth (mountain(); bake.js paintFar). */
+export const FAR_DROP = .12;
 export const TOYAMA_PROFILE = [[0, 1], [.025, .74], [.07, .62], [.24, .49], [.5, .3], [.78, .12], [1, 0]];
 /** How tall a bank's crest stands in the soft (geometry) channel, as a share of the soft swell (three-pack.js K_SWELL). */
 export const BANK_SOFT = .3;
@@ -105,7 +107,7 @@ export function bankGeom(q) {
 
 /**
  * A cluster of tongues. pieces: {p: [[x, z]...] the outline's control points, at?: [dx, dz] to move them all, tone: 'gold' |
- * 'silver', seed, kiri?: [from, to], toward?, run?, facing? (tongueFade)} listed far to near (a later piece lies over an earlier one).
+ * 'silver', seed, kiri?: [from, to], toward?, run?, facing? (tongueFade), under?} listed far to near (a later piece lies over an earlier one).
  * `all` gives every piece a default for those (a pond's shores all face the pond). kiri puts a string of cut
  * gold along the outline between two fractions of its length. The first listed piece of each tone names its part.
  */
@@ -115,12 +117,28 @@ export function tongues(id, pieces, all = {}) {
   pieces.forEach((piece, i) => {
     const q = {...all, ...piece}, s = geoms[i], tone = q.tone ?? 'gold';
     const p = out[tone] ??= part(`${id}-${tone}`, id, tone === 'silver' ? MAT.sandSilver : MAT.sandGold, centre, {reach: 1.6, order: tone === 'silver' ? 1 : 0});
-    const f = {d: s.outline, soft: tone === 'silver' ? .03 : .05, crisp: 1, tongue: true};
-    if (q.kiri) { const [from, to] = q.kiri; f.kiri = [{path: pathOf(s.outline, from, to), pitch: 4, half: 1.1}]; }
-    if (tone !== 'silver') {
+    let outline = s.outline, fade = tone === 'silver' ? null : tongueFade(outline, q);
+    if (fade && q.toward && (q.under ?? 16) > 0) {
+      // A shore that lies along water runs in under it: its water side is carried `under` units toward the water, so that the
+      // waterline is the water's own outline (the pond or stream is listed after the shores) and no lobe of the shore shows in it.
+      const n = outline.length, pts = Array.isArray(q.toward[0]) ? q.toward : [q.toward], under = q.under ?? 16;
+      outline = outline.map((pt, k) => {
+        if (!fade.on[k]) return pt;
+        let e = 1; while (e < 8 && fade.on[(k + e) % n] && fade.on[(k - e + n) % n]) e++;
+        const t = pts.reduce((best, c) => Math.hypot(c[0] - pt[0], c[1] - pt[1]) < Math.hypot(best[0] - pt[0], best[1] - pt[1]) ? c : best);
+        const m = Math.hypot(t[0] - pt[0], t[1] - pt[1]) || 1, w = Math.min(1, e / 8) * Math.min(under, m * .8);
+        return [pt[0] + (t[0] - pt[0]) / m * w, pt[1] + (t[1] - pt[1]) / m * w];
+      });
+      fade = tongueFade(outline, q);
+    }
+    const f = {d: outline, soft: tone === 'silver' ? .03 : .05, crisp: 1, tongue: true};
+    // The outline as it was written (what shows above the water), for the measuring scripts.
+    if (outline !== s.outline) f.drawn = s.outline;
+    if (q.kiri) { const [from, to] = q.kiri; f.kiri = [{path: pathOf(outline, from, to), pitch: 4, half: 1.1}]; }
+    if (fade) {
       // Togidashi: the powder is laid thick along the drawn edge and thins away from it until it is the ground's own.
-      f.fade = tongueFade(s.outline, q);
-      for (const r of f.fade.runs) p.lines.push({d: r, w: 1, amp: .7});
+      f.fade = fade;
+      for (const r of fade.runs) p.lines.push({d: r, w: 1, amp: .7});
     }
     p.fills.push(f);
   });
@@ -176,7 +194,7 @@ export function tongueFade(outline, q = {}) {
   const xs = outline.map(p => p[0]), zs = outline.map(p => p[1]), half = Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) / 2;
   // The same stretches with two points in three left out: what the baker strokes for the fade (a wide stroke through every point is slow).
   const coarse = runs.map(r => r.filter((_, i) => i % 3 === 0 || i === r.length - 1));
-  return {runs, coarse, run: q.run ?? Math.max(6, far > 1 ? far : half)};
+  return {runs, coarse, on, run: q.run ?? Math.max(6, far > 1 ? far : half)};
 }
 
 /**
@@ -205,10 +223,18 @@ export function banks(id, pieces) {
 export function mountain(id, heads) {
   if (!heads.length) throw new Error(`mountain(${id}): no heads`);
   const out = {}, geoms = heads.map(q => bankGeom({taper: .1, jitter: 0, step: 4, ...q})), centre = centreOf(geoms);
+  // A head is the dome under its ridge: the arc, closed by the chord between its two ends (set a little lower, where the powder has
+  // already thinned to nothing). The powder lies thick along the whole arc, flanks included, and thins inward and toward the foot.
+  const domes = geoms.map(s => {
+    const r = s.ridge, a = r[0], b = r[r.length - 1], drop = s.depth * FAR_DROP;
+    return [...r.map(p => [p[0], p[1]]), [b[0], b[1] + drop], [a[0], a[1] + drop]];
+  });
   heads.forEach((q, i) => {
     const s = geoms[i], tone = q.tone ?? 'gold';
     const p = out[tone] ??= part(`${id}-${tone}`, id, tone === 'blue' ? MAT.toyamaBlue : MAT.toyamaGold, centre, {order: tone === 'blue' ? 1 : 0});
-    p.fills.push({d: s.outline, soft: 0, crisp: 0, wedge: {ridge: s.ridge, depth: s.depth, amp: q.amp ?? 0, far: true, profile: TOYAMA_PROFILE}});
+    // A nearer head hides the one behind it; hiddenBy lists the nearer heads of the other metal (their part is painted apart from this one).
+    const hiddenBy = domes.filter((_, j) => j > i && (heads[j].tone ?? 'gold') !== tone);
+    p.fills.push({d: domes[i], soft: 0, crisp: 0, hiddenBy, wedge: {ridge: s.ridge, depth: s.depth, amp: q.amp ?? 0, far: true, profile: TOYAMA_PROFILE, cluster: id, seq: i, drop: s.depth * FAR_DROP}});
   });
   return Object.values(out);
 }

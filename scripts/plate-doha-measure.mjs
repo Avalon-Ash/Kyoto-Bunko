@@ -10,7 +10,9 @@ const W = PLATE.halfW * 2, H = PLATE.halfH * 2, LID = W * H;
 const PIECE_MATS = new Set([MAT.bankGold, MAT.bankSilver, MAT.sandGold, MAT.sandSilver, MAT.toyamaGold, MAT.toyamaBlue]);
 /** What of a bank can be seen: the crest and the wedge down to where its height is 15% (0.62 of its depth); below that it is ground. */
 export const visible = f => {
-  if (!f.wedge) return f.d;
+  // A shore that runs in under the water is measured by its outline as written (f.drawn): the stretch under the water is not seen.
+  if (!f.wedge) return f.drawn ?? f.d;
+  // (A far head is still measured as the band its powder shows in, 0.62 of its depth below the ridge, not as its whole dome.)
   const {ridge, depth, rear = 0} = f.wedge;
   return [...ridge.map(p => [p[0], p[1] - rear * Math.min(1, p[2] * 3)]), ...ridge.map(p => [p[0], p[1] + depth * (p[5] ?? 1) * .62]).reverse()];
 };

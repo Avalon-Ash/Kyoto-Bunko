@@ -38,8 +38,8 @@ export {PIECES};
 
 export function nishikyo() {
   return [
-    ...pond('garden-pond', 15, 69, 217, 71, 7),
     ...tongues('shore', SHORES, {toward: [[-120, 69], [15, 69], [150, 69]]}),
+    ...pond('garden-pond', 15, 69, 217, 71, 7),
     // Katsura fence: a run of bamboo along the south-west shore's lower edge: this is an enclosed garden.
     ...bambooFence('katsura-fence', [-205, 170], [-90, 159], {on: 'shore-gold'}),
     ...suyari('mist-sky', -300, -72, -201, 13, 9),

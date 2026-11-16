@@ -50,6 +50,54 @@ function paintWedge(ctx, f) {
   ctx.restore();
 }
 
+/** A profile's height at t (0..1), between its stops. */
+const profileAt = (profile, t) => {
+  for (let i = 1; i < profile.length; i++) if (t <= profile[i][0]) { const [t0, h0] = profile[i - 1], [t1, h1] = profile[i]; return h0 + (h1 - h0) * (t - t0) / Math.max(t1 - t0, 1e-6); }
+  return profile[profile.length - 1][1];
+};
+// Where a far head's ridge is stroked for its powder, as shares of its depth: close together by the ridge (its hard edge), wider apart below.
+const FAR_STEPS = [.012, .025, .045, .07, .1, .135, .175, .22, .27, .32, .38, .44, .5, .57, .64, .71, .78, .85, .92, 1];
+const grey = v => 'rgb(' + v + ',' + v + ',' + v + ')';
+
+/**
+ * A far mountain's head (doha.js mountain; niku-ai togidashi). Its dome is cleared first, so it hides whatever head lies behind it.
+ * Then G is how thick its powder lies: 1 on the ridge and thinning with the distance from it, measured from the arc itself (so the
+ * powder follows the ridge down both flanks) by stroking the ridge again and again, each time narrower and higher. Last it is
+ * thinned to nothing toward the foot (the chord between the ridge's two ends) and toward either end, so the dome has no lower
+ * edge and no side: the ridge itself fades out as it comes down to the ground.
+ */
+function paintFar(ctx, f) {
+  const {ridge, depth, profile, drop} = f.wedge, a = ridge[0], b = ridge[ridge.length - 1];
+  ctx.save();
+  trace(ctx, f.d, true); ctx.clip();
+  ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#000'; ctx.fill();
+  ctx.globalCompositeOperation = 'lighten';
+  for (let i = FAR_STEPS.length - 1; i >= 0; i--) {
+    const h = profileAt(profile, FAR_STEPS[i]);
+    if (h < .004) continue;
+    ctx.strokeStyle = 'rgb(0,' + Math.round(255 * h) + ',0)'; ctx.lineWidth = 2 * depth * FAR_STEPS[i];
+    ctx.beginPath();
+    ridge.forEach(([x, z], k) => { if (k % 2 && k < ridge.length - 1) return; if (k) ctx.lineTo(x, z); else ctx.moveTo(x, z); });
+    ctx.stroke();
+  }
+  // Toward the foot: nothing at the dome's closing line, whole at `rise` above it (measured square to the chord).
+  const cx = b[0] - a[0], cz = b[1] - a[1], cl = Math.hypot(cx, cz) || 1;
+  let nx = cz / cl, nz = -cx / cl; if (nz > 0) { nx = -nx; nz = -nz; }
+  // (A low head would lose most of itself to that, so the fade takes no more than the lower half of the dome.)
+  const arch = Math.max(...ridge.map(p => (p[0] - a[0]) * nx + (p[1] - a[1]) * nz)) + drop;
+  const rise = Math.min(depth * .55, arch * .5), fx = a[0], fz = a[1] + drop;
+  const x0 = Math.min(...f.d.map(p => p[0])) - 2, x1 = Math.max(...f.d.map(p => p[0])) + 2, z0 = Math.min(...f.d.map(p => p[1])) - 2, z1 = Math.max(...f.d.map(p => p[1])) + 2;
+  ctx.globalCompositeOperation = 'multiply';
+  const foot = ctx.createLinearGradient(fx, fz, fx + nx * rise, fz + nz * rise);
+  for (const [t, v] of [[0, 0], [.2, 26], [.5, 128], [.8, 230], [1, 255]]) foot.addColorStop(t, grey(v));
+  ctx.fillStyle = foot; ctx.fillRect(x0, z0, x1 - x0, z1 - z0);
+  // Toward either end: nothing at the ridge's two ends, whole a seventh of the way in.
+  const ends = ctx.createLinearGradient(a[0], a[1], b[0], b[1]);
+  for (const [t, v] of [[0, 0], [.05, 40], [.14, 255], [.86, 255], [.95, 40], [1, 0]]) ends.addColorStop(t, grey(v));
+  ctx.fillStyle = ends; ctx.fillRect(x0, z0, x1 - x0, z1 - z0);
+  ctx.restore();
+}
+
 /**
  * A string of cut gold squares laid along a path (the suhama's edge, a bank's ridge): into the B channel at full strength,
  * where a rim line (amp .5) never reaches. Every so often one is left out, as a string is laid by hand.
@@ -100,12 +148,18 @@ export function paintLayer(ctx, w, h, parts, layer) {
   if (layer === 0) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h); }
   toUnits(ctx, w, h);
   ctx.lineCap = ctx.lineJoin = 'round';
+  // Far mountains are painted together, far to near, whichever part (gold or blue-gold) each head belongs to: a nearer head hides the one behind.
+  const fars = layer === 0 ? parts.filter(p => p.layer === 0 && !p.limbs && !p.mesh).flatMap(p => p.fills.filter(f => f.wedge?.far)) : [];
+  const clusters = [...new Set(fars.map(f => f.wedge.cluster))];
+  fars.sort((a, b) => clusters.indexOf(a.wedge.cluster) - clusters.indexOf(b.wedge.cluster) || a.wedge.seq - b.wedge.seq);
+  let farDone = false;
   for (const p of parts) {
     if (p.layer !== layer || p.limbs || p.mesh) continue;
     ctx.globalCompositeOperation = 'source-over';
     // Fading tongues: clear what lies under the whole cluster first, then lay each one's powder; where two overlap the thicker shows.
     if (layer === 0 && p.fills.some(f => f.fade)) { ctx.fillStyle = '#000'; for (const f of p.fills) if (f.fade) { trace(ctx, f.d, true); ctx.fill(); } }
     for (const f of p.fills) {
+      if (f.wedge?.far && layer === 0) { if (!farDone) { for (const g of fars) paintFar(ctx, g); farDone = true; ctx.globalCompositeOperation = 'source-over'; } continue; }
       if (f.wedge && layer === 0) { paintWedge(ctx, f); if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
       if (f.fade && layer === 0) { paintTongue(ctx, f); ctx.globalCompositeOperation = 'source-over'; if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
       // A standing part is a pillow: its whole silhouette feeds the blurred channel, which becomes its dome.
@@ -146,7 +200,11 @@ export function identMaps(doc, parts, w, h, layers, groundMat) {
     const x1 = Math.min(w, Math.ceil((p.bounds[2] + pad + PLATE.halfW) * sx)), z1 = Math.min(h, Math.ceil((p.bounds[3] + pad + PLATE.halfH) * sz));
     if (x1 <= x0 || z1 <= z0) continue;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(x0, z0, x1 - x0, z1 - z0); toUnits(ctx, w, h);
-    for (const f of p.fills) { trace(ctx, f.d, true); ctx.fill(); if (reach > 0) { ctx.lineWidth = reach * 2; ctx.stroke(); } }
+    for (const f of p.fills) {
+      trace(ctx, f.d, true); ctx.fill(); if (reach > 0) { ctx.lineWidth = reach * 2; ctx.stroke(); }
+      // A far head belongs to the nearer head of the other metal wherever that one lies over it.
+      if (f.hiddenBy?.length) { ctx.globalCompositeOperation = 'destination-out'; for (const d of f.hiddenBy) { trace(ctx, d, true); ctx.fill(); } ctx.globalCompositeOperation = 'source-over'; }
+    }
     for (const l of p.lines) { ctx.lineWidth = l.w + reach * 2; trace(ctx, l.d, false); ctx.stroke(); }
     const data = ctx.getImageData(x0, z0, x1 - x0, z1 - z0).data, map = maps[p.layer], pack = packed[p.layer];
     for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) {

@@ -55,8 +55,8 @@ export function ukyo() {
   return [
     ...mountain('arashiyama', ARASHIYAMA),
     ...mountain('kameyama', KAMEYAMA),
-    ...pond('sogen', 143, 49, 160, 115, 5),
     ...tongues('shore', SHORES),
+    ...pond('sogen', 143, 49, 160, 115, 5),
     ...fallenLeaves('near-leaves', 238, 196, 96, 26, 14, 4),
     ...suyari('mist-ridge', -350, -190, -122, 12, 4),
     ...suyari('mist-pond', 130, 330, -112, 12, 8),
