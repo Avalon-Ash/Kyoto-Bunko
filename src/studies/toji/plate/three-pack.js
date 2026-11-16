@@ -559,11 +559,14 @@ const float M_SWELL=17., M_AMB=.17, M_KEY=.44, M_POOL=1.75;
 // coat mirrors a narrow warm-white band (M_BAND_*), and the powder under it a broad gold sheen that brightens the
 // body without whitening it (M_SHEEN_*). SWEEP: how fast the place follows the lean; FALL: how fast it fades across
 // the lid; WIDTH: the gaussian's tightness (larger is narrower); GAIN: how bright, by day (a night keeps .45 of it).
-// Age (uAge, 0 as new to 1): the amber lacquer has browned, so the powder under it reads darker (M_AGE_BODY is what
-// gets through at age 1; a night is dim already and keeps more), and its surface has hazed, laying a thin grey veil over everything (M_AGE_VEIL) while the
+// Age (uAge, 0 as new to 1): the amber lacquer has browned (M_FLAKE_AGED tints the chips, and the lacquer between them
+// is less amber), and its surface has hazed, laying a very thin grey veil (M_AGE_VEIL) while the
 // mirror in the coat, the sheen in the powder and the lamp's pool all weaken (M_AGE_GLOSS, _SHEEN, _POOL at age 1).
+// The ground is dark because of the lacquer between its chips (mNashiji), never because the whole thing is multiplied down: the
+// tiers are M_DEPTH_A/B/C (three depths of chip) and M_FILL (the gold under the lacquer where powder lies close); a night keeps M_FLAKE_NIGHT of them.
 // Raised gold keeps its value but loses saturation (M_AGE_PALE): the picture ends up paler than its ground.
-const vec3 M_AGE_BODY=vec3(.42,.35,.22), M_AGE_BODY_NIGHT=vec3(.80,.74,.62), M_AGE_VEIL=vec3(.05,.043,.032);
+const vec3 M_AGE_VEIL=vec3(.0035,.003,.002);
+const float M_DEPTH_A=.078, M_DEPTH_B=.19, M_DEPTH_C=.53, M_FILL=.8, M_FLAKE_NIGHT=.78;
 // Silver on the lid sulphides the same way (M_TARNISH at age 1), in blotches; fine drawn lines stay bright.
 // The coat no longer mirrors evenly (M_AGE_HAZE: how far its gloss swings from place to place), the lacquer lies a
 // little thicker here and thinner there (M_AGE_MURA: the swing in the ground's value), and where a bank's crown has
@@ -589,7 +592,6 @@ float mPool(){return M_POOL*mix(1.,M_AGE_POOL,uAge);}
 vec3 mLight(){return M_AMB*mAmbC*mOcc+(M_KEY*mDk*mKeyC+mPool()*mAtt*mDp*mPoolC)*mSh;}
 vec3 mSpec(float e){return (M_KEY*pow(max(dot(mN,mHk),0.),e)*mKeyC+mPool()*mAtt*pow(max(dot(mN,mHp),0.),e)*mPoolC)*mSh;}
 vec3 mAgedSilver(vec3 f0,vec2 p,float k){return f0*mix(vec3(1.),M_TARNISH,clamp(uAge*k*(.86+.26*smoothstep(.25,.8,mVnoise(p*.05+17.))),0.,1.));}
-vec3 mAgedLacquer(vec3 c){return c*mix(vec3(1.),mix(M_AGE_BODY,M_AGE_BODY_NIGHT,uNight),uAge)+M_AGE_VEIL*uAge*(mAmbC*.55*mOcc+mKeyC*mDk*.45*mSh);}
 vec3 mRoom(float rough){
   vec3 r=reflect(-uView,mN);
   float up=smoothstep(-.35,1.,r.y),win=smoothstep(mix(.74,.15,rough),1.,dot(r,uKey));
@@ -680,20 +682,55 @@ float mKiriCluster(vec2 p,vec2 tdir,float e,out vec3 glint){
   glint*=cov;return cov;
 }
 vec3 mCoat(){return (vec3(1.,.95,.86)*(mSpec(220.)*.42+mSpec(36.)*.10)+mRoom(0.)*.045+mKeyC*mBand*M_BAND_GAIN)*mix(1.,M_AGE_GLOSS*(.45+M_AGE_HAZE*mVnoise(mWP.xz*.035+9.)),uAge);}
+// Nashiji (梨子地), the Hatsune way: the ground is dark lacquer and the gold is in it as flat chips, large, each of its own
+// shape and size, in several golds (mostly orange, some yellow, some reddish, a few pale). They are laid in three layers
+// at three depths, so chips overlap and some lie deeper (dimmer) than others. The ground is dark because of the lacquer
+// between the chips, not because anything is darkened: where the powder lies close (dens high: 濃梨子地) the chips cover
+// nearly all of it, the layers lie brighter, and the lacquer between them has a deep gold under it, so a close ground is
+// one step up from a sparse one with no edge between. dens is the powder's density here (.4 thin, .9 the ground, 2+ dense).
+const vec2 M_PN[5]=vec2[5](vec2(1.,0.),vec2(.309,.951),vec2(-.809,.588),vec2(-.809,-.588),vec2(.309,-.951));
+const vec3 M_FLAKE_AGED=vec3(.90,.82,.68); // the amber lacquer over the chips has browned with age
+// One layer of chips: one in each cell, a convex piece of five random sides, longer than wide, at its own angle, inside
+// its cell. hl, hw are its half-length and half-width as a share of the cell. Returns its coverage of the pixel; col is
+// the chip's colour (lit), glint the light it mirrors.
+float mChips(vec2 p,float cell,float lo,float hi,float pres,float depth,vec3 hueMul,vec3 L,vec3 broad,out vec3 col,out vec3 glint){
+  float vis=smoothstep(1.3,3.2,cell/max(uPx,.05));
+  vec2 g=p/cell,id=floor(g),r=mHash2(id),a=mHash2(id+3.7),b=mHash2(id+9.1),o1=mHash2(id+31.1),o2=mHash2(id+41.3),h=mHash2(id+7.31);
+  float hl=mix(lo,hi,a.x),hw=hl*mix(.62,.95,a.y);
+  vec2 d=fract(g)-.5-(r-.5)*max(1.-2.48*hl,0.);
+  float ang=b.x*6.283,ca=cos(ang),sa=sin(ang);
+  vec2 q=vec2(ca*d.x-sa*d.y,sa*d.x+ca*d.y)/vec2(hl,hw);
+  float dist=max(max(max(dot(q,M_PN[0])-(.72+.28*b.y),dot(q,M_PN[1])-(.72+.28*o1.x)),max(dot(q,M_PN[2])-(.72+.28*o1.y),dot(q,M_PN[3])-(.72+.28*o2.x))),dot(q,M_PN[4])-(.72+.28*o2.y));
+  float aa=max(uPx,.05)*.75/(cell*hw);
+  float cov=step(h.x,pres)*(1.-smoothstep(-aa,aa,dist));
+  float hh=h.y;
+  vec3 hue=hh<.58?vec3(1.,.38,.09):hh<.78?vec3(1.,.54,.13):hh<.93?vec3(.92,.25,.07):vec3(1.,.70,.32);
+  float tone=.62+.66*fract(hh*37.3);
+  vec3 chip=hue*hueMul*tone*depth*(.06+.90*L);
+  vec3 nf=normalize(mN+vec3(r.x-.5,0.,r.y-.5)*.5);
+  vec3 gl=(M_KEY*.45*pow(max(dot(nf,mHk),0.),70.)*mKeyC+M_POOL*mAtt*pow(max(dot(nf,mHp),0.),70.)*mPoolC)*mSh;
+  float avg=pres*2.7*(lo+hi)*(lo+hi)*.25*.8*.9;
+  col=mix(vec3(1.,.40,.10)*hueMul*.95*depth*(.06+.90*L),chip,vis);
+  glint=mix(avg*broad*.55,cov*gl*2.6,vis);
+  return mix(avg,cov,vis);
+}
 vec3 mNashiji(vec2 p,float dens,vec3 tint){
-  // Gold powder sunk at three depths in amber lacquer (Hatsune: 金粉を透漆で塗りこむ). The lacquer absorbs blue
-  // first, so the deepest powder reads red-brown and the shallow powder bright orange-gold; the body between grains
-  // is the amber glow of powder further down, not black. Photos of the trousseau read honey-gold overall.
-  vec3 L=mLight(),ga,gb,gc;
-  float a=mFlake(M_R1*p,.62,.47,dens*1.15,0.,.55,ga),b=mFlake(M_R2*p+13.7,1.35,.43,dens*.85,0.,.5,gb),c=mFlake(M_R3*p+41.3,2.4,.36,dens*.30,0.,.4,gc);
-  vec3 deep=tint*vec3(.82,.52,.17),mid=tint*vec3(1.,.70,.28),top=tint*vec3(1.,.86,.52);
-  vec3 col=tint*vec3(.36,.20,.056)*(.16+.52*L);
-  col=mix(col,deep*(.10+.62*L),a*.9);
-  col=mix(col,mid*(.10+.84*L),b*.92);
-  col=mix(col,top*(.12+1.02*L),c);
+  vec3 L=mLight(),hueMul=clamp(tint/M_GOLD,vec3(.6),vec3(2.)),c1,c2,c3,g1,g2,g3;
+  float dn=smoothstep(1.05,2.1,dens);
+  vec3 broad=(M_KEY*pow(max(dot(mN,mHk),0.),12.)*mKeyC+M_POOL*mAtt*pow(max(dot(mN,mHp),0.),12.)*mPoolC)*mSh;
+  // The chips' lay is warped a little so the cells they sit in never read as a lattice.
+  vec2 w=p+(vec2(mVnoise(p*.37+3.1),mVnoise(p*.37+11.7))-.5)*2.2;
+  vec3 age=mix(vec3(1.),M_FLAKE_AGED,uAge)*mix(1.,mix(M_FLAKE_NIGHT,M_FLAKE_NIGHT*.8,dn),uNight);
+  float a=mChips(M_R1*w,2.8,.30,.41,mix(.3,1.,clamp(dens*1.0,0.,1.)),mix(M_DEPTH_A,M_DEPTH_A*5.4,dn),hueMul*age*vec3(1.,.85,.72),L,broad,c1,g1);
+  float b=mChips(M_R2*w+13.7,2.5,.30,.41,mix(.3,1.,clamp(dens*.85,0.,1.)),mix(M_DEPTH_B,M_DEPTH_B*3.0,dn),hueMul*age,L,broad,c2,g2);
+  float c=mChips(M_R3*w+41.3,3.3,.30,.41,mix(.2,1.,clamp(dens*.55,0.,1.)),mix(M_DEPTH_C,M_DEPTH_C*1.5,dn),hueMul*age*vec3(1.,1.10,1.22),L,broad,c3,g3);
+  // The lacquer between the chips: nearly black amber; where the powder lies close, the gold under it shows through.
+  vec3 lacq=mix(vec3(.30,.10,.045)*(.02+.05*L)*mix(1.8,1.,uAge),vec3(.62,.28,.07)*hueMul*age*M_FILL*(.06+.90*L),dn*.85);
+  vec3 col=mix(mix(mix(lacq,c1,a),c2,b),c3,c);
   float sheen=mSheen*mix(1.,M_AGE_SHEEN,uAge);
   col*=(1.+M_SHEEN_GAIN*sheen)*(1.+(mVnoise(p*.011+3.)-.5)*M_AGE_MURA*uAge);
-  return mAgedLacquer(col+tint*M_AMBER*(ga*.7+gb*1.2+gc*1.5)*(1.+2.2*mBand*mix(1.,M_AGE_GLOSS,uAge)+1.2*sheen))+mCoat();
+  vec3 glint=(g1+g2*1.1+g3*1.3)*tint*M_AMBER;
+  return col+glint*(1.+2.2*mBand*mix(1.,M_AGE_GLOSS,uAge)+1.2*sheen)+M_AGE_VEIL*uAge*(mAmbC*.55*mOcc+mKeyC*mDk*.45*mSh)+mCoat()*.18;
 }
 vec3 mMetal(vec2 p,vec3 f0,float rise){
   f0=mix(f0,vec3(dot(f0,vec3(.3,.55,.15)))*vec3(1.05,1.,.90),M_AGE_PALE*uAge);
@@ -811,11 +848,11 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(mat==2||mat==3){
     float cloud=mat==3?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
     // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
-    wM=smoothstep(.06,.62,hs)*(.30+.25*cloud)*.2;wN=1.-wM;dens=mix(dens,1.25,smoothstep(.02,.3,hs)*(1.-wM));
+    wM=smoothstep(.06,.62,hs)*(.30+.25*cloud)*.2;wN=1.-wM;dens=mix(dens,2.1,smoothstep(.02,.3,hs)*(1.-wM));
     kAmt=smoothstep(.01,.09,hs)*.85;
     f0=mix(M_GOLD,M_PALE,.55);tint=mix(M_GOLD,M_PALE,.35*w);rise=max(rise,.75);c=M_PALE*line*(.14+.6*L)*w;
   }
-  else if(mat==4){wN=1.;dens=mix(dens,1.05,w);kAmt=smoothstep(.01,.09,hs)*.85;c=M_PALE*line*(.12+.5*L)*w;}
+  else if(mat==4){wN=1.;dens=mix(dens,2.,w);kAmt=smoothstep(.01,.09,hs)*.85;c=M_PALE*line*(.12+.5*L)*w;}
   else if(mat==5){wM=1.;c=M_PALE*line*(.12+.6*L)*mix(.5,1.,rise);}
   // Flat silver stands for white things (sand, petals): it dulls but stays pale. Raised and shaded silver goes dark.
   else if(mat==6){wN=1.;dens=.95;}
@@ -882,7 +919,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     // it is the ground's own. No flake, no cut gold, no grain but the powder's. Powder is laid on or left off; no dark is mixed in.
     float Ht=fine.g,a=smoothstep(.0,.85,Ht),ridgeV=smoothstep(.45,1.,Ht),edgeV=smoothstep(.6,1.,Ht);
     vec3 pw=mat==23?mix(M_GOLD,M_PALE,.8):vec3(.80,.93,.96);
-    vec3 pwd=mNashiji(kp,mix(.9,1.6,Ht),pw)*mix(1.55,2.1,ridgeV);
+    vec3 pwd=mNashiji(kp,mix(1.4,2.5,Ht),pw)*mix(1.55,2.1,ridgeV);
     if(mat==24)pwd=mix(pwd*.55,mMetal(kp,vec3(.8,.87,.9),.9)*1.25,.7);
     c=mix(c,pwd,a)+mMetal(kp,pw,.9)*.9*edgeV;
   }
@@ -950,11 +987,12 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     float wr=smoothstep(.62,.95,hs)*smoothstep(.50,.72,mVnoise(M_R1*kp*.07+5.)*.62+mVnoise(M_R2*kp*.19)*.38)*M_AGE_WEAR*uAge;
     c=mix(c,M_UNDER*(.3+L),wr);
   }
-  if(uDensView>2.5)c=vec3(texture(uContact,mPuv(kp)).r*.8);
+  if(uDensView>4.5)c=mat==1?vec3(1.,0.,1.):(mat==2||mat==3||mat==4||mat==12||(mat>=19&&mat<=24))?vec3(0.,1.,1.):vec3(0.,1.,0.); // dev layers: plain ground magenta, dense-nashiji faces cyan, the rest green
+  else if(uDensView>2.5)c=vec3(texture(uContact,mPuv(kp)).r*.8);
   else if(uDensView>1.5)c=mat==1?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
   else if(uDensView>.5)c=vec3(dField*.8);
   outgoingLight=mFinish(c,1.).rgb;
-  if(uDensView>3.5)outgoingLight=vec3(kiriV,0.,(mat>=2&&mat<=4)?1.-kiriV:kiriB*(1.-kiriV)); // dev: red = kirikane, blue = other hill ground (?dens=kiri)
+  if(uDensView>3.5&&uDensView<4.5)outgoingLight=vec3(kiriV,0.,(mat>=2&&mat<=4)?1.-kiriV:kiriB*(1.-kiriV)); // dev: red = kirikane, blue = other hill ground (?dens=kiri)
   diffuseColor.a=1.;
 }`;
 
@@ -1021,6 +1059,7 @@ void main(){
 /** Fragment shader for KIND.mist: semi-transparent gold foil drifting over the plate, clipped inside the lid lip. */
 export const MAKIE_MIST_FRAG_GLSL = `
 uniform sampler2D uState, uMistFine, uMistIdent;
+uniform float uDensView;
 varying vec3 vKyotoWorld, vKyotoNormal;
 varying vec2 vKyotoUv, vKyotoMeta;
 varying float vPartId;
@@ -1044,4 +1083,5 @@ void main(){
   float sv=smoothstep(.40,.68,mVnoise(vec2(vKyotoUv.x*.012,vKyotoUv.y*.19)+vPartId*3.7));
   c=mix(c,mMetal(vKyotoUv,mAgedSilver(M_OXID,vKyotoUv,1.),1.)*.9+.2*mSheet(mAgedSilver(M_SILVER,vKyotoUv,.7)),sv*.9);
   fragColor=mFinish(c,alpha);
+  if(uDensView>4.5)fragColor=vec4(0.,1.,1.,alpha); // dev layers mask: mist is a dense-nashiji face
 }`;

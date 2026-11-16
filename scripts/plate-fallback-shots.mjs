@@ -52,7 +52,7 @@ for (const theme of themes) for (const ward of wards) {
   await sleep(2000);
   const info = JSON.parse(await evalJs(`JSON.stringify({ward:document.querySelector('#scene').dataset.renderedWard,w:document.querySelector('#scene').width,h:document.querySelector('#scene').height,plate:document.querySelector('#scene').dataset.plate,renderer:document.querySelector('#scene').dataset.renderer})`));
   if (info.ward !== ward || info.plate !== 'true' || info.renderer !== 'three') throw Error(`not ready: ${JSON.stringify(info)}`);
-  let quality = 92, bytes;
+  let quality = 84, bytes; // 92 until the ground became a field of chips (docs/plans/2026-11-16-ground-tone.md): that detail does not compress, and the set must stay within 2.5 MB
   for (; quality >= 40; quality -= 4) {
     const shot = await send('Page.captureScreenshot', {format: 'webp', quality, fromSurface: true, clip: {x: 0, y: 0, width: W, height: H, scale: 1}});
     bytes = Buffer.from(shot.result.data, 'base64');

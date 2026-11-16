@@ -852,10 +852,10 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
 
     // Light: a key from the window side, a cool dim room by night, and the hand's own lamp.
     const night = f.night;
-    // An aged box sits in a quieter day: the night is already as dim as the Hatsune photographs.
-    const age = shared.uAge.value, dayDim = night ? 1 : 1 - .24 * age;
-    ambient.color.set(night ? '#7f96d6' : '#fff4e0'); ambient.intensity = (night ? .35 : .55) * dayDim;
-    key.color.set(night ? '#9fb4e8' : '#fff0d6'); key.intensity = (night ? 1.7 : 3.4) * dayDim;
+    // An aged box sits in a slightly quieter day. (The ground is dark by its own structure now, so the pieces no longer need the light held down to sit above it.)
+    const age = shared.uAge.value, dayDim = night ? 1 : 1 - .14 * age;
+    ambient.color.set(night ? '#7f96d6' : '#fff4e0'); ambient.intensity = (night ? .5 : .55) * dayDim;
+    key.color.set(night ? '#9fb4e8' : '#fff0d6'); key.intensity = (night ? 2.5 : 3.4) * dayDim;
     scene.environmentIntensity = (night ? .22 : .55) * dayDim;
     lamp.position.set(lampAt[0], lampAt[1], lampAt[2]); lamp.intensity = (night ? 120000 : 50000) * (.15 + presence.x);
 
