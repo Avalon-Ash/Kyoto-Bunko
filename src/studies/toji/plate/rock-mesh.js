@@ -229,7 +229,9 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1,
     return r > 1e-9 ? [cx + dx / r * along, cz + dz / r * along] : [cx, cz];
   }));
 
-  const bodyMat = mat === MAT.kirigin ? MAT.muraSilver : MAT.mura;
+  // A powder rock (the pilot wards): the body is its own pale gold or silver and there are no foil tiles.
+  const powder = mat === MAT.rockGold || mat === MAT.rockSilver;
+  const bodyMat = powder ? mat : mat === MAT.kirigin ? MAT.muraSilver : MAT.mura;
   const bodyVerts = [];
   for (const [[j0, i0], [j1, i1], [j2, i2]] of topTris) {
     pushTri(bodyVerts, pos[j0][i0], pos[j1][i1], pos[j2][i2], [0, 1, 0], norm[j0][i0], norm[j1][i1], norm[j2][i2], foilUv[j0][i0], foilUv[j1][i1], foilUv[j2][i2]);
@@ -283,6 +285,7 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1,
   const maxSpan = Math.ceil(Math.hypot(w, h) * 1.15 / pitch);
   const tileVerts = [];
   const tileThick = .022;
+  if (powder) { p.mesh = [{mat: bodyMat, vertices: bodyVerts}]; return p; }
 
   for (let iz = -maxSpan; iz <= maxSpan; iz++) {
     for (let ix = -maxSpan; ix <= maxSpan; ix++) {

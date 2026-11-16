@@ -6,102 +6,68 @@
 import {MAT, hall, karamon, moatWall, branchPine as pine, bird, rock, suyari} from './vocab.js';
 import {tongues} from './doha.js';
 
-// Tongues, far to near. kiri: [from, to], a string of cut gold along the outline between those fractions of its length.
-const STAIRS = [
-  // a long gold tongue under the first hall, a bay in its lower edge
-  {at: [-256, -134], sc: 1.3, p: [[-70, 2], [-50, -12], [-30, -8], [-12, -16], [8, -10], [28, -18], [42, -22], [54, -8], [72, 4], [56, 12], [40, 10], [30, 2], [18, -2], [6, 4], [2, 14], [-18, 16], [-44, 14]], tone: 'gold', seed: 11, kiri: [.55, .8]},
-  // silver, a crescent: both tips lifted
-  {at: [-176, -76], sc: 1.3, p: [[-60, -16], [-46, -18], [-28, -8], [-14, -2], [-6, -6], [8, 0], [18, -2], [40, -8], [56, -20], [66, -18], [60, -4], [44, 12], [20, 20], [-6, 22], [-30, 18], [-50, 6]], tone: 'silver', seed: 12},
-  // gold, a comma: the round head on the right, the thin tail to the left
-  {at: [-64, -10], sc: 1.3, p: [[-84, 4], [-60, 0], [-38, -4], [-16, -10], [8, -22], [34, -26], [56, -18], [64, -4], [56, 12], [34, 22], [10, 24], [-14, 14], [-38, 10], [-62, 8]], tone: 'gold', seed: 13, kiri: [.3, .5]},
-  // silver, two lobes joined at the waist
-  {at: [34, 52], sc: 1.3, p: [[-56, 0], [-46, -14], [-28, -18], [-12, -10], [-4, -6], [10, -12], [28, -20], [48, -14], [54, 0], [46, 14], [28, 20], [10, 14], [-2, 10], [-14, 16], [-32, 20], [-48, 14]], tone: 'silver', seed: 14},
-  // gold, a spit: broad at the left, pointing right
-  {at: [122, 116], sc: 1.3, p: [[-44, -18], [-24, -24], [-6, -20], [10, -14], [28, -16], [44, -6], [56, -6], [78, 2], [54, 6], [26, 12], [2, 20], [-24, 26], [-46, 20], [-54, 2]], tone: 'gold', seed: 15, kiri: [.05, .3]},
-  // silver, a bean with two bays in its lower edge, beside the last hall
-  {at: [214, 172], sc: 1.3, p: [[-60, -4], [-46, -16], [-24, -18], [-4, -12], [16, -18], [40, -14], [58, -2], [62, 12], [44, 14], [34, 6], [20, 10], [10, 20], [-6, 22], [-14, 12], [-30, 16], [-48, 10]], tone: 'silver', seed: 16},
-];
-const FORECOURT = [
-  // a round gold islet at the far left of the court of the gate
-  {at: [-298, 132], sc: 1.3, p: [[-34, -8], [-18, -18], [2, -20], [22, -14], [34, -2], [30, 12], [14, 20], [-6, 20], [-24, 14], [-36, 4]], tone: 'gold', seed: 21},
-  // silver, a boomerang
-  {at: [-222, 160], sc: 1.3, p: [[-58, -14], [-40, -20], [-18, -12], [0, -2], [16, 8], [38, 12], [62, 10], [74, 20], [60, 26], [34, 24], [18, 26], [2, 14], [-14, 16], [-30, 4], [-46, 6], [-58, -4]], tone: 'silver', seed: 22},
-  // gold, an S: the left end lifted, the right end pulled up
-  {at: [-112, 160], sc: 1.3, p: [[-52, -14], [-30, -22], [-6, -18], [14, -8], [34, -6], [56, -14], [60, -2], [40, 8], [16, 6], [-6, 12], [-30, 18], [-48, 10]], tone: 'gold', seed: 23, kiri: [.05, .4]},
-  // a small silver bean to the right of the gate
-  {at: [-56, 180], sc: 1.3, p: [[-26, 0], [-14, -10], [4, -12], [18, -6], [28, 4], [14, 10], [-2, 8], [-16, 12]], tone: 'silver', seed: 24},
-];
-const EAST = [
-  // silver, a bean with a notch on its upper edge
-  {at: [198, -138], sc: 1.25, p: [[-56, 2], [-40, -10], [-22, -12], [-12, -4], [-4, -2], [8, -12], [28, -14], [50, -8], [60, 6], [44, 14], [22, 12], [8, 20], [-6, 14], [-24, 18], [-46, 12]], tone: 'silver', seed: 31},
-  // gold, long and thin with a hook at the right end
-  {at: [262, -106], sc: 1.25, p: [[-64, -8], [-44, -14], [-20, -10], [4, -14], [30, -12], [52, -18], [68, -10], [62, 0], [46, -2], [26, 2], [4, 4], [-18, 10], [-42, 12], [-60, 6]], tone: 'gold', seed: 32},
-  // gold, a lemon on a slant, under the east pine
-  {at: [272, -36], sc: 1.25, p: [[-60, 10], [-46, -4], [-24, -16], [2, -22], [28, -16], [50, -4], [62, 10], [48, 18], [26, 22], [0, 22], [-26, 20], [-46, 18]], tone: 'gold', seed: 33, kiri: [.1, .35]},
-  // a small silver comma
-  {at: [282, 44], sc: 1.25, p: [[-30, -4], [-18, -14], [-2, -14], [10, -6], [26, -4], [42, 0], [30, 6], [14, 8], [4, 16], [-12, 18], [-26, 10]], tone: 'silver', seed: 34},
-];
-const WEST = [
-  // gold, a long curved sausage
-  {at: [-286, -52], sc: 1.3, p: [[-62, 6], [-48, 2], [-40, -8], [-22, -12], [-4, -10], [16, -18], [32, -12], [48, -10], [64, 0], [56, 6], [30, 0], [12, 8], [-6, 2], [-22, 12], [-44, 16]], tone: 'gold', seed: 41},
-  // silver, a small peanut
-  {at: [-292, 8], sc: 1.3, p: [[-42, 2], [-34, -10], [-18, -12], [-6, -4], [8, -8], [26, -12], [42, -4], [44, 8], [26, 14], [8, 8], [-6, 12], [-24, 16], [-38, 12]], tone: 'silver', seed: 42},
-  // gold, a wedge pointing left, under the west pine
-  {at: [-266, 58], sc: 1.3, p: [[-72, 4], [-60, -8], [-46, -6], [-34, -16], [-22, -14], [8, -22], [22, -18], [40, -24], [62, -8], [66, 8], [44, 18], [28, 24], [16, 18], [-2, 24], [-16, 20], [-46, 14]], tone: 'gold', seed: 43, kiri: [.2, .45]},
-  // a small round silver islet
-  {at: [-318, 102], sc: 1.3, p: [[-38, -6], [-20, -12], [0, -8], [18, -2], [38, 2], [40, 10], [20, 10], [2, 6], [-16, 12], [-34, 8]], tone: 'silver', seed: 44},
+// The ground is one shore (岸) along the moat and the stone wall, laid as a gold bank over a thin silver ribbon over a front gold
+// bank, with a long gold arm up the east side to the pine. Their outlines are the scalloped waves of a Shioyama-style suhama: a
+// run of round lobes with sharp coves between. The halls rise out of mist (suyari), not out of pieces of ground.
+// Listed far to near; kiri: [from, to], a string of cut gold along the outline between those fractions of its length.
+const SHORE = [
+  // silver: a thin ribbon sandwiched between the two gold banks; only a hand's breadth of it shows
+  {p: [[-358,172],[-300,170],[-240,173],[-170,171],[-90,173],[0,171],[90,172],[180,171],[260,173],[330,171],[358,174],[358,198],[300,201],[220,199],[130,201],[40,199],[-50,201],[-140,199],[-230,201],[-310,199],[-358,198]], tone: 'silver', seed: 51},
+  // the long gold bank: its upper edge scalloped, a lobe at the left that rises to the west pine, its lower edge in gentler waves
+  {p: [[-352,180],[-338,184],[-320,187],[-302,185],[-288,180],[-269,187],[-244,189],[-219,186],[-200,180],[-185,183],[-165,186],[-145,185],[-130,180],[-109,185],[-82,188],[-55,185],[-34,180],[-18,186],[2,187],[22,184],[38,180],[56,185],[80,189],[104,187],[122,180],[137,184],[155,186],[173,184],[188,180],[205,186],[227,188],[249,185],[266,181],[284,184],[310,187],[334,185],[352,181],[358,168],[352,152],[334,158],[322,166],[309,159],[292,154],[275,154],[262,163],[247,153],[227,148],[207,152],[192,159],[179,151],[163,146],[147,148],[134,156],[116,144],[94,139],[72,144],[54,151],[39,142],[21,136],[3,137],[-12,147],[-23,139],[-36,135],[-49,138],[-60,145],[-76,132],[-97,127],[-118,133],[-134,140],[-148,132],[-165,126],[-182,127],[-196,137],[-208,125],[-223,121],[-238,126],[-250,134],[-258,112],[-266,92],[-280,68],[-304,52],[-330,56],[-348,76],[-356,110],[-357,150]], tone: 'gold', seed: 52, kiri: [.52, .62]},
+  // the front gold bank at the water: low waves, its lower edge under the stone wall
+  {p: [[-352,197],[-339,194],[-323,192],[-307,193],[-294,197],[-278,192],[-257,191],[-236,193],[-220,197],[-206,194],[-189,192],[-172,193],[-158,197],[-139,193],[-115,191],[-91,193],[-72,197],[-57,193],[-39,192],[-21,194],[-6,197],[9,194],[29,191],[49,192],[64,197],[77,193],[94,192],[111,193],[124,197],[140,192],[160,191],[180,193],[196,197],[207,194],[222,192],[237,193],[248,196],[262,192],[284,193],[300,197],[322,192],[340,193],[352,196],[353,204],[200,205],[0,204],[-200,205],[-353,204]], tone: 'gold', seed: 53},
+  // the east arm: a long gold bank up the right side to the foot of the east pine, its left edge scalloped
+  {p: [[356,170],[358,120],[357,60],[354,10],[346,-30],[334,-62],[322,-90],[302,-108],[276,-114],[252,-108],[238,-92],[234,-72],[238,-62],[246,-44],[252,-22],[250,0],[242,18],[236,30],[240,42],[250,58],[256,80],[254,100],[246,114],[242,120],[248,132],[262,146],[270,160],[274,172],[300,176],[330,176]], tone: 'gold', seed: 54, kiri: [.34, .5]},
 ];
 
-// Rocks: each against something. Outline and peaks are relative to (x, z); w, h its half extents.
-// on: what it stands against; why: the reason it is there.
+// Rocks: each against something it belongs to, on the shore. Outline and peaks are relative to (x, z); w, h its half extents.
+// on: what it stands against; why: the reason it is there. A pair is one large angular stone and a small round one beside it.
 export const ROCKS = [
-  // at the roots of the east pine: three summits, the middle one the highest
-  {id: 'east-pine', x: 258, z: -52, w: 22, h: 10, seed: 4, height: 14, foil: .8,
-    outline: [[-22, 4], [-18, -4], [-10, -3], [-6, -10], [2, -6], [8, -11], [14, -5], [22, -1], [20, 5], [6, 9], [-12, 8]],
-    peaks: [{x: -12, z: -2, rx: 9, rz: 7, h: .7}, {x: 2, z: -5, rx: 9, rz: 8, h: 1}, {x: 15, z: -3, rx: 8, rz: 6, h: .6}],
-    on: 'the roots of the east pine', why: 'the pine grips a stone; the stone is what holds its foot'},
-  {id: 'east-pine-s', x: 210, z: -44, w: 9, h: 7, seed: 3, height: 5,
-    outline: [[-8, 5], [-9, -1], [-4, -6], [0, -3], [4, -7], [8, -2], [7, 5], [0, 7]],
-    peaks: [{x: -3, z: 0, rx: 8, rz: 6, h: 1}, {x: 6, z: -2, rx: 5, rz: 5, h: .5}],
-    on: 'beside the large one', why: 'the small one of the pair'},
-  // at the west pine: tall and thin
-  {id: 'west-pine', x: -286, z: 91, w: 15, h: 9, seed: 6, height: 15,
-    outline: [[-9, 3], [-8, -4], [-3, -12], [2, -15], [7, -8], [10, 0], [8, 6], [0, 9], [-6, 8]],
-    peaks: [{x: 1, z: -6, rx: 8, rz: 10, h: 1}],
-    on: 'the roots of the west pine', why: 'a tall thin stone leaning at the pine, as a lantern stone stands by an old tree'},
-  // at the foot of the gate: split into two
-  {id: 'karamon-foot', x: -76, z: 179, w: 14, h: 8, seed: 9, height: 10,
-    outline: [[-13, 2], [-9, -6], [-3, -8], [0, -2], [3, -2], [7, -9], [13, -5], [14, 2], [8, 7], [0, 6], [-8, 8]],
-    peaks: [{x: -6, z: -3, rx: 7, rz: 6, h: .85}, {x: 8, z: -4, rx: 6, rz: 6, h: 1}],
-    on: 'the footing of the cusped gate, at its east side', why: 'the gate foot is steadied by a stone, the way a garden gate has one'},
-  // at the corner of the last hall: a long flat slab, low on the left
-  {id: 'hall-foot', x: 277, z: 158, w: 19, h: 8, seed: 3, height: 9, foil: .85,
-    outline: [[-19, 5], [-15, -2], [-3, -4], [10, -8], [18, -3], [19, 4], [6, 8], [-10, 8]],
-    peaks: [{x: 5, z: -3, rx: 14, rz: 6, h: 1}, {x: -10, z: 0, rx: 8, rz: 5, h: .4}],
-    on: 'the base of the last hall, on its east', why: 'a stone at the corner of the plinth of the last hall, where the staircase ends'},
-  // on the shore of the moat: a low wide stone with a small peak on its right
-  {id: 'moat-shore', x: -30, z: 177, w: 14, h: 8, seed: 2, height: 7,
-    outline: [[-13, 4], [-8, -3], [0, -5], [9, -3], [14, 3], [6, 7], [-6, 8]],
-    peaks: [{x: -2, z: -1, rx: 13, rz: 6, h: .7}, {x: 8, z: -1, rx: 6, rz: 5, h: 1}],
-    on: 'the shore of the moat in front of the wall', why: 'water-edge stone: the moat has its bank of stones'},
+  // the east pine's roots: the large stone, jagged, one tall summit and two shoulders
+  {id: 'east-pine', x: 258, z: -66, w: 23, h: 11, seed: 4, height: 15,
+    outline: [[-22,6],[-19,-2],[-14,-4],[-12,-10],[-5,-9],[-1,-15],[5,-10],[9,-12],[14,-5],[21,-3],[23,5],[12,9],[-4,7],[-14,10]],
+    peaks: [{x: 0, z: -6, rx: 11, rz: 9, h: 1}, {x: -14, z: 0, rx: 7, rz: 6, h: .5}, {x: 15, z: -1, rx: 8, rz: 6, h: .4}],
+    lines: [[[0,-9],[-2,-3],[-6,3],[-9,8]], [[2,-8],[4,-2],[8,4],[10,7]], [[-8,-6],[-12,-1],[-16,4]], [[9,-7],[14,-3],[18,1]]],
+    on: 'the roots of the east pine, on the east arm of the shore', why: 'the pine grips a stone; the stone is what holds its foot'},
+  {id: 'east-pine-s', silver: true, x: 226, z: -56, w: 9, h: 6, seed: 3, height: 4,
+    outline: [[-9,1],[-7,-5],[-1,-6],[2,-3],[8,-4],[9,3],[2,6],[-5,5]],
+    peaks: [{x: -2, z: -1, rx: 9, rz: 6, h: 1}],
+    lines: [[[-2,-3],[0,1],[1,4]]],
+    on: 'beside the large stone, at the pine', why: 'the small one of the pair: a chip fallen from the large'},
+  // the west pine: one tall thin stone leaning at its trunk, and a flat pebble
+  {id: 'west-pine', silver: true, x: -284, z: 76, w: 15, h: 9, seed: 6, height: 15,
+    outline: [[-9,4],[-10,-3],[-6,-8],[-3,-16],[1,-12],[5,-18],[8,-9],[10,-2],[9,5],[2,9],[-5,8]],
+    peaks: [{x: 2, z: -10, rx: 8, rz: 12, h: 1}, {x: -5, z: -1, rx: 6, rz: 6, h: .5}],
+    lines: [[[2,-12],[1,-4],[0,3],[-2,8]], [[5,-13],[6,-5],[8,2]], [[-3,-10],[-6,-4],[-8,2]]],
+    on: 'the roots of the west pine, on the left lobe of the shore', why: 'a tall thin stone leaning at the pine, as a lantern stone stands by an old tree'},
+  {id: 'west-pine-s', x: -308, z: 82, w: 13, h: 5, seed: 8, height: 3,
+    outline: [[-13,2],[-9,-3],[0,-4],[10,-2],[13,1],[5,4],[-6,4]],
+    peaks: [{x: -1, z: 0, rx: 13, rz: 4, h: 1}],
+    lines: [[[-2,-2],[0,1],[1,3]]],
+    on: 'beside the tall stone, at the pine', why: 'the small one of the pair'},
+  // the foot of the cusped gate, its east side: split into two crowns
+  {id: 'karamon-foot', x: -86, z: 179, w: 15, h: 9, seed: 9, height: 11,
+    outline: [[-14,3],[-12,-5],[-6,-9],[-2,-3],[1,-3],[4,-10],[10,-9],[14,-3],[15,3],[9,7],[1,6],[-7,8]],
+    peaks: [{x: -7, z: -3, rx: 7, rz: 6, h: .8}, {x: 9, z: -5, rx: 7, rz: 6, h: 1}],
+    lines: [[[-7,-5],[-8,0],[-11,5]], [[-5,-4],[-2,1],[0,6]], [[9,-7],[11,-2],[13,3]], [[7,-6],[5,-1],[6,5]]],
+    on: 'the footing of the cusped gate, at its east side, on the bank', why: 'the gate foot is steadied by a stone, the way a garden gate has one'},
 ];
 /** The clusters, for the measuring and checking scripts. */
-const PIECES = {STAIRS, FORECOURT, EAST, WEST};
+const PIECES = {SHORE};
 export {PIECES};
 
 export function nakagyo() {
   const rooms = [[-248, -172, 62], [-161, -110, 64], [-74, -48, 66], [13, 14, 62], [100, 76, 58], [187, 138, 58]];
   return [
-    ...tongues('stairs', STAIRS),
-    ...tongues('forecourt', FORECOURT),
-    ...tongues('east', EAST),
-    ...tongues('west', WEST),
+    ...tongues('shore', SHORE),
+    // The halls rise out of the mist: two bands across the staircase, one among the far halls, one among the near.
     ...suyari('mist-court', -205, 15, -212, 11, 8),
-    ...suyari('mist-east', 140, 337, 10, 12, 5),
-    ...suyari('mist-gate', -344, -234, 125, 11, 2),
+    ...suyari('mist-far', -358, 40, -118, 13, 3),
+    ...suyari('mist-near', -90, 358, 62, 13, 5),
     ...moatWall('ishigaki', -333, 333, 201, 218, 232),
     ...ROCKS.flatMap(({id, x, z, w, h, seed, outline, peaks, height, lines, foil, silver}) =>
-      rock(`rock-${id}`, x, z, w, h, seed, {outline, peaks, height, lines, foil, ...(silver ? {mat: MAT.kirigin} : {})})),
+      rock(`rock-${id}`, x, z, w, h, seed, {outline, peaks, height, lines, foil, mat: silver ? MAT.rockSilver : MAT.rockGold})),
     ...rooms.flatMap(([x, z, w], i) => hall(`ninomaru-${i}`, x, z, w, 22, {wallH: 22, bays: 5})),
     ...karamon('karamon', -172, 184, 69),
     ...pine('west-pine', -305, 62, 99, 12, 2, {clusters: 3}),

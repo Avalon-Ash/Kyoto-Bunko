@@ -25,7 +25,7 @@ function paintWedge(ctx, f) {
   ctx.save();
   trace(ctx, f.d, true); ctx.clip();
   ctx.globalCompositeOperation = 'lighten';
-  const SUB = 3;
+  const SUB = f.wedge.far ? 2 : 3;
   for (let i = 0; i < ridge.length - 1; i++) {
     const [ax, az, ae, , , ad = 1] = ridge[i], [bx, bz, be, , , bd = 1] = ridge[i + 1];
     if (Math.max(ae, be) < .015) continue;
@@ -200,12 +200,14 @@ export function bakeContactField(doc, parts, w, h, falloff) {
       // back up the slope behind it (so it is the head behind that darkens, not the crest). Half strength: a crease, not a hole.
       ctx.save(); ctx.strokeStyle = 'rgb(150,150,150)'; ctx.lineWidth = 3.4; ctx.globalCompositeOperation = 'lighten';
       for (const f of p.fills) {
+        // A mountain head's step: the head behind it lies in the step's shadow, so that near and far read without a drawn edge.
+        ctx.strokeStyle = f.wedge?.far ? 'rgb(235,235,235)' : 'rgb(150,150,150)'; ctx.lineWidth = f.wedge?.far ? 6.5 : 3.4;
         if (f.tongue) { trace(ctx, f.d, true); ctx.stroke(); }
         else if (f.wedge) {
           ctx.beginPath(); let pen = false;
           for (const [x, z, e] of f.wedge.ridge) {
             if (e < .3) { pen = false; continue; }
-            const X = x, Z = z - 2.6;
+            const X = x, Z = z - (f.wedge.far ? 3.6 : 2.6);
             if (pen) ctx.lineTo(X, Z); else ctx.moveTo(X, Z);
             pen = true;
           }

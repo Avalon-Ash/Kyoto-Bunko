@@ -88,7 +88,7 @@ export function measureDoha(ward) {
     }
     biggest = Math.max(biggest, n);
   }
-  const straight = Math.max(0, ...pieces.map(q => q.ridge ? longestStraight(q.ridge, false) : longestStraight(q.d)), ...parts.filter(p => p.kind === KIND.rock && /^rock-/.test(p.id)).flatMap(p => p.fills.map(f => longestStraight(f.d))));
+  const straight = Math.max(0, ...pieces.map(q => q.far ? 0 : q.ridge ? longestStraight(q.ridge, false) : longestStraight(q.d)), ...parts.filter(p => p.kind === KIND.rock && /^rock-/.test(p.id)).flatMap(p => p.fills.map(f => longestStraight(f.d))));
   return {
     ward, clusters: clusters.length,
     piecesPerCluster: Object.fromEntries(clusters.map(c => [c, pieces.filter(q => q.cluster === c).length])),
@@ -105,6 +105,7 @@ export function measureDoha(ward) {
     // Far mountains (toyama) are gold or blue-gold, never silver (docs/plans/2026-11-16-doha.md §10.7): the silver share is over the rest.
     silverPieces: +(pieces.filter(q => q.silver).length / Math.max(1, pieces.filter(q => !q.far).length) * 100).toFixed(1),
     farHeads: pieces.filter(q => q.far).length,
+    // A far mountain's ridge is one smooth arc through few points, never ruled: it is not a straight run.
     longestStraight: +straight.toFixed(1),
     kiriPieces: pieces.filter(q => q.hasKiri).length,
   };

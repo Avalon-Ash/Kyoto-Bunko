@@ -151,17 +151,19 @@ export function createThreeRenderer(gl, canvas) {
     const isRock = isPart && Boolean(spec.rock), isSilverRock = spec.rock === 'silver';
     // Black lacquer on the pieces (walls, plinths) is shin-nuri: polished to a dark mirror.
     const isLacq = isPart && spec.name === 'lacquer';
+    // The pilot wards' rocks: fine pale powder in one raised form (rock-mesh.js powder), no foil.
+    const isRockP = isPart && /^rockPowder/.test(spec.name);
     // Roof faces are gold powder; the rest of MAT.gold on the pieces is leaf laid on wood (three-pack PART_POWDER_GLSL).
     const isPowder = isPart && spec.name === 'roofPowder', isLeaf = isPart && spec.name === 'gold', isGrain = isPowder || isLeaf;
-    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v4${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}${isPowder ? '-powder-v1' : ''}${isLeaf ? '-leaf-v1' : ''}`;
+    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v4${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}${isRockP ? '-rockp-v1' : ''}${isPowder ? '-powder-v1' : ''}${isLeaf ? '-leaf-v1' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', `#include <common>\n${isRock ? 'varying vec2 vRockUv;\n' : ''}${isGrain ? 'varying vec2 vKyotoUv; varying vec3 vKyotoRest;\n' : ''}${glsl}`)
+        .replace('#include <common>', `#include <common>\n${isRock || isRockP ? 'varying vec2 vRockUv;\n' : ''}${isGrain ? 'varying vec2 vKyotoUv; varying vec3 vKyotoRest;\n' : ''}${glsl}`)
         .replace('#include <beginnormal_vertex>', `vec3 kyotoP; vec3 objectNormal; ${call}(position, normal, kyotoP, objectNormal);`)
-        .replace('#include <begin_vertex>', `vec3 transformed = kyotoP;${isRock ? ' vRockUv = uv;' : ''}${isGrain ? ' vKyotoUv = uv; vKyotoRest = position;' : ''}`);
+        .replace('#include <begin_vertex>', `vec3 transformed = kyotoP;${isRock || isRockP ? ' vRockUv = uv;' : ''}${isGrain ? ' vKyotoUv = uv; vKyotoRest = position;' : ''}`);
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', `#include <common>\nvarying float vGlow; uniform float uGlowBase, uGlowGain;${isPart ? `\n${PART_LIGHT_GLSL}` : ''}${isGrain ? `\n${PART_POWDER_GLSL}` : ''}${isRock ? `\nuniform float uPx;\nvarying vec2 vRockUv;\nconst bool kyotoRockSilver = ${isSilverRock};\n${PART_KIRIKANE_GLSL}` : ''}`)
+        .replace('#include <common>', `#include <common>\nvarying float vGlow; uniform float uGlowBase, uGlowGain;${isPart ? `\n${PART_LIGHT_GLSL}` : ''}${isGrain ? `\n${PART_POWDER_GLSL}` : ''}${isRockP ? '\nvarying vec2 vRockUv;' : ''}${isRock ? `\nuniform float uPx;\nvarying vec2 vRockUv;\nconst bool kyotoRockSilver = ${isSilverRock};\n${PART_KIRIKANE_GLSL}` : ''}`)
         .replace('#include <normal_fragment_begin>', NORMAL_FIX)
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uGlowBase + vGlow * uGlowGain;');
       if (isRock) {
@@ -186,6 +188,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, K_ROCK_FOOT, (1. - smoothstep(0., K_ROC
           .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = mix(K_OXID_ROUGH, roughnessFactor, kyotoRockLit);
 roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNight), kyotoRockKiri);`);
+      }
+      if (isRockP) {
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <color_fragment>', `#include <color_fragment>
+{
+  // Fine powder: an even grain, a little paler on the faces that turn to the light and a little deeper in the hollows; at its foot the
+  // form takes the ground's own tone, so no edge is drawn between them.
+  vec2 rg = floor(vRockUv * 1.9);
+  float rn = fract(sin(dot(rg, vec2(12.9898, 78.233))) * 43758.5453);
+  float rl = smoothstep(-.4, .6, dot(inverseTransformDirection(normalize(vNormal), viewMatrix), normalize(uKey)));
+  diffuseColor.rgb *= (.9 + .1 * rn) * mix(.78, 1.12, rl);
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.43, .29, .14), (1. - smoothstep(0., 6., vLift)) * .35 * uAge);
+}`);
       }
       if (isPowder) {
         shader.fragmentShader = shader.fragmentShader

@@ -20,7 +20,7 @@ const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a
 /** The shape of a bank's wedge: [distance from the ridge / depth, height], read by bake.js (painted) and the shader. */
 export const WEDGE_PROFILE = [[0, 1], [.06, .82], [.2, .55], [.45, .24], [.75, .06], [1, 0]];
 /** The fade of a far mountain's powder down from its ridge: [distance from the ridge / depth, density]. Long and even; it ends in the ground. */
-export const TOYAMA_PROFILE = [[0, 1], [.15, .82], [.4, .6], [.65, .38], [.85, .16], [1, 0]];
+export const TOYAMA_PROFILE = [[0, 1], [.025, .74], [.07, .62], [.24, .49], [.5, .3], [.78, .12], [1, 0]];
 /** How tall a bank's crest stands in the soft (geometry) channel, as a share of the soft swell (three-pack.js K_SWELL). */
 export const BANK_SOFT = .3;
 
@@ -87,7 +87,8 @@ export function tongueGeom(q) {
 export function bankGeom(q) {
   if (!Array.isArray(q.ridge) || q.ridge.length < 3) throw new Error('bank: write at least three ridge points');
   const ctrl = q.ridge.map(([x, z, e = 1, d = 1]) => [x + (q.at?.[0] ?? 0), z + (q.at?.[1] ?? 0), e, d]);
-  const pts = shake(spline(ctrl, false, 4), false, q.seed ?? 1), n = pts.length, taper = q.taper ?? .22;
+  const smoothRidge = spline(ctrl, false, q.step ?? 4);
+  const pts = q.jitter === 0 ? smoothRidge : shake(smoothRidge, false, q.seed ?? 1), n = pts.length, taper = q.taper ?? .22;
   const ridge = pts.map((p, i) => {
     const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, u = i / (n - 1);
     let nx = -(b[1] - a[1]) / l, nz = (b[0] - a[0]) / l;
@@ -146,11 +147,11 @@ export function banks(id, pieces) {
  */
 export function mountain(id, heads) {
   if (!heads.length) throw new Error(`mountain(${id}): no heads`);
-  const out = {}, geoms = heads.map(q => bankGeom({taper: .1, ...q})), centre = centreOf(geoms);
+  const out = {}, geoms = heads.map(q => bankGeom({taper: .1, jitter: 0, step: 4, ...q})), centre = centreOf(geoms);
   heads.forEach((q, i) => {
     const s = geoms[i], tone = q.tone ?? 'gold';
     const p = out[tone] ??= part(`${id}-${tone}`, id, tone === 'blue' ? MAT.toyamaBlue : MAT.toyamaGold, centre, {order: tone === 'blue' ? 1 : 0});
-    p.fills.push({d: s.outline, soft: 0, crisp: 0, wedge: {ridge: s.ridge, depth: s.depth, amp: q.amp ?? .14, far: true, profile: TOYAMA_PROFILE}});
+    p.fills.push({d: s.outline, soft: 0, crisp: 0, wedge: {ridge: s.ridge, depth: s.depth, amp: q.amp ?? 0, far: true, profile: TOYAMA_PROFILE}});
   });
   return Object.values(out);
 }

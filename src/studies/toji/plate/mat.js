@@ -8,4 +8,6 @@ export const MAT = {ground: 1, nashijiLight: 2, mura: 3, gyobu: 4, gold: 5, silv
   // Doha: banks (a crisp ridge over a wedge that sinks into the ground) and suhama tongues (flat, with a rim). Gold or silver.
   bankGold: 19, bankSilver: 20, sandGold: 21, sandSilver: 22,
   // Toyama (far mountain) maki-e: a flat fine powder, brightest at the ridge and thinning to nothing down the slope; gold or a paler, cooler blue-gold.
-  toyamaGold: 23, toyamaBlue: 24};
+  toyamaGold: 23, toyamaBlue: 24,
+  // Doha rocks (pilot wards only): one raised form of fine pale powder, gold or silver, with grooves along its grain; no cut-gold squares.
+  rockGold: 25, rockSilver: 26};
