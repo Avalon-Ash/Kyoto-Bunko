@@ -52,8 +52,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ## 4. 下一步
 
-1. **等使用者決定**：疊坡的樣板（[開案書](plans/2026-11-16-doha.md) §14）做了三輪，形對了但金的山與岸和地同亮度；主席建議先做「地與調子」（同檔 §13.1：地壓深、金片變大變多色、三層亮度）再回來。屋頂（[開案書](plans/2026-11-16-roof-makie.md)）在 `claude/roof-1116`，還沒合併。參考圖在 `.shots/ref/`（不提交）：使用者的收藏相簿、初音的局部、江戶印籠。工具：`node scripts/plate-doha-measure.mjs`、`plate-doha-similar.mjs`、`plate-clip.mjs <out.json>`、`PLATE_KIRI=1`／`PLATE_TONE=1 node scripts/plate-shot.mjs …`（都要 dev server）。
-2. 地圖：使用者 2026-11-16 決定不做（現況夠用）。[備忘錄](plans/2026-11-16-r10-map-evaluation.md)留作紀錄。
+1. **等使用者看圖**：`claude/doha-1116`（疊在 `claude/roof-1116` 上）現在包含屋頂、疊坡樣板三輪（[開案書](plans/2026-11-16-doha.md)）、地與調子（[開案書](plans/2026-11-16-ground-tone.md)：地最深、三層亮度、大而多色的金片）。都還沒合併 `main`。接下來要修的：岩太小太圓、銀山像玻璃罩、其餘九區的丘與台地還沒拆。參考圖在 `.shots/ref/`（不提交）。工具：`PLATE_TONE=1`（分層）／`PLATE_KIRI=1 node scripts/plate-shot.mjs …`、`node scripts/plate-doha-measure.mjs`、`plate-clip.mjs <out.json>`（都要 dev server）。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
 4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核；各食處報告裡列的描述細節（米其林、創業年）；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
 5. 已知的小缺口：鳳凰不放大時頭與喙偏小；細小的草、葦、「大」字不放大時幾乎看不到；`parts.js` 的 `act()` 會讓任何 `MAT.lamp` 的部件在游標停留時發橘光，所以小景不要用 `MAT.lamp`。
