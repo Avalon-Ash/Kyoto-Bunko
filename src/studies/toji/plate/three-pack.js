@@ -21,6 +21,9 @@ export const MATERIALS = {
   // Age: silver and sheet silver stand for white things (sand, a fox, blossom, an eave's edge), so they dull a little but stay
   // pale and keep their polish (a rougher silver only mirrors the dim room and goes dark);
   // envMapIntensity makes up for the quieter day an aged box sits in, which would otherwise grey them. The dark, sulphided silver is the shade of rocks, trunks and banks, which the shaders lay themselves.
+  // Roof faces: gold powder under clear lacquer (takamakie). Broad, soft sheen rather than a mirror; the grain and the
+  // unevenness come from the shader (PART_POWDER_GLSL), not from a normal map.
+  [MAT.roofPowder]: {name: 'roofPowder', aged: {color: '#b99d5f', roughness: .68, clearcoat: 0, envMapIntensity: .5}, color: '#c4973f', paint: '#d6a640', metalness: .92, roughness: .6, clearcoat: .06, clearcoatRoughness: .5, envMapIntensity: .7, flake: 0},
   [MAT.silver]: {name: 'silver', aged: {color: '#d9d6cc', roughness: .27, metalness: .7, clearcoat: .2, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#e6e8e4', paint: '#d8dad6', metalness: 1, roughness: .2, clearcoat: .3, clearcoatRoughness: .08, flake: .3},
   [MAT.kirikane]: {name: 'kirikane', aged: {color: '#dcc892', roughness: .52}, color: '#f2c65e', paint: '#e0b650', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12},
   [MAT.kirigin]: {name: 'kirigin', aged: {color: '#d0ccc1', roughness: .45, metalness: .66, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#d8dbd6', paint: '#bfc0b8', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12},
@@ -96,11 +99,27 @@ export function placedMesh(p) {
 }
 
 /**
+ * Gold leaf on a long member shows the wood under it. A MAT.gold chunk at least 1.6 times longer than it is wide, in plan,
+ * gets uv = (1000 + across, along) so the shader can run a grain down its length; any other chunk keeps its uv (and gets no grain).
+ */
+export function grainUv(chunk) {
+  if (chunk.mat !== MAT.gold) return chunk;
+  const v = chunk.vertices;
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (let i = 0; i < v.length; i += 8) { x0 = Math.min(x0, v[i]); x1 = Math.max(x1, v[i]); z0 = Math.min(z0, v[i + 2]); z1 = Math.max(z1, v[i + 2]); }
+  const dx = x1 - x0, dz = z1 - z0, long = Math.max(dx, dz), short = Math.min(dx, dz);
+  if (long < 6 || long < 1.6 * short) return chunk;
+  const out = v.slice(), alongX = dx > dz;
+  for (let i = 0; i < v.length; i += 8) { out[i + 6] = 1000 + (alongX ? v[i + 2] : v[i]); out[i + 7] = alongX ? v[i] : v[i + 2]; }
+  return {...chunk, vertices: out};
+}
+
+/**
  * Part meshes grouped by material id: Map(mat → Float32Array of 16 floats per vertex, the packMeshes layout).
  * Bird vertices carry style.z = 1 and their perch point in uv; the hinge shrinks a bird to that point while it sleeps.
  */
 export function meshesByMaterial(parts) {
-  const placed = parts.map(p => (p.mesh ? {...p, mesh: placedMesh(p)} : p));
+  const placed = parts.map(p => (p.mesh ? {...p, mesh: placedMesh(p).map(grainUv)} : p));
   const mats = new Set();
   for (const p of placed) for (const chunk of p.mesh ?? []) mats.add(chunk.mat);
   const out = new Map();
@@ -300,6 +319,37 @@ const float K_LACQ_MIRROR=.3, K_LACQ_MIN=.35, K_LACQ_GROUND=.9, K_LACQ_WIN=.8, K
 const vec3 K_LACQ_ROOM=vec3(.05,.045,.04);
 uniform mat3 uTilt; uniform float uNight, uAge; uniform vec3 uView, uKey;
 varying float vLift;`;
+
+/**
+ * Gold powder on the roof faces (MAT.roofPowder) and gold leaf on long members (MAT.gold with grainUv). Both work on the
+ * geometry's rest position, so the grains stay on the roof as it sways, and both fade out where a grain is smaller than a pixel.
+ * Powder: every grain is a tiny facet at its own tilt; the density of powder varies slowly over the face; toward the eave
+ * the face receives less light. Leaf: the foil follows the wood under it, so a grain runs down the member and bumps the normal.
+ */
+export const PART_POWDER_GLSL = `
+varying vec2 vKyotoUv; varying vec3 vKyotoRest;
+const float K_POW_FREQ=1.7; // powder cells per plate unit
+const float K_POW_TILT=1.1; // how far one grain's facet leans
+const float K_POW_UNEVEN=.11; // how unevenly the powder lies over the face (share of its brightness)
+const float K_POW_EAVE=.4; // share of the light the face loses at the eave
+const float K_POW_LOBE=.1, K_POW_LOBE_EXP=6.; // the broad soft sheen of the powder
+const float K_LEAF_FREQ=.55, K_LEAF_BUMP=.5, K_LEAF_TONE=.3; // wood grain lines per plate unit across a member, how far they raise the foil, how much they change its brightness
+vec3 kyotoHash3(vec3 p){ p=fract(p*vec3(.1031,.103,.0973)); p+=dot(p,p.yxz+33.33); return fract((p.xxy+p.yxx)*p.zyx); }
+float kyotoHash2(vec2 p){ vec3 q=fract(vec3(p.xyx)*.1031); q+=dot(q,q.yzx+33.33); return fract((q.x+q.y)*q.z); }
+float kyotoVnoise(vec2 p){
+  vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+  return mix(mix(kyotoHash2(i),kyotoHash2(i+vec2(1.,0.)),f.x),mix(kyotoHash2(i+vec2(0.,1.)),kyotoHash2(i+vec2(1.,1.)),f.x),f.y);
+}
+float kyotoPowderFine(){ return 1.-smoothstep(.5,1.4,length(fwidth(vKyotoRest))*K_POW_FREQ); }
+float kyotoPowderDensity(){ return kyotoVnoise(vKyotoRest.xz*.11+vKyotoRest.y*.07)*.6+kyotoVnoise(vKyotoRest.xz*.37-vKyotoRest.y*.2)*.4; }
+float kyotoLeafOn(){ return step(500.,vKyotoUv.x); }
+float kyotoLeafFine(){ return kyotoLeafOn()*(1.-smoothstep(.5,1.4,length(fwidth(vKyotoUv))*K_LEAF_FREQ)); }
+// Wood under the foil: lines run along the member (uv.y), wander slowly, and come in two widths.
+float kyotoWood(){
+  float across=vKyotoUv.x-1000., along=vKyotoUv.y;
+  float wander=kyotoVnoise(vec2(along*.045,across*.31))*3.;
+  return kyotoVnoise(vec2(across*K_LEAF_FREQ+wander,along*.018))*.6+kyotoVnoise(vec2(across*K_LEAF_FREQ*2.7+wander,along*.04))*.4;
+}`;
 
 /** Shared diamond-halftone kirikane & gold/oxidized-silver helpers for tree trunks and rock bodies. */
 export const PART_KIRIKANE_GLSL = `

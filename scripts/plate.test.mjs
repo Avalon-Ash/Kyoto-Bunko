@@ -1023,7 +1023,7 @@ test('meshLantern upper frame and hidden cap support join hexCapMesh with 0.3-0.
 
 // ---- three.js renderer (T0–T1): pure data checks. The WebGL side is checked by screenshots (.claude/dispatch/shot.mjs). ----
 import {readFileSync} from 'node:fs';
-import {MATERIALS, BOX_MATERIALS, STATE_WIDTH, STATE_HEIGHT, GROUND_GLSL, PART_MOTION_GLSL, TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, packLifeState, meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox, bakeSoftLayer, mistGeometryData} from '../src/studies/toji/plate/three-pack.js';
+import {grainUv, MATERIALS, BOX_MATERIALS, STATE_WIDTH, STATE_HEIGHT, GROUND_GLSL, PART_MOTION_GLSL, TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, packLifeState, meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox, bakeSoftLayer, mistGeometryData} from '../src/studies/toji/plate/three-pack.js';
 import {packMeshes} from '../src/studies/toji/plate/mesh-geometry.js';
 import {limbMesh, stampInstances} from '../src/studies/toji/plate/limbs.js';
 import {createThreeRenderer} from '../src/studies/toji/plate/three-renderer.js';
@@ -1457,4 +1457,19 @@ test('patina: materials move toward their aged values, and the contact field fal
   assert.equal(f[4 * w + 32], 255);
   assert.ok(Math.abs((f[4 * w + 33] - f[4 * w + 34]) - (f[4 * w + 36] - f[4 * w + 37])) <= 1, 'straight fall');
   assert.equal(f[4 * w + 32 + 12], 0, 'nothing beyond the falloff');
+});
+
+test('roof faces are gold powder; gold leaf stays on small parts and carries a grain along its length', () => {
+  assert.equal(MATERIALS[MAT.roofPowder].name, 'roofPowder');
+  const {parts} = preparePlate(PLATES.W_MINAMI());
+  const roofMat = new Set(parts.filter(p => p.id === 'kondo-roof').flatMap(p => p.mesh.map(c => c.mat)));
+  assert.ok(roofMat.has(MAT.roofPowder), 'the roof shell is powder');
+  const slab = parts.find(p => p.id === 'kondo-roof').mesh.find(c => c.mat === MAT.roofPowder).vertices;
+  for (let i = 0; i < slab.length; i += 8) assert.ok(slab[i + 6] >= -1 && slab[i + 6] <= 1 && slab[i + 7] >= 0 && slab[i + 7] <= 1, 'roof uv is (across, t)');
+  const beam = {mat: MAT.gold, vertices: [0, 0, 0, 0, 1, 0, 0, 0, 40, 0, 0, 0, 1, 0, 0, 0, 40, 0, 6, 0, 1, 0, 0, 0]};
+  const g = grainUv(beam).vertices;
+  assert.ok(g[14] === 1000 && g[15] === 40 && g[22] === 1006, 'a long gold chunk is flagged for grain: uv = (1000 + across, along)');
+  const stub = {mat: MAT.gold, vertices: [0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 3, 0, 2, 0, 1, 0, 0, 0]};
+  assert.equal(grainUv(stub), stub, 'a short gold chunk keeps its uv');
+  assert.ok(meshesByMaterial(parts).has(MAT.roofPowder));
 });

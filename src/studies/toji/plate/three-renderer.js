@@ -21,7 +21,7 @@ import {groundPoint, normalize, trailIntensity} from '../geometry.js';
 import {
   MATERIALS, agedSpec, CONTACT, BOX_MATERIALS, GROUND_LID, STATE_WIDTH, STATE_HEIGHT, packLifeState,
   meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox,
-  bakeSoftLayer, mistGeometryData, PART_MOTION_GLSL, PART_LIGHT_GLSL, PART_KIRIKANE_GLSL, BOX_MOTION_GLSL, BOX_GROUND_GLSL, BOX_GROUND_DEPTH_GLSL,
+  bakeSoftLayer, mistGeometryData, PART_MOTION_GLSL, PART_LIGHT_GLSL, PART_POWDER_GLSL, PART_KIRIKANE_GLSL, BOX_MOTION_GLSL, BOX_GROUND_GLSL, BOX_GROUND_DEPTH_GLSL,
   TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, DENSITY,
   MAKIE_GROUND_PARS_GLSL, MAKIE_GROUND_FRAG_GLSL, MAKIE_MIST_VERT_GLSL, MAKIE_MIST_FRAG_GLSL,
   BOX_SIDE_VERT_GLSL, BOX_SIDE_PARS_GLSL, BOX_SIDE_FRAG_GLSL,
@@ -151,15 +151,17 @@ export function createThreeRenderer(gl, canvas) {
     const isRock = isPart && Boolean(spec.rock), isSilverRock = spec.rock === 'silver';
     // Black lacquer on the pieces (walls, plinths) is shin-nuri: polished to a dark mirror.
     const isLacq = isPart && spec.name === 'lacquer';
-    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v4${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}`;
+    // Roof faces are gold powder; the rest of MAT.gold on the pieces is leaf laid on wood (three-pack PART_POWDER_GLSL).
+    const isPowder = isPart && spec.name === 'roofPowder', isLeaf = isPart && spec.name === 'gold', isGrain = isPowder || isLeaf;
+    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v4${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}${isPowder ? '-powder-v1' : ''}${isLeaf ? '-leaf-v1' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', `#include <common>\n${isRock ? 'varying vec2 vRockUv;\n' : ''}${glsl}`)
+        .replace('#include <common>', `#include <common>\n${isRock ? 'varying vec2 vRockUv;\n' : ''}${isGrain ? 'varying vec2 vKyotoUv; varying vec3 vKyotoRest;\n' : ''}${glsl}`)
         .replace('#include <beginnormal_vertex>', `vec3 kyotoP; vec3 objectNormal; ${call}(position, normal, kyotoP, objectNormal);`)
-        .replace('#include <begin_vertex>', `vec3 transformed = kyotoP;${isRock ? ' vRockUv = uv;' : ''}`);
+        .replace('#include <begin_vertex>', `vec3 transformed = kyotoP;${isRock ? ' vRockUv = uv;' : ''}${isGrain ? ' vKyotoUv = uv; vKyotoRest = position;' : ''}`);
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', `#include <common>\nvarying float vGlow; uniform float uGlowBase, uGlowGain;${isPart ? `\n${PART_LIGHT_GLSL}` : ''}${isRock ? `\nuniform float uPx;\nvarying vec2 vRockUv;\nconst bool kyotoRockSilver = ${isSilverRock};\n${PART_KIRIKANE_GLSL}` : ''}`)
+        .replace('#include <common>', `#include <common>\nvarying float vGlow; uniform float uGlowBase, uGlowGain;${isPart ? `\n${PART_LIGHT_GLSL}` : ''}${isGrain ? `\n${PART_POWDER_GLSL}` : ''}${isRock ? `\nuniform float uPx;\nvarying vec2 vRockUv;\nconst bool kyotoRockSilver = ${isSilverRock};\n${PART_KIRIKANE_GLSL}` : ''}`)
         .replace('#include <normal_fragment_begin>', NORMAL_FIX)
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uGlowBase + vGlow * uGlowGain;');
       if (isRock) {
@@ -184,6 +186,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, K_ROCK_FOOT, (1. - smoothstep(0., K_ROC
           .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = mix(K_OXID_ROUGH, roughnessFactor, kyotoRockLit);
 roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNight), kyotoRockKiri);`);
+      }
+      if (isPowder) {
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <color_fragment>', `#include <color_fragment>
+float kyotoPowFine = kyotoPowderFine();
+// Powder lies thicker in some places than others (more so as the box ages), and no two grains are the same brightness.
+diffuseColor.rgb *= 1. + (kyotoPowderDensity() - .5) * 2. * K_POW_UNEVEN * mix(.45, 1., uAge);
+diffuseColor.rgb *= 1. + (kyotoHash3(floor(vKyotoRest * K_POW_FREQ)).z - .5) * .4 * kyotoPowFine;`)
+          .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+normal = normalize(normal + (kyotoHash3(floor(vKyotoRest * K_POW_FREQ)) - .5) * 2. * K_POW_TILT * kyotoPowFine * mix(1.15, 1., uAge));`);
+      }
+      if (isLeaf) {
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <color_fragment>', `#include <color_fragment>
+float kyotoWoodH = kyotoWood(), kyotoLeafFn = kyotoLeafFine();
+// Foil is never dead flat: it sags a little over the wood, and the grain shows through, more as it wears thin.
+diffuseColor.rgb *= 1. + (kyotoWoodH - .5) * K_LEAF_TONE * kyotoLeafFn * mix(.5, 1., uAge);
+diffuseColor.rgb *= 1. + (kyotoVnoise(vKyotoRest.xz * .23 + vKyotoRest.y * .1) - .5) * .06 * kyotoLeafOn();`)
+          .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{
+  vec2 kyotoDH = vec2(dFdx(kyotoWoodH), dFdy(kyotoWoodH)) * K_LEAF_BUMP * kyotoLeafFn * mix(.5, 1., uAge);
+  vec3 kyotoSx = dFdx(-vViewPosition), kyotoSy = dFdy(-vViewPosition);
+  vec3 kyotoR1 = cross(kyotoSy, normal), kyotoR2 = cross(normal, kyotoSx);
+  float kyotoDet = dot(kyotoSx, kyotoR1);
+  normal = normalize(abs(kyotoDet) * normal - sign(kyotoDet) * (kyotoDH.x * kyotoR1 + kyotoDH.y * kyotoR2));
+}`);
       }
       if (isPart) {
         shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>
@@ -212,7 +240,13 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
   reflectedLight.indirectSpecular+=kyotoMirror*mix(K_LACQ_MIN,1.,kyotoFres)*K_LACQ_MIRROR*mix(1.,.45,uNight)*kyotoContact;` : ''}${isRock ? `
   float kyotoRockGlint=kyotoKiriGlint(kyotoNW,kyotoRockTilt,kyotoRockKiri,normalize(uKey),normalize(uView),uNight);
   reflectedLight.directSpecular*=mix(vec3(1.),K_KIRI_NIGHT_SPEC_TINT,uNight*kyotoRockKiri);
-  reflectedLight.directSpecular+=kyotoRockFoil*kyotoRockGlint*kyotoContact;` : ''}
+  reflectedLight.directSpecular+=kyotoRockFoil*kyotoRockGlint*kyotoContact;` : ''}${isPowder ? `
+  // Powder: a broad soft sheen, and toward the eave (uv.y is t, 1 at the eave) the face is lit less: the powder is thinner there.
+  float kyotoLobe=pow(max(dot(kyotoR,normalize(uKey)),0.),K_POW_LOBE_EXP);
+  reflectedLight.directSpecular+=material.specularColorBlended*kyotoLobe*K_POW_LOBE*mix(1.,.35,uNight)*kyotoContact;
+  float kyotoEaveLit=1.-K_POW_EAVE*smoothstep(.42,1.,vKyotoUv.y);
+  reflectedLight.directDiffuse*=kyotoEaveLit; reflectedLight.indirectDiffuse*=kyotoEaveLit;
+  reflectedLight.directSpecular*=kyotoEaveLit; reflectedLight.indirectSpecular*=kyotoEaveLit;` : ''}
 }`);
       }
     };

@@ -47,11 +47,13 @@ for (const job of jobs) {
   await evalJs(`document.querySelector('#scene').scrollIntoView({block:'center'})`);
   await sleep(300);
   const r = await evalJs(`(()=>{const c=document.querySelector('#scene').getBoundingClientRect();return [c.x,c.y,c.width,c.height,scrollX,scrollY];})()`);
-  const x = r[0] + r[2] * fx, y = r[1] + r[3] * fy;
+  let x = r[0] + r[2] * fx, y = r[1] + r[3] * fy;
   await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x: x - 30, y: y - 20});
   await sleep(120);
   await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x, y});
   if (Number(zoom) > 1) { await send('Input.dispatchMouseEvent', {type: 'mouseWheel', x, y, deltaX: 0, deltaY: -Math.log(Number(zoom)) / .01, modifiers: 2}); await sleep(900); }
+  // PLATE_LIGHT=fx,fy rests the light elsewhere after the zoom, so a close view of a roof is not under the light's own pool.
+  if (process.env.PLATE_LIGHT) { const [lx, ly] = process.env.PLATE_LIGHT.split(',').map(Number); x = r[0] + r[2] * lx; y = r[1] + r[3] * ly; await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x, y}); await sleep(300); }
   await sleep(2800);
   await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x: x + 1, y});
   await sleep(400);

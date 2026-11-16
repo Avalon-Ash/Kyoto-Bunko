@@ -27,14 +27,15 @@ const unit = (v, fallback = [0, 1, 0]) => { const l = Math.hypot(v[0], v[1], v[2
  * Pushes one triangle. Skips slivers. The face normal is oriented along `hint`; per-vertex normals, when given,
  * are used for shading instead of the face normal.
  */
-function tri(out, a, b, c, hint, na, nb, nc) {
+function tri(out, a, b, c, hint, na, nb, nc, ua, ub, uc) {
   const n = cross(sub(b, a), sub(c, a)), area = .5 * Math.hypot(n[0], n[1], n[2]);
   if (!(area > 1e-7)) return;
   let f = unit(n);
-  if (dot(f, hint) < 0) { f = scale(f, -1); [b, c, nb, nc] = [c, b, nc, nb]; }
-  for (const [p, q] of [[a, na], [b, nb], [c, nc]]) out.push(p[0], p[1], p[2], ...(q || f), p[0], p[2]);
+  if (dot(f, hint) < 0) { f = scale(f, -1); [b, c, nb, nc, ub, uc] = [c, b, nc, nb, uc, ub]; }
+  // uv is the plan position unless the caller gives one (a roof slab gives its own surface coordinates).
+  for (const [p, q, uv] of [[a, na, ua], [b, nb, ub], [c, nc, uc]]) out.push(p[0], p[1], p[2], ...(q || f), ...(uv || [p[0], p[2]]));
 }
-const quadFace = (out, a, b, c, d, hint, na, nb, nc, nd) => { tri(out, a, b, c, hint, na, nb, nc); tri(out, a, c, d, hint, na, nc, nd); };
+const quadFace = (out, a, b, c, d, hint, na, nb, nc, nd, uvs) => { uvs = uvs || []; tri(out, a, b, c, hint, na, nb, nc, uvs[0], uvs[1], uvs[2]); tri(out, a, c, d, hint, na, nc, nd, uvs[0], uvs[2], uvs[3]); };
 
 /** Chamfers every corner of a convex 2D polygon by at most `chamfer` units. */
 function chamferConvex(pts, chamfer) {
@@ -56,7 +57,7 @@ const box = (x0, x1, z0, z1, y0, y1, mat, chamfer = .3) =>
  * `depth` down in y, and the four borders are sealed. Front normals are smooth; the top row of each border wall
  * leans halfway toward the front normal so the rim reads as a small chamfer instead of a razor edge.
  */
-function gridSlab(F, nu, nv, depth, mat) {
+function gridSlab(F, nu, nv, depth, mat, uvOf = null) {
   const top = Array.from({length: nu + 1}, (_, i) => Array.from({length: nv + 1}, (_, j) => F(i / nu, j / nv)));
   const at = (i, j) => top[clamp(i, 0, nu)][clamp(j, 0, nv)];
   const normal = (i, j) => {
@@ -70,9 +71,10 @@ function gridSlab(F, nu, nv, depth, mat) {
     const a = top[i][j], b = top[i + 1][j], c = top[i + 1][j + 1], d = top[i][j + 1];
     const na = N[i][j], nb = N[i + 1][j], nc = N[i + 1][j + 1], nd = N[i][j + 1];
     const h = unit(add(add(na, nb), add(nc, nd)));
-    quadFace(v, a, b, c, d, h, na, nb, nc, nd);
+    const uvs = uvOf && [uvOf(i / nu, j / nv), uvOf((i + 1) / nu, j / nv), uvOf((i + 1) / nu, (j + 1) / nv), uvOf(i / nu, (j + 1) / nv)];
+    quadFace(v, a, b, c, d, h, na, nb, nc, nd, uvs);
     const m = scale(h, -1);
-    quadFace(v, down(a), down(b), down(c), down(d), m, scale(na, -1), scale(nb, -1), scale(nc, -1), scale(nd, -1));
+    quadFace(v, down(a), down(b), down(c), down(d), m, scale(na, -1), scale(nb, -1), scale(nc, -1), scale(nd, -1), uvs);
   }
   let cx = 0, cz = 0, count = 0;
   for (const row of top) for (const p of row) { cx += p[0]; cz += p[2]; count++; }
@@ -89,7 +91,8 @@ function gridSlab(F, nu, nv, depth, mat) {
     let out = unit([along[2], 0, -along[0]], [0, 0, 1]);
     const mid = scale(add(p, q), .5);
     if (dot(out, [mid[0] - cx, 0, mid[2] - cz]) < 0) out = scale(out, -1);
-    quadFace(v, p, q, down(q), down(p), out, unit(add(out, N[i0][j0])), unit(add(out, N[i1][j1])), out, out);
+    const uvp = uvOf && uvOf(i0 / nu, j0 / nv), uvq = uvOf && uvOf(i1 / nu, j1 / nv);
+    quadFace(v, p, q, down(q), down(p), out, unit(add(out, N[i0][j0])), unit(add(out, N[i1][j1])), out, out, uvOf && [uvp, uvq, uvq, uvp]);
   }
   return {mat, vertices: v};
 }
@@ -183,14 +186,16 @@ export function meshRoof(id, cx, zEave, halfW, rise, {ridgeHalf = halfW * .2, up
   const p = part(id, KIND.tier, layer, mat, [cx, zEave], {group, order, mountY: surf.mountY, ...(motionWith ? {motionWith} : {})});
   p.fills.push({d: surf.shape.outline, soft: .25, crisp: .8});
   const lineMat = mat === MAT.gold ? MAT.hyomonGold : MAT.gold;
-  const mesh = [gridSlab((a, t) => S(a * 2 - 1, t), 24, 16, 2.8 * k, mat)];
+  // The roof face is gold powder (takamakie), not leaf: its own material, with uv = (across, t) for the shader (t 0 ridge, 1 eave).
+  const mesh = [gridSlab((a, t) => S(a * 2 - 1, t), 24, 16, 2.8 * k, mat === MAT.gold ? MAT.roofPowder : mat, (a, t) => [a * 2 - 1, t])];
   const steps = 16;
   for (let i = 0; i <= tiles; i++) {
     const u = -1 + 2 * i / tiles;
     mesh.push(surfaceBand(S, Array.from({length: steps + 1}, (_, j) => [u, j / steps]), 'u', .65, .12, .12, lineMat));
   }
   const ridgeT = .9 / Math.max(1, Math.hypot(...sub(S(0, .01), S(0, 0)).filter((_, c) => c !== 1)) / .01);
-  mesh.push(surfaceBand(S, Array.from({length: 25}, (_, j) => [-1 + j / 12, ridgeT]), 't', 1.6, .12, .5, lineMat));
+  // The ridge is a narrow strip of leaf: one of the few small places gold leaf is laid.
+  mesh.push(surfaceBand(S, Array.from({length: 25}, (_, j) => [-1 + j / 12, ridgeT]), 't', 1.6, .12, .5, MAT.gold));
   p.mesh = mesh;
 
   const lip = part(`${id}-lip`, KIND.tier, layer, MAT.silver, [cx, zEave], {group, order, motionWith: motionWith || id});
@@ -389,8 +394,8 @@ export function meshKaramon(id, cx, zBase, halfW = 66) {
   cap.fills.push({d: [...curve, P(66, 59), P(-66, 59)], soft: .2, crisp: .9});
   const idx = a => Math.round(a * 48);
   cap.mesh = [
-    gridSlab((a, w) => { const c = curve[idx(a)], l = lower[idx(a)]; return [c[0], 12, lerp(c[1], l[1], w)]; }, 48, 2, 3, MAT.gold),
-    gridSlab((a, w) => { const l = lower[idx(a)], b = P((idx(a) / 24 - 1) * 66, 59); return [l[0], 8, lerp(l[1], b[1], w)]; }, 48, 2, 2, MAT.gold),
+    gridSlab((a, w) => { const c = curve[idx(a)], l = lower[idx(a)]; return [c[0], 12, lerp(c[1], l[1], w)]; }, 48, 2, 3, MAT.roofPowder, () => [0, 0]),
+    gridSlab((a, w) => { const l = lower[idx(a)], b = P((idx(a) / 24 - 1) * 66, 59); return [l[0], 8, lerp(l[1], b[1], w)]; }, 48, 2, 2, MAT.roofPowder, () => [0, 0]),
     ribbonMesh(curve.map(([x, z]) => [x, 12, z + 5 * s]), 1, .25, MAT.hyomonGold),
   ];
 
