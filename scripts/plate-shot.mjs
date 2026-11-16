@@ -5,6 +5,7 @@
 // PLATE_SHOT_QUERY=?plate=static node scripts/plate-shot.mjs …  shoots the still-picture fallback instead of three.js.
 // PLATE_TONE=1 also prints each shot's tone over the lid's own pixels (three.js only): luminance percentiles, median
 // saturation, and the share of bright and dark pixels, all in percent. docs/plans/2026-11-16-patina.md §5 uses them.
+// Each layer also reports its mean hue (degrees, weighted by chroma) and mean HSV saturation (percent).
 // The same line carries three layers (docs/plans/2026-11-16-ground-tone.md): ground (plain ground), dense (faces of dense nashiji: hills,
 // water, banks, suhama, toyama, mist) and pattern (the rest: inlays, parts), each with its share of the lid, L25/L50/L75, and the share of
 // the lid it covers with luminance above 75 (bright). Dev mask view 5 paints plain ground magenta, dense faces cyan, the rest green.
@@ -104,7 +105,7 @@ for (const job of jobs) {
       const load = async b64 => { const i = new Image(); i.src = 'data:image/png;base64,' + b64; await i.decode();
         const c = new OffscreenCanvas(i.width, i.height), g = c.getContext('2d'); g.drawImage(i, 0, 0); return g.getImageData(0, 0, i.width, i.height); };
       const a = await load(${JSON.stringify(shot.result.data)}), m = await load(${JSON.stringify(mask.result.data)});
-      const L = [], S = [], cls = [[], [], []]; // cls: 0 plain ground (mat 1), 1 dense-nashiji faces (hill, water, bank, suhama, toyama, mist), 2 everything else on the lid (inlays, parts)
+      const L = [], S = [], cls = [[], [], []], hue = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]; // hue[k] = chroma-weighted hue vector (cos, sin), saturation sum, count // cls: 0 plain ground (mat 1), 1 dense-nashiji faces (hill, water, bank, suhama, toyama, mist), 2 everything else on the lid (inlays, parts)
       for (let y = 0; y < a.height; y++) {
         let x0 = -1, x1 = -1;
         for (let x = 0; x < a.width; x++) {
@@ -116,15 +117,18 @@ for (const job of jobs) {
           const lum = .2126 * R + .7152 * G + .0722 * B;
           L.push(lum); S.push(mx > 0 ? (mx - Math.min(R, G, B)) / mx : 0);
           const mR = m.data[k], mG = m.data[k + 1], mB = m.data[k + 2];
-          cls[(mR > 150 && mB > 150 && mG < 90) ? 0 : (mG > 150 && mB > 150 && mR < 90) ? 1 : 2].push(lum);
+          const ci = (mR > 150 && mB > 150 && mG < 90) ? 0 : (mG > 150 && mB > 150 && mR < 90) ? 1 : 2; cls[ci].push(lum);
+          const ch = mx - Math.min(R, G, B), hh = ch > 0 ? ((mx === R ? ((G - B) / ch + 6) % 6 : mx === G ? (B - R) / ch + 2 : (R - G) / ch + 4) * Math.PI / 3) : 0;
+          hue[ci][0] += ch * Math.cos(hh); hue[ci][1] += ch * Math.sin(hh); hue[ci][2] += mx > 0 ? ch / mx : 0; hue[ci][3]++;
         }
       }
       if (!L.length) return 'no lid pixels';
       const pct = (v, p) => Math.round([...v].sort((p, q) => p - q)[Math.floor((v.length - 1) * p)] * 100);
       const share = f => Math.round(L.filter(f).length / L.length * 1000) / 10;
-      const layer = v => v.length ? {share: Math.round(v.length / L.length * 1000) / 10, L25: pct(v, .25), L50: pct(v, .5), L75: pct(v, .75), bright: Math.round(v.filter(x => x > .75).length / L.length * 1000) / 10} : null;
+      const hs = k => ({hue: Math.round((Math.atan2(hue[k][1], hue[k][0]) * 180 / Math.PI + 360) % 360 * 10) / 10, sat: Math.round(hue[k][2] / Math.max(hue[k][3], 1) * 1000) / 10});
+      const layer = (v, k) => v.length ? {...hs(k), share: Math.round(v.length / L.length * 1000) / 10, L25: pct(v, .25), L50: pct(v, .5), L75: pct(v, .75), bright: Math.round(v.filter(x => x > .75).length / L.length * 1000) / 10} : null;
       return JSON.stringify({pixels: L.length, L5: pct(L, .05), L25: pct(L, .25), L50: pct(L, .5), L75: pct(L, .75), L95: pct(L, .95),
-        S50: pct(S, .5), bright: share(v => v > .75), dark: share(v => v < .22), ground: layer(cls[0]), dense: layer(cls[1]), pattern: layer(cls[2])});
+        S50: pct(S, .5), bright: share(v => v > .75), dark: share(v => v < .22), ground: layer(cls[0], 0), dense: layer(cls[1], 1), pattern: layer(cls[2], 2)});
     })()`);
     console.log(name, 'tone', tone);
   }

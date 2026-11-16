@@ -22,7 +22,7 @@ import {
   MATERIALS, agedSpec, CONTACT, BOX_MATERIALS, GROUND_LID, STATE_WIDTH, STATE_HEIGHT, packLifeState,
   meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox,
   bakeSoftLayer, mistGeometryData, PART_MOTION_GLSL, PART_LIGHT_GLSL, PART_POWDER_GLSL, PART_KIRIKANE_GLSL, BOX_MOTION_GLSL, BOX_GROUND_GLSL, BOX_GROUND_DEPTH_GLSL,
-  TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, DENSITY,
+  TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, DENSITY, COAT, COAT_GLSL,
   MAKIE_GROUND_PARS_GLSL, MAKIE_GROUND_FRAG_GLSL, MAKIE_MIST_VERT_GLSL, MAKIE_MIST_FRAG_GLSL,
   BOX_SIDE_VERT_GLSL, BOX_SIDE_PARS_GLSL, BOX_SIDE_FRAG_GLSL,
 } from './three-pack.js';
@@ -30,6 +30,12 @@ import {
 const EYE = [430, 720, 920], TARGET = [0, 40, 0];
 /** How old the box looks unless ?age= says otherwise: 0 is as new, 1 is the Hatsune trousseau as it is today. */
 const AGE_DEFAULT = .85;
+/** ?coat=0..1: the shared tinted-lacquer coat (three-pack COAT, docs/plans/2026-11-16-coat.md). 0, the default, compiles none of it. */
+const COAT_PARAM = typeof location !== 'undefined' ? Number(new URLSearchParams(location.search).get('coat')) : 0;
+const COAT_ON = Number.isFinite(COAT_PARAM) && COAT_PARAM > 0 ? Math.min(1, COAT_PARAM) : 0;
+const COAT_DEFINE = COAT_ON > 0 ? '#define KYOTO_COAT_ON\n' : '';
+/** Scales what lies under the coat (the base's four light terms) by the film's transmittance T. */
+const coatApply = lift => `\n{\n  vec3 kyotoCoatNW = inverseTransformDirection(normal, viewMatrix);\n  vec3 kyotoCoatTT = kyotoCoatPart(kyotoCoatNW, ${lift});\n  reflectedLight.directDiffuse *= kyotoCoatTT; reflectedLight.indirectDiffuse *= kyotoCoatTT;\n  reflectedLight.directSpecular *= kyotoCoatTT; reflectedLight.indirectSpecular *= kyotoCoatTT;\n}`;
 const VIEW = normalize(EYE.map((v, i) => v - TARGET[i])), KEY = normalize([-.5, .78, .22]);
 const STRIDE = 10;
 const SHADOW_SOFT = 6; // PCF shadow filter radius in texels for softer window-light penumbra
@@ -131,7 +137,9 @@ export function createThreeRenderer(gl, canvas) {
     uView: {value: new THREE.Vector3(...VIEW)}, uKey: {value: new THREE.Vector3(...KEY)}, uLamp: {value: new THREE.Vector3(0, 70, 0)},
     uTime: {value: 0}, uNight: {value: 1}, uPresence: {value: 0}, uPx: {value: 1}, uTrails: {value: trails},
     uAge: {value: ageParam === null || Number.isNaN(Number(ageParam)) ? AGE_DEFAULT : Math.min(1, Math.max(0, Number(ageParam)))},
+    uCoatK: {value: 0}, uCoatUp: {value: new THREE.Vector3(0, 1, 0)}, uCoatV: {value: new THREE.Vector3(...VIEW)}, uCoatL: {value: new THREE.Vector3(...KEY)},
   };
+  shared.uCoatK.value = COAT_ON * shared.uAge.value;
   if (import.meta.env.DEV) window.__kyotoPlateUniforms = shared; // scripts/plate-shot.mjs flips uDensView to mask the lid
   // scripts/plate-clip.mjs reads the settled pose of the ward on screen and measures interpenetration (clip-probe.js).
   if (import.meta.env.DEV) window.__kyotoPlatePose = () => ({ward: plate.ward, parts: plate.parts, soft: plate.soft, ident: plate.ident, mw: plate.mw, mh: plate.mh, a: Float32Array.from(life.a), b: Float32Array.from(life.b)});
@@ -154,8 +162,9 @@ export function createThreeRenderer(gl, canvas) {
     // The pilot wards' rocks: fine pale powder in one raised form (rock-mesh.js powder), no foil.
     const isRockP = isPart && /^rockPowder/.test(spec.name);
     // Roof faces are gold powder; the rest of MAT.gold on the pieces is leaf laid on wood (three-pack PART_POWDER_GLSL).
+    const isCoat = COAT_ON > 0 && spec.name !== 'paper'; // the paper is not lacquered
     const isPowder = isPart && spec.name === 'roofPowder', isLeaf = isPart && spec.name === 'gold', isGrain = isPowder || isLeaf;
-    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v4${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}${isRockP ? '-rockp-v1' : ''}${isPowder ? '-powder-v1' : ''}${isLeaf ? '-leaf-v1' : ''}`;
+    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v4${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}${isRockP ? '-rockp-v1' : ''}${isPowder ? '-powder-v1' : ''}${isLeaf ? '-leaf-v1' : ''}${isCoat ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
@@ -163,7 +172,7 @@ export function createThreeRenderer(gl, canvas) {
         .replace('#include <beginnormal_vertex>', `vec3 kyotoP; vec3 objectNormal; ${call}(position, normal, kyotoP, objectNormal);`)
         .replace('#include <begin_vertex>', `vec3 transformed = kyotoP;${isRock || isRockP ? ' vRockUv = uv;' : ''}${isGrain ? ' vKyotoUv = uv; vKyotoRest = position;' : ''}`);
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', `#include <common>\nvarying float vGlow; uniform float uGlowBase, uGlowGain;${isPart ? `\n${PART_LIGHT_GLSL}` : ''}${isGrain ? `\n${PART_POWDER_GLSL}` : ''}${isRockP ? '\nvarying vec2 vRockUv;' : ''}${isRock ? `\nuniform float uPx;\nvarying vec2 vRockUv;\nconst bool kyotoRockSilver = ${isSilverRock};\n${PART_KIRIKANE_GLSL}` : ''}`)
+        .replace('#include <common>', `#include <common>\nvarying float vGlow; uniform float uGlowBase, uGlowGain;${isCoat ? `\n${COAT_GLSL}` : ''}${isPart ? `\n${PART_LIGHT_GLSL}` : ''}${isGrain ? `\n${PART_POWDER_GLSL}` : ''}${isRockP ? '\nvarying vec2 vRockUv;' : ''}${isRock ? `\nuniform float uPx;\nvarying vec2 vRockUv;\nconst bool kyotoRockSilver = ${isSilverRock};\n${PART_KIRIKANE_GLSL}` : ''}`)
         .replace('#include <normal_fragment_begin>', NORMAL_FIX)
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uGlowBase + vGlow * uGlowGain;');
       if (isRock) {
@@ -261,16 +270,17 @@ diffuseColor.rgb *= 1. + (kyotoVnoise(vKyotoRest.xz * .23 + vKyotoRest.y * .1) -
   reflectedLight.directSpecular+=material.specularColorBlended*kyotoLobe*K_POW_LOBE*mix(1.,.35,uNight)*kyotoContact;
   float kyotoEaveLit=1.-K_POW_EAVE*smoothstep(.42,1.,vKyotoUv.y);
   reflectedLight.directDiffuse*=kyotoEaveLit; reflectedLight.indirectDiffuse*=kyotoEaveLit;
-  reflectedLight.directSpecular*=kyotoEaveLit; reflectedLight.indirectSpecular*=kyotoEaveLit;` : ''}
+  reflectedLight.directSpecular*=kyotoEaveLit; reflectedLight.indirectSpecular*=kyotoEaveLit;` : ''}${isCoat ? coatApply('vLift') : ''}
 }`);
       }
+      if (!isPart && isCoat) shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>${coatApply('8.')}`);
     };
     return material;
   };
   const patchLimbMaterial = (material, spec) => {
     // Wood is silver where the foliage is gold (Hatsune); a tree that flowers in silver keeps gold wood.
     const silver = spec.name === 'silver', foil = silver ? 'kyotoAgedSilver(K_ROCK_FOIL_SILVER, .35)' : 'kyotoKiriGold()';
-    material.customProgramCacheKey = () => `kyoto-limb-${spec.glow ? 1 : 0}-${silver ? 's' : 'g'}-kiri-v3`;
+    material.customProgramCacheKey = () => `kyoto-limb-${spec.glow ? 1 : 0}-${silver ? 's' : 'g'}-kiri-v3${COAT_ON > 0 ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
@@ -278,7 +288,7 @@ diffuseColor.rgb *= 1. + (kyotoVnoise(vKyotoRest.xz * .23 + vKyotoRest.y * .1) -
         .replace('#include <beginnormal_vertex>', 'vec3 kyotoP, objectNormal, kyotoTx, kyotoTz; kyotoLimb(position, normal, kyotoP, objectNormal, kyotoTx, kyotoTz);')
         .replace('#include <begin_vertex>', 'vec3 transformed = kyotoP; vTreeUv = uv; vBark = aStyle.z; vTreeTanX = normalize(normalMatrix * kyotoTx); vTreeTanZ = normalize(normalMatrix * kyotoTz);');
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', `#include <common>\nvarying float vGlow;\nvarying vec2 vTreeUv;\nvarying float vBark;\nvarying vec3 vTreeTanX, vTreeTanZ;\nuniform float uGlowBase, uGlowGain, uNight, uPx, uAge;\nuniform vec3 uView, uKey;\n${PART_KIRIKANE_GLSL}`)
+        .replace('#include <common>', `#include <common>\nvarying float vGlow;\nvarying vec2 vTreeUv;\nvarying float vBark;\nvarying vec3 vTreeTanX, vTreeTanZ;${COAT_ON > 0 ? `\nvarying float vLift;\n${COAT_GLSL}` : ''}\nuniform float uGlowBase, uGlowGain, uNight, uPx, uAge;\nuniform vec3 uView, uKey;\n${PART_KIRIKANE_GLSL}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
 float kyotoGrain = sin(vTreeUv.x * 2.5 + .5 * sin(vTreeUv.y * .31));
 float kyotoRow = floor(vTreeUv.y / 6.5);
@@ -305,13 +315,13 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
   float kyotoTrunkGlint = kyotoKiriGlint(kyotoTrunkN, kyotoTrunkTilt, kyotoTrunkKiri, normalize(uKey), normalize(uView), uNight);
   reflectedLight.directSpecular *= mix(vec3(1.), K_KIRI_NIGHT_SPEC_TINT, uNight * kyotoTrunkKiri);
   reflectedLight.directSpecular += ${foil} * kyotoTrunkGlint;
-}`)
+}${COAT_ON > 0 ? coatApply('vLift') : ''}`)
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uGlowBase + vGlow * uGlowGain;');
     };
     return material;
   };
   const patchStampMaterial = (material, spec) => {
-    material.customProgramCacheKey = () => `kyoto-stamp-${spec.glow ? 1 : 0}`;
+    material.customProgramCacheKey = () => `kyoto-stamp-${spec.glow ? 1 : 0}${COAT_ON > 0 ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
@@ -320,7 +330,7 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
         .replace('#include <beginnormal_vertex>', 'vec3 kyotoP, objectNormal, kyotoTx, kyotoTz; kyotoStamp(uv, kyotoP, objectNormal, kyotoTx, kyotoTz);')
         .replace('#include <begin_vertex>', 'vec3 transformed = kyotoP; vTreeTanX = normalize(normalMatrix * kyotoTx); vTreeTanZ = normalize(normalMatrix * kyotoTz);');
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', '#include <common>\nuniform highp sampler2DArray uStamps;\nvarying float vGlow;\nvarying vec4 vTree;\nvarying vec2 vTreeScale;\nvarying vec3 vTreeTanX, vTreeTanZ;\nuniform float uGlowBase, uGlowGain;')
+        .replace('#include <common>', '#include <common>\nuniform highp sampler2DArray uStamps;\nvarying float vGlow;\nvarying vec4 vTree;\nvarying vec2 vTreeScale;\nvarying vec3 vTreeTanX, vTreeTanZ;\nuniform float uGlowBase, uGlowGain;\nvarying float vLift;\n' + (COAT_ON > 0 ? COAT_GLSL : ''))
         .replace('#include <map_fragment>', `#include <map_fragment>
 vec4 kyotoInk = texture(uStamps, vTree.xyz);
 diffuseColor.a *= kyotoInk.g;
@@ -336,6 +346,7 @@ vec2 kyotoGrad = vec2(
 ) * vTree.w / (2. * kyotoE * vTreeScale);
 normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`)
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uGlowBase + vGlow * uGlowGain;');
+      if (COAT_ON > 0) shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>${coatApply('vLift')}`);
     };
     return material;
   };
@@ -370,6 +381,11 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       color: spec.color, metalness: spec.metalness, roughness: spec.roughness, clearcoat: spec.clearcoat, clearcoatRoughness: spec.clearcoatRoughness,
       side: THREE.DoubleSide, shadowSide: THREE.DoubleSide, ...extra,
     });
+    // The coat is one lacquer on everything: no surface sits below COAT.shine of clearcoat, and a glossy-but-not-mirror one takes the shared roughness.
+    if (COAT_ON > 0 && spec.name !== 'paper' && spec.name !== 'cord' && !spec.glow) {
+      m.clearcoat = Math.max(m.clearcoat, COAT.shine * COAT_ON);
+      if (spec.clearcoat <= .6) m.clearcoatRoughness = THREE.MathUtils.lerp(spec.clearcoatRoughness, COAT.shineRough, COAT_ON);
+    }
     if (spec.emissive) { m.emissive.set(spec.emissive); m.emissiveIntensity = 1; }
     if (spec.envMapIntensity) m.envMapIntensity = spec.envMapIntensity;
     if (spec.iridescence) { m.iridescence = spec.iridescence; m.iridescenceIOR = spec.iridescenceIOR; m.iridescenceThicknessRange = [...spec.iridescenceThicknessRange]; }
@@ -399,7 +415,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       .replace('#include <beginnormal_vertex>', 'vec3 kyotoP; vec3 objectNormal; kyotoGround(position, normal, kyotoP, objectNormal);')
       .replace('#include <begin_vertex>', 'vec3 transformed = kyotoP;');
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\n${MAKIE_GROUND_PARS_GLSL}`)
+      .replace('#include <common>', `#include <common>\n${COAT_DEFINE}${MAKIE_GROUND_PARS_GLSL}`)
       .replace('#include <opaque_fragment>', `${MAKIE_GROUND_FRAG_GLSL}\n#include <opaque_fragment>`)
       .replace('#include <tonemapping_fragment>', '')
       .replace('#include <colorspace_fragment>', '');
@@ -408,7 +424,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     glslVersion: THREE.GLSL3,
     uniforms: {...shared},
     vertexShader: MAKIE_MIST_VERT_GLSL,
-    fragmentShader: MAKIE_MIST_FRAG_GLSL,
+    fragmentShader: COAT_DEFINE + MAKIE_MIST_FRAG_GLSL,
     transparent: true,
     depthWrite: false,
     depthTest: true,
@@ -433,7 +449,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
           .replace('#include <common>', `#include <common>\n${BOX_SIDE_VERT_GLSL}`)
           .replace('vec3 transformed = kyotoP;', 'vec3 transformed = kyotoP; vKyotoSide = uv; vKyotoSideW = kyotoP; vKyotoSideN = objectNormal;');
         shader.fragmentShader = shader.fragmentShader
-          .replace('#include <common>', `#include <common>\n${BOX_SIDE_PARS_GLSL}`)
+          .replace('#include <common>', `#include <common>\n${COAT_DEFINE}${BOX_SIDE_PARS_GLSL}`)
           .replace('#include <opaque_fragment>', `${BOX_SIDE_FRAG_GLSL}\n#include <opaque_fragment>`);
       };
     }
@@ -834,6 +850,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     const rz = quiet ? 0 : -f.px * .05 * f.lift, rx = quiet ? 0 : f.py * .035 * f.lift;
     const cz = Math.cos(rz), sz = Math.sin(rz), cx = Math.cos(rx), sx = Math.sin(rx);
     shared.uTilt.value.fromArray([cz, cx * sz, sx * sz, -sz, cx * cz, sx * cz, 0, -sx, cx]);
+    shared.uCoatUp.value.set(-sz, cx * cz, sx * cz);
     shared.uOpening.value = f.opening * f.opening * (3 - 2 * f.opening);
 
     // The cords feel the box lean and feel it pulled along its track; reduced motion leaves them hanging still.

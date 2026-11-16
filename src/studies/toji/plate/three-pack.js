@@ -446,7 +446,7 @@ float kyotoKiriGlint(vec3 nw,vec2 tilt,float cov,vec3 keyDir,vec3 viewDir,float 
 
 const TREE_MOTION_CORE_GLSL = `
 uniform sampler2D uState; uniform mat3 uTilt; uniform float uOpening;
-varying float vGlow;
+varying float vGlow; varying float vLift;
 ${GROUND_GLSL}
 void kyotoTreeTransform(vec2 rest, float height, vec3 localN, vec2 along, vec4 owner, vec4 style,
     out vec3 outPos, out vec3 outNormal, out vec3 outTanX, out vec3 outTanZ){
@@ -466,7 +466,7 @@ void kyotoTreeTransform(vec2 rest, float height, vec3 localN, vec2 along, vec4 o
   outNormal=uTilt*normalize(tx*localN.x+up*localN.y+tz*localN.z);
   outTanX=uTilt*(tx*along.x+tz*along.y);
   outTanZ=uTilt*(-tx*along.y+tz*along.x);
-  vGlow=A.w;
+  vGlow=A.w; vLift=height;
 }`;
 
 /** Tree limb hinge/sway transform (groundY under each vertex, +0.6 clearance). */
@@ -549,7 +549,36 @@ void kyotoGround(vec3 aPos, vec3 aNormal, out vec3 outPos, out vec3 outNormal){
 export const CONTACT = {width: 512, falloff: 18};
 export const DENSITY = {width: 256, falloff: 80, more: .65, less: .22, refShift: .06};
 
+/**
+ * The shared coat (docs/plans/2026-11-16-coat.md): one tinted clear lacquer over every surface but the paper. It is Beer-Lambert
+ * absorption in the film, applied to what lies under the coat and never to the coat's own mirror. Light goes in and comes out, so
+ * the film is crossed twice, once along the key light and once along the view, each bent by the lacquer's index (K_COAT_N).
+ * COAT.color is the colour the film leaves a ray that crosses it twice at right angles through thickness 1 (OpenPBR's coat_color), so
+ * the absorption is -ln(C) per unit thickness. The thickness follows the form (kyotoCoatPart, mThick on the ground): thick in
+ * hollows, at the foot of things and under eaves, thin on crowns and raised faces, and never nothing, as the old lacquer on
+ * a raised part is still coated. uCoatK is ?coat times the box's age; with it at 0 nothing here runs.
+ */
+export const COAT = {color: [.96, .80, .50], index: 1.5, gain: 1.17, shine: .32, shineRough: .1};
+export const COAT_GLSL = `
+#ifndef KYOTO_COAT_DEFS
+#define KYOTO_COAT_DEFS
+uniform float uCoatK; uniform vec3 uCoatUp, uCoatV, uCoatL;
+const vec3 K_COAT_A=-log(vec3(${COAT.color.map(v => v.toFixed(3)).join(',')}));
+const float K_COAT_RN2=1./(${(COAT.index * COAT.index).toFixed(3)});
+vec3 kyotoCoatT(float thick,float cv,float cl){
+  float tv=sqrt(1.-(1.-cv*cv)*K_COAT_RN2),tl=sqrt(1.-(1.-cl*cl)*K_COAT_RN2);
+  return exp(-K_COAT_A*thick*.5*(1./tv+1./tl)*uCoatK)*mix(1.,${COAT.gain.toFixed(3)},step(1e-4,uCoatK));
+}
+vec3 kyotoCoatPart(vec3 nW,float lift){
+  float up=clamp(dot(nW,uCoatUp),0.,1.);
+  float th=mix(1.5,.7,smoothstep(0.,16.,lift))*(.75+.5*(1.-up));
+  return kyotoCoatT(th,clamp(dot(nW,uCoatV),0.,1.),clamp(dot(nW,uCoatL),0.,1.));
+}
+#endif`;
 const MAKIE_COMMON_GLSL = `
+#ifdef KYOTO_COAT_ON
+${COAT_GLSL}
+#endif
 uniform vec3 uView, uKey, uLamp;
 uniform float uTime, uNight, uPresence, uPx, uOpening, uAge;
 uniform vec3 uTrails[20];
@@ -589,7 +618,7 @@ ivec2 mIdent0(vec2 p){
 float mHash(vec2 p){vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
 vec2 mHash2(vec2 p){vec3 q=fract(vec3(p.xyx)*vec3(.1031,.1030,.0973));q+=dot(q,q.yzx+33.33);return fract((q.xx+q.yz)*q.zy);}
 float mVnoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mHash(i),mHash(i+vec2(1.,0.)),f.x),mix(mHash(i+vec2(0.,1.)),mHash(i+1.),f.x),f.y);}
-vec3 mN, mHk, mHp, mKeyC, mPoolC, mAmbC, mWP; float mAtt, mDk, mDp, mWake=0., mSh=1., mOcc=1., mBand=0., mSheen=0.;
+vec3 mN, mHk, mHp, mKeyC, mPoolC, mAmbC, mWP; float mThick=1., mAtt, mDk, mDp, mWake=0., mSh=1., mOcc=1., mBand=0., mSheen=0.;
 float mPool(){return M_POOL*mix(1.,M_AGE_POOL,uAge);}
 vec3 mLight(){return M_AMB*mAmbC*mOcc+(M_KEY*mDk*mKeyC+mPool()*mAtt*mDp*mPoolC)*mSh;}
 vec3 mSpec(float e){return (M_KEY*pow(max(dot(mN,mHk),0.),e)*mKeyC+mPool()*mAtt*pow(max(dot(mN,mHp),0.),e)*mPoolC)*mSh;}
@@ -773,6 +802,12 @@ vec3 mHirame(vec3 c,vec2 kp,float dS,float rise){
     return mix(c,sc,cv);
 }
 vec4 mFinish(vec3 c,float a){
+#ifdef KYOTO_COAT_ON
+  if(uCoatK>0.){
+    vec3 T=kyotoCoatT(mThick,clamp(dot(mN,uCoatV),0.,1.),clamp(dot(mN,uCoatL),0.,1.));
+    c=c*T+mCoat()*(1.-T)*.3;
+  }
+#endif
   c*=1.25;float l=max(dot(c,vec3(.3,.55,.15)),1e-4),t=l/(1.+l*.42);
   c=mix(c*(t/l),vec3(t),smoothstep(.9,2.6,l)*.55);c=min(c,vec3(1.));
   c=mix(c,c*vec3(.92,.96,1.05)+vec3(.003,.005,.009),uNight*.6);
@@ -836,6 +871,8 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   // Occlusion from the contact field (bake.js): squared twice over so it has no edge anywhere.
   float occ=texture(uContact,mPuv(kp)).r;occ*=occ*(3.-2.*occ);
   mOcc=1.-M_OCC_AMB*occ*uAge;mSh*=1.-M_OCC_ALL*occ*uAge;
+  // The film lies thick in the hollows and at the foot of things, thin over raised ground (the coat, kyotoCoatT).
+  mThick=(.55+.8*occ+.55*(1.-smoothstep(0.,.3,hs)))*(.85+.3*mVnoise(kp*.3+4.));
   mSetLight(normalize(normalize(vKyotoNormal)-grad.x*vKyotoTanX-grad.y*vKyotoTanZ),vKyotoWorld);
   float line=fine.b;vec3 L=mLight();
   float w=smoothstep(.02,.34,hs);
@@ -1037,6 +1074,7 @@ export const BOX_SIDE_FRAG_GLSL = `
   // The walls darken toward the foot in one long grade, as a box does that has stood on a shelf.
   float low=smoothstep(-70.,-134.,sp.y);
   c=mix(c,c*vec3(.56,.49,.42),low*low*.6*uAge);
+  mThick=.9+.7*low;
   outgoingLight=mFinish(c*vec3(1.,.86,.62)*.9*K_SIDE_DIM,1.).rgb;
 }`;
 
