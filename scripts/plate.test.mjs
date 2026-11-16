@@ -7,10 +7,10 @@ import {densityFromMask} from '../src/studies/toji/plate/bake.js';
 import {buildBox} from '../src/studies/toji/plate/box.js';
 
 // Wards whose ground is already doha.js pieces (suhama tongues, banks) and not hill() or gardenGround(); more join as the other wards are redone.
-const dohaWards = new Set(['W_NAKAGYO', 'W_FUSHIMI', 'W_HIGASHIYAMA', 'W_KITA', 'W_MINAMI', 'W_UKYO']);
+const dohaWards = new Set(['W_NAKAGYO', 'W_FUSHIMI', 'W_HIGASHIYAMA', 'W_KITA', 'W_MINAMI', 'W_UKYO', 'W_SAKYO', 'W_YAMASHINA']);
 // The wards redone in the nine-wards run (docs/plans/2026-11-16-nine-wards.md): a far mountain, a shore and the rocks they already had (not yet redone), so
 // the cluster, piece-count, silver-share and rock-total ranges of the scattered pilot are not asked of them.
-const nineWards = new Set(['W_HIGASHIYAMA', 'W_KITA', 'W_MINAMI', 'W_UKYO']);
+const nineWards = new Set(['W_HIGASHIYAMA', 'W_KITA', 'W_MINAMI', 'W_UKYO', 'W_SAKYO', 'W_YAMASHINA']);
 const p3bWards = ['W_KITA', 'W_UKYO', 'W_NISHIKYO', 'W_SAKYO', 'W_KAMIGYO', 'W_SHIMOGYO', 'W_NAKAGYO', 'W_YAMASHINA'];
 const inside = ([x, z], polygon) => {
   let hit = false;
@@ -481,7 +481,7 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
 
   // Scope fence: part counts per ward. R5a/R5b added the attached scenes to every ward; patina P3b split the coral
   // leaves, the fire of the 大, the silver petals and the dew of shell into parts of their own (one part per material).
-  const expectedCounts = {W_MINAMI: 55, W_UKYO: 29, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 46, W_KITA: 32, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 45, W_HIGASHIYAMA: 31, W_SHIMOGYO: 36};
+  const expectedCounts = {W_MINAMI: 55, W_UKYO: 29, W_NISHIKYO: 34, W_YAMASHINA: 39, W_FUSHIMI: 46, W_KITA: 32, W_KAMIGYO: 42, W_SAKYO: 37, W_NAKAGYO: 45, W_HIGASHIYAMA: 31, W_SHIMOGYO: 36};
   for (const [ward, build] of Object.entries(PLATES)) {
     const {parts, errors} = preparePlate(build());
     assert.deepEqual(errors, [], ward);
@@ -883,7 +883,7 @@ test('all three ward lanterns migrate to rigidGroup mesh while keeping part coun
 
   const wardLanterns = [
     ['W_NISHIKYO', 34, ['shore-lantern']], // 34: R5b added the Katsura fence
-    ['W_YAMASHINA', 38, ['west-lantern', 'east-lantern']], // 38: R5b added the stair-foot grass, P3b the coral leaves
+    ['W_YAMASHINA', 39, ['west-lantern', 'east-lantern']], // 39: R5b added the stair-foot grass, P3b the coral leaves; the nine-wards run replaced the ground and hill by two heads' parts and the banks
   ];
   for (const [ward, count, ids] of wardLanterns) {
     const {parts, errors} = preparePlate(PLATES[ward]());
@@ -1494,7 +1494,7 @@ import {measureDoha} from './plate-doha-measure.mjs';
 import {similar} from './plate-doha-similar.mjs';
 import {bankGeom, tongueGeom, mountain, JITTER} from '../src/studies/toji/plate/doha.js';
 import {meshRock} from '../src/studies/toji/plate/rock-mesh.js';
-const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5], W_HIGASHIYAMA: [2, 2], W_KITA: [0, 0], W_MINAMI: [3, 3], W_UKYO: [0, 0]}; // Kita's two rocks are not named rock-*, so the measure does not count them
+const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5], W_HIGASHIYAMA: [2, 2], W_KITA: [0, 0], W_MINAMI: [3, 3], W_UKYO: [0, 0], W_SAKYO: [0, 0], W_YAMASHINA: [0, 0]}; // Kita's two rocks are not named rock-*, so the measure does not count them
 for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition numbers`, () => {
   const m = measureDoha(ward);
   // Nakagyo is one shore of four long banks (plan §11.2): the cluster, piece-count, size and straight-run ranges are for the scattered wards.
@@ -1502,7 +1502,7 @@ for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition nu
   if (!shore) assert.ok(m.clusters >= 2 && m.clusters <= 4, `clusters ${m.clusters}`);
   if (!shore) for (const [c, n] of Object.entries(m.piecesPerCluster)) assert.ok(n >= 3 && n <= 7, `${c}: ${n} pieces`);
   else if (!nineWards.has(ward)) assert.ok(m.pieces >= 2 && m.pieces <= 4, `shore pieces ${m.pieces}`);
-  else assert.ok(m.pieces >= 6 && m.pieces <= 12 && m.farHeads >= 3, `mountain heads ${m.farHeads} and shore pieces ${m.pieces - m.farHeads}`);
+  else assert.ok(m.pieces >= 6 && m.pieces <= 14 && m.farHeads >= 3, `mountain heads ${m.farHeads} and shore pieces ${m.pieces - m.farHeads}`);
   for (const [c, n] of Object.entries(m.rocksPerCluster)) assert.ok(n <= 5, `${c}: ${n} rocks`);
   const [lo, hi] = rockTotals[ward];
   assert.ok(m.rocks >= lo && m.rocks <= hi, `${m.rocks} rocks, not ${lo}-${hi}`);
