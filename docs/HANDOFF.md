@@ -7,7 +7,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main` 在 `d958327`（2026-11-16，使用者同意合併與 push，部署成功）：開案書 R0–R10、銀的補強、作舊與珊瑚、穿插修正、技法堆疊都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/handoff-1116`：只有本檔的更新，還沒 push。沒有進行中的實作 |
+| 工作分支 | `claude/roof-1116`（從 `main` 開）：屋頂改成金粉、貼金透木紋，已整合，**尚未合併 `main`**。`claude/doha-1116`（疊在它上面）：疊坡的樣板（中京、伏見），**等使用者看圖，不要合併**。子代理工作樹 `C:\Git\_wt_kyoto_doha`（分支 `agent/doha-1116`）保留給修訂用 |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除；`node_modules` 用 junction 連到主資料夾（`cmd /c mklink /J`），**刪工作樹前先 `cmd /c rmdir` 拿掉 junction**，否則會刪到主資料夾的套件。目前有哪些以 `git worktree list` 為準 |
@@ -52,7 +52,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ## 4. 下一步
 
-1. 等使用者實機看過後的意見。已知可再調的：中京等高台上的切金列是散在台面上的橫向短列，不只在邊緣；上京南庭在建築陰影裡偏灰；穿插還沒量的種類是樹 × 樹、霞的邊緣、同群組內的接合。工具：`node scripts/plate-clip.mjs <out.json>`、`PLATE_KIRI=1`／`PLATE_TONE=1 node scripts/plate-shot.mjs …`（都要 dev server）。
+1. **等使用者決定**：疊坡的樣板方向對不對（[開案書](plans/2026-11-16-doha.md)、[報告](agent-runs/2026-11-16-doha-pilot.md)）；對了才派其餘九區。屋頂（[開案書](plans/2026-11-16-roof-makie.md)）要不要先合併。工具：`node scripts/plate-doha-measure.mjs`、`node scripts/plate-clip.mjs <out.json>`、`PLATE_KIRI=1`／`PLATE_TONE=1 node scripts/plate-shot.mjs …`（都要 dev server）。
 2. 地圖：使用者 2026-11-16 決定不做（現況夠用）。[備忘錄](plans/2026-11-16-r10-map-evaluation.md)留作紀錄。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
 4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核；各食處報告裡列的描述細節（米其林、創業年）；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
