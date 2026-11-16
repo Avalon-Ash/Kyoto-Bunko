@@ -59,6 +59,8 @@ for (const job of jobs) {
   const shot = await send('Page.captureScreenshot', {format: 'png', clip: {x: Math.max(0, r[0] + r[4]), y: Math.max(0, r[1] + r[5]), width: r[2], height: r[3], scale: 1}});
   writeFileSync(join(outDir, `${name}.png`), Buffer.from(shot.result.data, 'base64'));
   console.log(name, info);
+  // PLATE_CPU=4 slows the page's CPU fourfold before PLATE_EVAL runs (for frame-time readings).
+  if (process.env.PLATE_CPU) await send('Emulation.setCPUThrottlingRate', {rate: Number(process.env.PLATE_CPU)});
   if (process.env.PLATE_EVAL) console.log(name, 'eval', await evalJs(process.env.PLATE_EVAL));
   if (process.env.PLATE_TONE) {
     // The lid's pixels: paint plain ground magenta and the rest of the lid green (the dev mask), then take each row from

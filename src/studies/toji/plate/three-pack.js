@@ -61,11 +61,11 @@ export const BOX_MATERIALS = {
   // Hatsune: the whole body is nashiji (amber lacquer over gold powder), not black lacquer (user decision, handoff §3).
   20: {name: 'side', color: '#a8722e', metalness: .72, roughness: .45, clearcoat: 1, clearcoatRoughness: .06, flake: 0, nashijiSide: true},
   // The lid's lip: gold, as on the Hatsune boxes (museum photos show no silver rim).
-  21: {name: 'rim', color: '#c39345', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .2},
+  21: {name: 'rim', aged: {color: '#ad9668', roughness: .46}, color: '#c39345', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .2},
   22: {name: 'inner', color: '#8c6a2d', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5},
   23: {name: 'paper', color: '#cdbd98', metalness: 0, roughness: .9, clearcoat: 0, clearcoatRoughness: 0, flake: 0},
-  24: {name: 'gold', color: '#d7a64a', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3},
-  26: {name: 'edge', color: '#c99a42', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3},
+  24: {name: 'gold', aged: {color: '#c2aa76', roughness: .46}, color: '#d7a64a', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3},
+  26: {name: 'edge', aged: {color: '#b39c6c', roughness: .46}, color: '#c99a42', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3},
   27: {name: 'cord', color: '#85100a', metalness: 0, roughness: .6, clearcoat: 0, clearcoatRoughness: 0, flake: 0},
   28: {name: 'tray', color: '#b4843a', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5},
 };
@@ -502,7 +502,7 @@ const vec3 M_AGE_BODY=vec3(.42,.35,.22), M_AGE_BODY_NIGHT=vec3(.80,.74,.62), M_A
 // The coat no longer mirrors evenly (M_AGE_HAZE: how far its gloss swings from place to place), the lacquer lies a
 // little thicker here and thinner there (M_AGE_MURA: the swing in the ground's value), and where a bank's crown has
 // been rubbed for centuries the red-brown under-lacquer shows through the gold (M_AGE_WEAR, M_UNDER).
-const float M_AGE_HAZE=1.1, M_AGE_MURA=.26, M_AGE_WEAR=.5;
+const float M_AGE_HAZE=1.1, M_AGE_MURA=.26, M_AGE_WEAR=.3;
 const vec3 M_UNDER=vec3(.21,.075,.04);
 const vec3 M_CORAL=vec3(.60,.115,.06);
 const vec3 M_TARNISH=vec3(.46,.42,.36);
@@ -630,6 +630,10 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   vec2 e=abs(kp)-M_HALF;float out_=max(e.x,e.y);
   mWake=0.;mSh=1.;mSetLight(normalize(vKyotoNormal),vKyotoWorld);
   vec3 bc=out_>7.4?mMetal(kp,M_GOLD*.92,1.):out_>6.4?mMetal(kp,M_GOLD*.6,1.):mNashiji(kp,.9,M_GOLD);
+  // The lip is where hands lift the lid: its gold has worn through to the lacquer in patches, most at the corners.
+  float corner=smoothstep(.86,1.,min(abs(kp.x)/M_HALF.x,abs(kp.y)/M_HALF.y));
+  float worn=uAge*step(6.4,out_)*smoothstep(.62-.22*corner,.80,mVnoise(kp*.045+2.))*.7;
+  bc=mix(bc,M_UNDER*(.3+mLight()),worn);
   outgoingLight=mFinish(bc,1.).rgb;
   diffuseColor.a=1.;
 }else{
@@ -732,7 +736,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     c=mix(c,wtr,m);
   }
   if(uAge>0.&&mat>=2&&mat<=4){
-    float wr=smoothstep(.45,.85,hs)*smoothstep(.52,.74,mVnoise(kp*.16+5.))*M_AGE_WEAR*uAge;
+    float wr=smoothstep(.62,.95,hs)*smoothstep(.50,.72,mVnoise(M_R1*kp*.07+5.)*.62+mVnoise(M_R2*kp*.19)*.38)*M_AGE_WEAR*uAge;
     c=mix(c,M_UNDER*(.3+L),wr);
   }
   if(uAge>0.){
@@ -774,6 +778,9 @@ export const BOX_SIDE_FRAG_GLSL = `
   c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.6)),kv)+M_PALE*kg;
   // Walls face the room, not the window: keep them a warmer, slightly deeper amber than the lid.
   const float K_SIDE_DIM=.82; // dim box walls one step below the lid while keeping rim and edge bright
+  // Dirt gathers toward the foot of the walls, and under the lid's overhang.
+  float low=smoothstep(-96.,-132.,sp.y)*(.75+.5*mVnoise(vec2(sp.x*.02,7.))),under=body*smoothstep(-47.,-36.,sp.y);
+  c=mix(c,c*vec3(.50,.43,.36),clamp(low*.62+under*.4,0.,.8)*uAge);
   outgoingLight=mFinish(c*vec3(1.,.86,.62)*.9*K_SIDE_DIM,1.).rgb;
 }`;
 

@@ -1437,3 +1437,22 @@ test('attached scenes name an existing part and stay off the solids', async () =
   }
   assert.ok(seen >= 10, 'the five wards carry their scenes');
 });
+
+test('patina: materials move toward their aged values, and the contact field falls in a straight line', async () => {
+  const {MATERIALS, agedSpec} = await import('../src/studies/toji/plate/three-pack.js');
+  const gold = MATERIALS[MAT.gold];
+  assert.equal(agedSpec(gold, 0), gold, 'as new: the entry itself');
+  assert.equal(agedSpec(MATERIALS[MAT.coral], 1), MATERIALS[MAT.coral], 'coral does not age');
+  const old = agedSpec(gold, 1), half = agedSpec(gold, .5);
+  assert.equal(old.color, gold.aged.color);
+  assert.equal(old.roughness, gold.aged.roughness);
+  assert.ok(half.roughness > gold.roughness && half.roughness < old.roughness);
+  assert.match(half.color, /^#[0-9a-f]{6}$/);
+  assert.equal(gold.color, '#cf9e48', 'the table is not written to');
+  // One texel of contact in the middle of a row: without softening the field drops by the same step per texel.
+  const w = 64, h = 8, mask = new Float32Array(w * h); mask[4 * w + 32] = 1;
+  const f = densityFromMask(mask, w, h, 720 / w * 10, false);
+  assert.equal(f[4 * w + 32], 255);
+  assert.ok(Math.abs((f[4 * w + 33] - f[4 * w + 34]) - (f[4 * w + 36] - f[4 * w + 37])) <= 1, 'straight fall');
+  assert.equal(f[4 * w + 32 + 12], 0, 'nothing beyond the falloff');
+});

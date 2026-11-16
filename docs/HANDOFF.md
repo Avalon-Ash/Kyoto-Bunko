@@ -7,7 +7,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main` 在 `7dca894`（2026-11-16，使用者同意合併與 push，部署成功）：開案書 R0–R10 與銀的補強都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/patina-1116`（從 `main` 開）：目前只有作舊的開案書 [`plans/2026-11-16-patina.md`](plans/2026-11-16-patina.md)，**等使用者同意後開工**。上一輪的總表見 [`agent-runs/2026-11-16-overnight-chain.md`](agent-runs/2026-11-16-overnight-chain.md) |
+| 工作分支 | `claude/patina-1116`（從 `main` 開）：作舊與材質深度 P0–P5、紅珊瑚與青貝（[開案書與結果](plans/2026-11-16-patina.md)）。**尚未合併 `main`、尚未 push**。上一輪的總表見 [`agent-runs/2026-11-16-overnight-chain.md`](agent-runs/2026-11-16-overnight-chain.md) |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除。本輪用過的兩個已移除；目前有哪些以 `git worktree list` 為準 |
@@ -31,27 +31,28 @@ npm run dev -- --host 127.0.0.1 --strictPort
 |---|---|
 | 資料 | **792 筆**，`validate_data.js --strict` ERROR 0／WARN 0。2026-11-16 查完十一區所有食處（Tabelog）與「世界遺產」「國寶」標籤：退役 17 筆、改區 27 筆。「營業中」的依據是 Tabelog 英文版沒有閉店類標示，不是現場確認。寺社、商店等其他類型的事實查核還沒做 |
 | 首頁文庫 | 十一區文箱，每區一面蒔繪盤；單指盒面移光，長拖換函，雙指捏合／滾輪／快捷鍵放大（上限 3 倍），點蓋／Enter／空白鍵開蓋直入 `DetailView`；月光預設、閒置移光 |
-| 蒔繪盤 | **只有 three.js 一條管線**（`plate/three-renderer.js`＋`three-pack.js`）。舊的自寫 WebGL2 管線、2.5D 浮雕與 `?three=0` 已刪。狐、鳳凰、鶯、銀沙灘與向月台、石垣都是 three 網格，沒有平塗佔位。岩面是菱形切金（受光大而密、背光小而疏），銀岩是銀。地有疏密場（靠近物較密）。九區有依附小景（`plate/<區>.js` 裡帶 `on` 欄位的部件）。**銀的分工**（2026-11-16 對照德川美術館「初音蒔絵文台・硯箱（部分）」照片）：葉是金的樹，幹與枝是銀（背光氧化銀灰、受光淡銀、上面是切銀）；開銀花的櫻保留金幹；霞帶的金裡躺著細長的灰銀條 |
+| 蒔繪盤 | **只有 three.js 一條管線**（`plate/three-renderer.js`＋`three-pack.js`）。舊的自寫 WebGL2 管線、2.5D 浮雕與 `?three=0` 已刪。狐、鳳凰、鶯、銀沙灘與向月台、石垣都是 three 網格，沒有平塗佔位。岩面是菱形切金（受光大而密、背光小而疏），銀岩是銀。地有疏密場（靠近物較密）。九區有依附小景（`plate/<區>.js` 裡帶 `on` 欄位的部件）。**銀的分工**（2026-11-16 對照德川美術館「初音蒔絵文台・硯箱（部分）」照片）：葉是金的樹，幹與枝是銀（背光氧化銀灰、受光淡銀、上面是切銀）；開銀花的櫻保留金幹；霞帶的金裡躺著細長的灰銀條。**作舊**（`claude/patina-1116`，未上線）：總開關 `?age=0..1`（預設 .85，0 是全新）；地是深棕橙的梨子地、圖的金比地淡、岩與樹幹的陰面是硫化銀的暖深灰、部件腳邊有積汙；代表白色的銀（砂、狐、花）保持淡；紅珊瑚（`MAT.coral`）用在楓葉、梅心、「大」字 |
 | 降級 | 沒有 WebGL2、three 載入或啟動失敗、context 遺失、或網址加 `?plate=static` 時，顯示預渲染的靜態圖（`plate/static/` 22 張 webp，十一區 × 日夜），換函與開蓋照常，盒面不動。**盤面有改動就要重拍**：`node scripts/plate-fallback-shots.mjs`（dev server 在 3000） |
 | 全站 UI | 手機優先、深色預設；暖日／月光、語系、減少動態全站共用（色票唯一來源 `src/theme.css`）。卡片有傾斜與柔光（觸控只有按壓回饋）、篩選後新卡片淡入；30 張以上的列表分批渲染（`src/lib/batch-render.ts`） |
 | 背景 | すやり霞＋和紙＋金箔／銀塵、障子格光與卓面光澤（`backdrop.js`）；十一區各自的紋樣與一行短句（`ward-art.js`，2026-11-16 改寫為「地標＋該區另一個重點」） |
 | 歲時記 | 只有[計畫](SEASONAL_PLAN.md)；首頁入口已移除 |
 | 文箱架構 | `study.js`（`mountBunko`：手勢、移光、縮放、換函、開蓋）、`renderer.js`（選 three 或靜態圖）、`plate/three-renderer.js`＋`three-pack.js`、`plate/static-plate.js`、`plate/parts.js`＋`vocab.js`＋`mat.js`＋`<區>.js`（構圖資料）、`plate/creature-mesh.js`／`rock-mesh.js`／`architecture-mesh.js` 等（網格）、`backdrop.js`＋`ward-art.js`（背景） |
 
-## 3. 最近一次驗收（2026-11-16，`claude/roadmap-1116` `0734d1d`）
+## 3. 最近一次驗收（2026-11-16，`claude/patina-1116`）
 
 | 檢查 | 結果 |
 |---|---|
 | `npm run lint` | exit 0 |
 | `npx --no-install tsx validate_data.js --strict` | ERROR 0、WARN 0，792 筆 |
-| `npm test` | `scripts/*.test.mjs` 128/128、`src/lib/*.test.ts` 17/17 |
-| `npm run build` | exit 0；`three-renderer` chunk gzip 約 195 KB |
+| `npm test` | `scripts/*.test.mjs` 129/129、`src/lib/*.test.ts` 17/17 |
+| `npm run build` | exit 0；`three-renderer` chunk gzip 約 198 KB |
+| 盤面調子 | `PLATE_TONE=1 node scripts/plate-shot.mjs <outDir> <job…>`；數字與目標見 [`plans/2026-11-16-patina.md`](plans/2026-11-16-patina.md) §9 |
 
-截圖都是無頭 Chrome（桌機 GPU）拍的，存在子代理的工作樹裡，已隨工作樹刪除。**本輪所有畫面改動使用者都還沒在實機上看過。**
+截圖都是無頭 Chrome（桌機 GPU）拍的，放在 `.shots/`（不提交）。**作舊的畫面使用者還沒在實機上看過。** 改著色器時不要用 `sed -i`：dev server 偵測不到，會量到舊的。
 
 ## 4. 下一步
 
-1. **等使用者決定**：[作舊與材質深度的開案書](plans/2026-11-16-patina.md)要不要照做。
+1. **等使用者決定**：`claude/patina-1116` 合併進 `main`、push（各自分開問）。上線前建議使用者在本機看：十一區日夜、放大後岩石腳邊的積汙、`?age=0` 與 `?age=1` 的對照。
 2. 地圖：使用者 2026-11-16 決定不做（現況夠用）。[備忘錄](plans/2026-11-16-r10-map-evaluation.md)留作紀錄。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
 4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核；各食處報告裡列的描述細節（米其林、創業年）；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。

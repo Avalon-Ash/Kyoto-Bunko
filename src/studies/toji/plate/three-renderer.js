@@ -29,7 +29,7 @@ import {
 
 const EYE = [430, 720, 920], TARGET = [0, 40, 0];
 /** How old the box looks unless ?age= says otherwise: 0 is as new, 1 is the Hatsune trousseau as it is today. */
-const AGE_DEFAULT = .7;
+const AGE_DEFAULT = .85;
 const VIEW = normalize(EYE.map((v, i) => v - TARGET[i])), KEY = normalize([-.5, .78, .22]);
 const STRIDE = 10;
 const SHADOW_SOFT = 6; // PCF shadow filter radius in texels for softer window-light penumbra
@@ -364,8 +364,8 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
   boxGroup.add(mesh(buffers(lidTop.position, lidTop.normal, lidTop.uv, lidTop.part), groundMaterial, groundDepth));
   let boxVertices = box.lidTop;
   for (const [id, slice] of sliceBox(box.data, box.lidTop, box.opaque)) {
-    const spec = BOX_MATERIALS[id];
-    if (!spec) throw new Error(`three renderer: no material for box id ${id}`);
+    if (!BOX_MATERIALS[id]) throw new Error(`three renderer: no material for box id ${id}`);
+    const spec = agedSpec(BOX_MATERIALS[id], shared.uAge.value);
     // The cords are drawn live; the fixed geometry here never carries id 27 (they come from cordTube), but guard anyway.
     const boxMaterial = patchMaterial(physical(spec), spec, BOX_MOTION_GLSL, 'kyotoBox');
     if (spec.nashijiSide) {
