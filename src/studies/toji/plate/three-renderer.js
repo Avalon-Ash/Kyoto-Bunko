@@ -171,9 +171,9 @@ float kyotoRockRim = pow(1. - clamp(dot(normalize(vNormal), normalize(vViewPosit
 float kyotoRockAmt = smoothstep(K_ROCK_AMT_LO, K_ROCK_AMT_HI, kyotoRockNL) * mix(K_ROCK_LOW_AMT, 1., smoothstep(1.5, 12., vLift)) + kyotoRockRim * K_ROCK_RIM_AMT;
 vec2 kyotoRockTilt; float kyotoRockTone;
 float kyotoRockKiri = kyotoRockKiriPattern(kyotoRockXZ, kyotoRockAmt, uPx, kyotoRockTilt, kyotoRockTone);
-vec3 kyotoRockFoil = kyotoRockSilver ? mix(K_ROCK_FOIL_OXID, K_ROCK_FOIL_SILVER, smoothstep(.15, .6, kyotoRockAmt)) : mix(K_ROCK_FOIL_OXID, kyotoKiriGold(), smoothstep(.15, .6, kyotoRockAmt));
-kyotoRockFoil *= .9 + .2 * kyotoRockTone;
-diffuseColor.rgb = mix(K_ROCK_BODY_SHADE, kyotoRockSilver ? K_ROCK_BODY_SILVER : K_ROCK_BODY_GOLD, kyotoRockLit);
+vec3 kyotoRockFoil = kyotoRockSilver ? kyotoAgedSilver(mix(K_ROCK_FOIL_OXID, K_ROCK_FOIL_SILVER, smoothstep(.15, .6, kyotoRockAmt)), mix(1., .35, smoothstep(.15, .6, kyotoRockAmt))) : mix(K_ROCK_FOIL_OXID, kyotoKiriGold(), smoothstep(.15, .6, kyotoRockAmt));
+kyotoRockFoil *= mix(.9 + .2 * kyotoRockTone, .62 + .62 * kyotoRockTone, uAge * float(kyotoRockSilver));
+diffuseColor.rgb = mix(kyotoAgedSilver(K_ROCK_BODY_SHADE, 1.), kyotoRockSilver ? kyotoAgedSilver(K_ROCK_BODY_SILVER, .8) : K_ROCK_BODY_GOLD, kyotoRockLit);
 diffuseColor.rgb = mix(diffuseColor.rgb, kyotoRockFoil, kyotoRockKiri * K_ROCK_KIRI_COVER);`)
           .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = mix(K_OXID_ROUGH, roughnessFactor, kyotoRockLit);
@@ -214,8 +214,8 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
   };
   const patchLimbMaterial = (material, spec) => {
     // Wood is silver where the foliage is gold (Hatsune); a tree that flowers in silver keeps gold wood.
-    const silver = spec.name === 'silver', foil = silver ? 'K_ROCK_FOIL_SILVER' : 'kyotoKiriGold()';
-    material.customProgramCacheKey = () => `kyoto-limb-${spec.glow ? 1 : 0}-${silver ? 's' : 'g'}-kiri-v2`;
+    const silver = spec.name === 'silver', foil = silver ? 'kyotoAgedSilver(K_ROCK_FOIL_SILVER, .35)' : 'kyotoKiriGold()';
+    material.customProgramCacheKey = () => `kyoto-limb-${spec.glow ? 1 : 0}-${silver ? 's' : 'g'}-kiri-v3`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
@@ -235,7 +235,7 @@ vec3 kyotoTrunkNW = inverseTransformDirection(normalize(vNormal), viewMatrix);
 float kyotoTrunkLit = smoothstep(K_TRUNK_LIT_LO, K_TRUNK_LIT_HI, dot(kyotoTrunkNW, normalize(uKey)));
 vec2 kyotoTrunkTilt;
 float kyotoTrunkKiri = kyotoKiriPattern(vTreeUv, K_TRUNK_KIRI_CELL, kyotoTrunkLit, uPx, kyotoTrunkTilt) * (1. - kyotoBark * K_TRUNK_BARK_MASK);
-diffuseColor.rgb = ${silver ? 'mix(K_TRUNK_SILVER_SHADE, K_TRUNK_SILVER_LIT, kyotoTrunkLit)' : 'mix(diffuseColor.rgb, K_M_OXID * K_TRUNK_OXID_SCALE, (1. - kyotoTrunkLit) * K_TRUNK_OXID_STRENGTH)'};
+diffuseColor.rgb = ${silver ? 'kyotoAgedSilver(mix(K_TRUNK_SILVER_SHADE, K_TRUNK_SILVER_LIT, kyotoTrunkLit), mix(1., .7, kyotoTrunkLit))' : 'mix(diffuseColor.rgb, K_M_OXID * K_TRUNK_OXID_SCALE, (1. - kyotoTrunkLit) * K_TRUNK_OXID_STRENGTH)'};
 diffuseColor.rgb *= 1. - kyotoBark * .45;
 diffuseColor.rgb = mix(diffuseColor.rgb, ${foil}, kyotoTrunkKiri * K_TRUNK_KIRI_COVER);`)
         .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>

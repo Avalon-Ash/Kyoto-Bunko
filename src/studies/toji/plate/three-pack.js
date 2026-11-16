@@ -18,13 +18,13 @@ export const MATERIALS = {
   [MAT.gyobu]: {name: 'gyobu', aged: {color: '#bfa468', roughness: .55}, color: '#c29a46', paint: '#8a6a2c', metalness: .85, roughness: .45, clearcoat: .5, clearcoatRoughness: .1, flake: .7},
   [MAT.gold]: {name: 'gold', aged: {color: '#cdb98e', roughness: .55, clearcoat: .1}, color: '#cf9e48', paint: '#d6a640', metalness: 1, roughness: .38, clearcoat: .3, clearcoatRoughness: .1, flake: .22},
   // T3: railings read dull grey under the grey room; a whiter, smoother silver with a thin coat keeps them silver.
-  [MAT.silver]: {name: 'silver', color: '#e6e8e4', paint: '#d8dad6', metalness: 1, roughness: .2, clearcoat: .3, clearcoatRoughness: .08, flake: .3},
+  [MAT.silver]: {name: 'silver', aged: {color: '#6e675b', roughness: .46, clearcoat: .08}, color: '#e6e8e4', paint: '#d8dad6', metalness: 1, roughness: .2, clearcoat: .3, clearcoatRoughness: .08, flake: .3},
   [MAT.kirikane]: {name: 'kirikane', aged: {color: '#dcc892', roughness: .52}, color: '#f2c65e', paint: '#e0b650', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12},
-  [MAT.kirigin]: {name: 'kirigin', color: '#d8dbd6', paint: '#bfc0b8', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12},
+  [MAT.kirigin]: {name: 'kirigin', aged: {color: '#8d867a', roughness: .5}, color: '#d8dbd6', paint: '#bfc0b8', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12},
   // T3: mother-of-pearl is pale with colour that shifts, not a teal paint: lighter base, wider film range.
   [MAT.aogai]: {name: 'aogai', color: '#8fbcb6', paint: '#9cc6c0', metalness: .2, roughness: .2, clearcoat: 1, clearcoatRoughness: .05, flake: 0, iridescence: 1, iridescenceIOR: 1.6, iridescenceThicknessRange: [250, 800]},
   [MAT.hyomonGold]: {name: 'hyomonGold', aged: {color: '#d6c294', roughness: .36}, color: '#e6b94e', paint: '#e2b24c', metalness: 1, roughness: .18, clearcoat: 0, clearcoatRoughness: 0, flake: .15},
-  [MAT.hyomonSilver]: {name: 'hyomonSilver', color: '#e0e2de', paint: '#d8d9d4', metalness: 1, roughness: .15, clearcoat: 0, clearcoatRoughness: 0, flake: .15},
+  [MAT.hyomonSilver]: {name: 'hyomonSilver', aged: {color: '#7b7468', roughness: .38}, color: '#e0e2de', paint: '#d8d9d4', metalness: 1, roughness: .15, clearcoat: 0, clearcoatRoughness: 0, flake: .15},
   [MAT.water]: {name: 'water', color: '#2c4256', paint: '#2a3d50', metalness: .6, roughness: .12, clearcoat: 1, clearcoatRoughness: .02, flake: 0},
   // Body of a silver (kirigin) rock: the shader lays silver foil on it. Mist (kasumi) is baked, so it has no mesh material of its own.
   [MAT.muraSilver]: {name: 'muraSilver', rock: 'silver', color: '#d9b25a', paint: '#caa24a', metalness: .9, roughness: .3, clearcoat: 0, clearcoatRoughness: 0, flake: .2},
@@ -301,6 +301,10 @@ const vec3 K_M_OXID=vec3(.66,.66,.64); // oxidized silver-grey on shaded faces (
 const vec3 K_KIRI_GOLD=vec3(.92,.62,.14); // bright cut-gold foil color for halftone kirikane pieces
 const vec3 K_KIRI_GOLD_AGED=vec3(.80,.66,.40); // the same foil gone pale and flat with age
 vec3 kyotoKiriGold(){return mix(K_KIRI_GOLD,K_KIRI_GOLD_AGED,uAge);}
+// Silver sulphides with age: K_TARNISH is what is left of it at age 1 (a warm dark grey). k is how exposed the place
+// is to it: 1 in the hollows and the shade, less on ridges and foil that handling keeps rubbed bright.
+const vec3 K_TARNISH=vec3(.46,.42,.36);
+vec3 kyotoAgedSilver(vec3 c,float k){return c*mix(vec3(1.),K_TARNISH,clamp(uAge*k,0.,1.));}
 const vec3 K_ROCK_BODY_GOLD=vec3(.36,.22,.06); // dark bronze ground between the gold foil on the lit face of a rock
 const vec3 K_ROCK_BODY_SHADE=vec3(.27,.27,.26); // the ground where the rock turns away from the light: oxidized silver, dark
 const vec3 K_ROCK_BODY_SILVER=vec3(.40,.41,.41); // the ground of a silver rock, lit
@@ -490,6 +494,8 @@ const float M_SWELL=17., M_AMB=.17, M_KEY=.44, M_POOL=1.75;
 // mirror in the coat, the sheen in the powder and the lamp's pool all weaken (M_AGE_GLOSS, _SHEEN, _POOL at age 1).
 // Raised gold keeps its value but loses saturation (M_AGE_PALE): the picture ends up paler than its ground.
 const vec3 M_AGE_BODY=vec3(.42,.35,.22), M_AGE_BODY_NIGHT=vec3(.80,.74,.62), M_AGE_VEIL=vec3(.05,.043,.032);
+// Silver on the lid sulphides the same way (M_TARNISH at age 1), in blotches; fine drawn lines stay bright.
+const vec3 M_TARNISH=vec3(.46,.42,.36);
 const float M_AGE_GLOSS=.35, M_AGE_SHEEN=.25, M_AGE_POOL=.28, M_AGE_PALE=.42;
 const float M_BAND_SWEEP=6.5, M_BAND_FALL=1., M_BAND_WIDTH=2.2, M_BAND_GAIN=.14, M_SHEEN_WIDTH=.35, M_SHEEN_GAIN=.55;
 const mat2 M_R1=mat2(.940,.342,-.342,.940), M_R2=mat2(.766,-.643,.643,.766), M_R3=mat2(.5,.866,-.866,.5);
@@ -505,6 +511,7 @@ vec3 mN, mHk, mHp, mKeyC, mPoolC, mAmbC, mWP; float mAtt, mDk, mDp, mWake=0., mS
 float mPool(){return M_POOL*mix(1.,M_AGE_POOL,uAge);}
 vec3 mLight(){return M_AMB*mAmbC+(M_KEY*mDk*mKeyC+mPool()*mAtt*mDp*mPoolC)*mSh;}
 vec3 mSpec(float e){return (M_KEY*pow(max(dot(mN,mHk),0.),e)*mKeyC+mPool()*mAtt*pow(max(dot(mN,mHp),0.),e)*mPoolC)*mSh;}
+vec3 mAgedSilver(vec3 f0,vec2 p,float k){return f0*mix(vec3(1.),M_TARNISH,clamp(uAge*k*(.72+.5*smoothstep(.25,.8,mVnoise(p*.07+17.))),0.,1.));}
 vec3 mAgedLacquer(vec3 c){return c*mix(vec3(1.),mix(M_AGE_BODY,M_AGE_BODY_NIGHT,uNight),uAge)+M_AGE_VEIL*uAge*(mAmbC*.55+mKeyC*mDk*.45*mSh);}
 vec3 mRoom(float rough){
   vec3 r=reflect(-uView,mN);
@@ -656,19 +663,19 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   }
   else if(mat==4){wN=1.;dens=mix(dens,1.05,w);bigD=.22*w;bigCell=4.;kAmt=smoothstep(.01,.09,hs)*.85;c=M_PALE*line*(.12+.5*L)*w;}
   else if(mat==5){wM=1.;c=M_PALE*line*(.12+.6*L)*mix(.5,1.,rise);}
-  else if(mat==6){wM=1.;f0=M_SILVER;}
+  else if(mat==6){wM=1.;f0=mAgedSilver(M_SILVER,kp,1.);}
   else if(mat==7){wM=1.;f0=M_GOLD*.9;rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_PALE*line*(.22+.6*L);}
-  else if(mat==8){wM=1.;f0=mix(M_SILVER,M_GOLD,.25)*.9;rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_SILVER*line*(.22+.6*L);}
+  else if(mat==8){wM=1.;f0=mAgedSilver(mix(M_SILVER,M_GOLD,.25)*.9,kp,.9);rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_SILVER*line*(.22+.6*L);}
   else if(mat==9||mat==12){wN=1.;}
   else if(mat==10){wS=1.;f0=M_PALE;c=M_PALE*glow*.5;}
-  else if(mat==11){wS=1.;f0=M_SILVER;}
+  else if(mat==11){wS=1.;f0=mAgedSilver(M_SILVER,kp,.85);}
   else if(mat==13){wS=.82;wM=.18;f0=M_GOLD;tint=M_GOLD;}
   else if(mat==14)c=M_LACQ*(.8+1.4*L)+mCoat()*2.2+M_GOLD*line*(.16+.80*L)*mix(.5,1.,rise);
   else c=mix(vec3(.10,.06,.025)*(.4+.5*L),vec3(1.,.62,.22)*1.15,glow)+M_LACQ;
   c+=wN*mNashiji(kp,dens,tint)+wM*mMetal(kp,f0,rise)+wS*mSheet(f0);
   vec3 bigG;float bigX=mFlake(M_R2*kp,bigCell,mix(.47,.30,bigSq),bigD,bigSq,.26,bigG);
   if(mat==7||mat==8){
-    vec3 foil=mat==7?M_PALE:M_SILVER;
+    vec3 foil=mat==7?M_PALE:mAgedSilver(M_SILVER,kp,.6);
     c=mix(c,mSheet(foil)+foil*(.10+.25*L)+foil*glow*(.45+.45*sin(kp.x*.31+kp.y*.17-uTime*9.)),bigX)+foil*bigG*.6;
   }else c=mix(c,tint*vec3(1.,.80,.44)*(.07+.74*L),bigX*.92)+tint*M_AMBER*bigG;
   if(kAmt>0.){
@@ -678,7 +685,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     float slope=smoothstep(.02,.25,length(gs)),face=-dot(gs/max(length(gs),1e-4),normalize(uKey.xz))*slope;
     float rim=smoothstep(.0,.04,hs)*(1.-smoothstep(.1,.7,hs));
     // Silver carries the shade: the Hatsune rocks and sandbars are gold where lit and grey silver on the far face.
-    c=mix(c*(1.-.14*kAmt),mMetal(kp,M_OXID,1.)*.82,clamp(kAmt*max(-face,0.)*1.1,0.,.75));
+    c=mix(c*(1.-.14*kAmt),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.82,clamp(kAmt*max(-face,0.)*1.1,0.,.75));
     // One gradient from the rim inward, carried by two techniques (Hatsune rocks and sandbars): kirikane at the bright
     // end, thinning; dense nashiji under and between the pieces, carrying on past the last piece and thinning in turn
     // into the plain ground.
@@ -709,7 +716,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     // A silver shore just inside the water's edge (the Hatsune sandbars and banks are grey silver).
     float e=.25*(texture(uFine0,mPuv(kp+vec2(7.,0.))).g+texture(uFine0,mPuv(kp-vec2(7.,0.))).g+texture(uFine0,mPuv(kp+vec2(0.,7.))).g+texture(uFine0,mPuv(kp-vec2(0.,7.))).g);
     float shore=1.-smoothstep(.5,.95,e/max(fine.g,.01));
-    wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,M_OXID,1.)*.85+M_SILVER*line*(.1+.3*L),shore*.7);
+    wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.85+M_SILVER*line*(.1+.3*L),shore*.7);
     c=mix(c,wtr,m);
   }
   if(uAge>0.){
@@ -798,6 +805,6 @@ void main(){
   vec3 c=.5*mNashiji(vKyotoUv,1.6,mix(M_GOLD,M_PALE,.5))+.5*mMetal(vKyotoUv,M_PALE*.95,1.)+.25*mSheet(M_PALE);
   // Long thin strips of grey silver lie in the gold (the Hatsune mist bands alternate the two metals).
   float sv=smoothstep(.50,.60,mVnoise(vec2(vKyotoUv.x*.012,vKyotoUv.y*.19)+vPartId*3.7));
-  c=mix(c,mMetal(vKyotoUv,M_OXID,1.)*.9+.2*mSheet(M_SILVER),sv*.9);
+  c=mix(c,mMetal(vKyotoUv,mAgedSilver(M_OXID,vKyotoUv,1.),1.)*.9+.2*mSheet(mAgedSilver(M_SILVER,vKyotoUv,.7)),sv*.9);
   fragColor=mFinish(c,alpha);
 }`;
