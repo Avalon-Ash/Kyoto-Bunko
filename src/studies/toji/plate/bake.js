@@ -1,6 +1,7 @@
 // Rasterises a plate's parts with Canvas 2D. The GPU side (blur, upload) lives in three-renderer.js.
 // Channels of a painted layer:  R soft swell (blurred later)  G crisp relief  B line work  A coverage.
 import {PLATE, KIND} from './vocab.js';
+import {WEDGE_PROFILE} from './doha.js';
 
 const trace = (ctx, d, close) => {
   ctx.beginPath();
@@ -9,6 +10,62 @@ const trace = (ctx, d, close) => {
   if (close) ctx.closePath();
 };
 const toUnits = (ctx, w, h) => ctx.setTransform(w / (PLATE.halfW * 2), 0, 0, h / (PLATE.halfH * 2), w / 2, h / 2);
+
+/**
+ * A bank's wedge (doha.js): its height falls from 1 at the ridge to 0 at depth along the normal, painted as linear-gradient
+ * strips along the ridge and radial fans at its corners, kept by 'lighten' (the highest wins) and clipped to the bank's outline.
+ * The G channel carries the height itself (the shader's relief and the colour's fade); R carries it times f.wedge.amp (the soft
+ * swell the geometry is raised by). The ridge's own strength (env) scales both, so a bank's crest dies out at its ends.
+ */
+function paintWedge(ctx, f) {
+  const {depth, amp} = f.wedge;
+  // Every other ridge vertex (the ends kept): the strips are 7 units long at most and the corners are fanned, so nothing shows.
+  const ridge = f.wedge.ridge.filter((_, i, a) => i % 2 === 0 || i === a.length - 1);
+  const stops = (g, k) => { for (const [t, h] of WEDGE_PROFILE) g.addColorStop(t, 'rgb(' + Math.round(255 * Math.min(1, amp * h * k)) + ',' + Math.round(255 * h * k) + ',0)'); };
+  ctx.save();
+  trace(ctx, f.d, true); ctx.clip();
+  ctx.globalCompositeOperation = 'lighten';
+  for (let i = 0; i < ridge.length - 1; i++) {
+    const [ax, az, ae, nx, nz] = ridge[i], [bx, bz, be] = ridge[i + 1], k = (ae + be) / 2;
+    if (k < .015) continue;
+    const tl = Math.hypot(bx - ax, bz - az) || 1, ex = (bx - ax) / tl * 1.2, ez = (bz - az) / tl * 1.2;
+    const g = ctx.createLinearGradient((ax + bx) / 2, (az + bz) / 2, (ax + bx) / 2 + nx * depth, (az + bz) / 2 + nz * depth);
+    stops(g, k); ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(ax - ex, az - ez); ctx.lineTo(bx + ex, bz + ez); ctx.lineTo(bx + ex + nx * depth, bz + ez + nz * depth); ctx.lineTo(ax - ex + nx * depth, az - ez + nz * depth); ctx.closePath(); ctx.fill();
+    if (i === 0) continue;
+    // The corner at this vertex: a fan between the two segments' normals, so the wedge has no gap where the ridge turns.
+    const [px, pz, pe, mx, mz] = ridge[i - 1];
+    if (mx * nx + mz * nz > .995) continue;
+    const r = ctx.createRadialGradient(ax, az, 0, ax, az, depth);
+    stops(r, Math.max(ae, pe)); ctx.fillStyle = r;
+    ctx.beginPath(); ctx.moveTo(ax, az); ctx.lineTo(ax + mx * depth, az + mz * depth); ctx.lineTo(ax + (mx + nx) * depth * .52, az + (mz + nz) * depth * .52); ctx.lineTo(ax + nx * depth, az + nz * depth); ctx.closePath(); ctx.fill();
+    void px; void pz;
+  }
+  ctx.restore();
+}
+
+/**
+ * A string of cut gold squares laid along a path (the suhama's edge, a bank's ridge): into the B channel at full strength,
+ * where a rim line (amp .5) never reaches. Every so often one is left out, as a string is laid by hand.
+ */
+function paintKiriString(ctx, strings) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighten'; ctx.fillStyle = 'rgb(0,0,255)';
+  for (const {path, pitch, half} of strings) {
+    let at = 0, k = 0, carried = 0;
+    for (let i = 0; i < path.length - 1; i++) {
+      const [ax, az] = path[i], [bx, bz] = path[i + 1], len = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bz - az, bx - ax);
+      for (; at <= carried + len; at += pitch, k++) {
+        if ((k * 7 + 3) % 11 === 0) continue;
+        const t = (at - carried) / len;
+        ctx.save(); ctx.translate(ax + (bx - ax) * t, az + (bz - az) * t); ctx.rotate(ang);
+        ctx.fillRect(-half, -half, half * 2, half * 2); ctx.restore();
+      }
+      carried += len;
+    }
+  }
+  ctx.restore();
+}
 
 /** Paint one layer of the plate into ctx (w × h pixels). Layer 0 is opaque: it is the ground itself. */
 export function paintLayer(ctx, w, h, parts, layer) {
@@ -22,9 +79,11 @@ export function paintLayer(ctx, w, h, parts, layer) {
     if (p.layer !== layer || p.limbs || p.mesh) continue;
     ctx.globalCompositeOperation = 'source-over';
     for (const f of p.fills) {
+      if (f.wedge && layer === 0) { paintWedge(ctx, f); if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
       // A standing part is a pillow: its whole silhouette feeds the blurred channel, which becomes its dome.
       ctx.fillStyle = `rgb(${layer > 0 ? 255 : Math.round(f.soft * 255)},${Math.round(f.crisp * 255)},0)`;
       trace(ctx, f.d, true); ctx.fill();
+      if (f.kiri && layer === 0) paintKiriString(ctx, f.kiri);
     }
     // Lines add to the blue channel only, so they sit on whatever relief is already there.
     ctx.globalCompositeOperation = 'lighter';

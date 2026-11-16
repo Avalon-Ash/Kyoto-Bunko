@@ -6,6 +6,8 @@ import {KIND, MAT, PLATE, roof, storey, kakezukuri, stoneSteps, stream, shell, s
 import {densityFromMask} from '../src/studies/toji/plate/bake.js';
 import {buildBox} from '../src/studies/toji/plate/box.js';
 
+// Wards whose ground is already doha.js pieces (suhama tongues, banks) and not hill() or gardenGround(); more join as the other wards are redone.
+const dohaWards = new Set(['W_NAKAGYO', 'W_FUSHIMI']);
 const p3bWards = ['W_KITA', 'W_UKYO', 'W_NISHIKYO', 'W_SAKYO', 'W_KAMIGYO', 'W_SHIMOGYO', 'W_NAKAGYO', 'W_YAMASHINA'];
 const inside = ([x, z], polygon) => {
   let hit = false;
@@ -50,15 +52,17 @@ test('P3b ground fields reserve about a third of the lid and all eight wards are
     assert.ok(hasPlate(ward), `${ward} has its own plate`);
     const parts = PLATES[ward](), fills = parts.flatMap(p => p.fills.map(f => f.d));
     const mist = parts.filter(p => p.kind === KIND.mist).length;
-    const rocks = parts.filter(p => p.kind === KIND.rock).length;
+    // doha pilot wards (docs/plans/2026-11-16-doha.md): rocks stand on the pieces, two to five to a cluster; the rest of the lid is bare nashiji by doha.js's own fence.
+    const rocks = parts.filter(p => p.kind === KIND.rock && !(p.id === 'ishigaki')).length, doha = dohaWards.has(ward);
     assert.ok(mist >= 2 && mist <= 4, `${ward} has two to four mist bands`);
-    assert.ok(rocks >= 1 && rocks <= 3, `${ward} has one to three rocks`);
+    assert.ok(doha ? rocks >= 4 && rocks <= 20 : rocks >= 1 && rocks <= 3, `${ward} has ${doha ? 'four to twenty' : 'one to three'} rocks`);
     // Sample the source silhouettes, not shadows or material brightness. Thin line work is not a ground field.
     let bare = 0, total = 0;
     for (let x = -356; x < 360; x += 8) for (let z = -226; z < 230; z += 8) {
       total++;
       if (!fills.some(p => inside([x, z], p))) bare++;
     }
+    if (doha) { assert.ok(bare / total >= .35 && bare / total <= .75, `${ward} keeps its bare ground (${(100 * bare / total).toFixed(1)}%)`); continue; }
     assert.ok(bare / total >= .26 && bare / total <= .46, `${ward} reserves ${(100 * bare / total).toFixed(1)}% of its source picture`);
   }
 });
@@ -467,7 +471,7 @@ test('preparePlate validates mesh/motionWith and preserves all 11 wards without 
 
   // Scope fence: part counts per ward. R5a/R5b added the attached scenes to every ward; patina P3b split the coral
   // leaves, the fire of the 大, the silver petals and the dew of shell into parts of their own (one part per material).
-  const expectedCounts = {W_MINAMI: 54, W_UKYO: 26, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 40, W_KITA: 30, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 42, W_HIGASHIYAMA: 28, W_SHIMOGYO: 36};
+  const expectedCounts = {W_MINAMI: 54, W_UKYO: 26, W_NISHIKYO: 34, W_YAMASHINA: 38, W_FUSHIMI: 54, W_KITA: 30, W_KAMIGYO: 42, W_SAKYO: 36, W_NAKAGYO: 57, W_HIGASHIYAMA: 28, W_SHIMOGYO: 36};
   for (const [ward, build] of Object.entries(PLATES)) {
     const {parts, errors} = preparePlate(build());
     assert.deepEqual(errors, [], ward);
@@ -1472,4 +1476,36 @@ test('roof faces are gold powder; gold leaf stays on small parts and carries a g
   const stub = {mat: MAT.gold, vertices: [0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 3, 0, 2, 0, 1, 0, 0, 0]};
   assert.equal(grainUv(stub), stub, 'a short gold chunk keeps its uv');
   assert.ok(meshesByMaterial(parts).has(MAT.roofPowder));
+});
+
+// Doha (docs/plans/2026-11-16-doha.md §4.3): the pieces of the two pilot wards stay inside the plan's numbers. Range fences; they move when the plan does.
+import {measureDoha} from './plate-doha-measure.mjs';
+import {bankShape, tongueShape} from '../src/studies/toji/plate/doha.js';
+for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition numbers`, () => {
+  const m = measureDoha(ward);
+  assert.ok(m.clusters >= 2 && m.clusters <= 4, `clusters ${m.clusters}`);
+  for (const [c, n] of Object.entries(m.piecesPerCluster)) assert.ok(n >= 3 && n <= 7, `${c}: ${n} pieces`);
+  for (const [c, n] of Object.entries(m.rocksPerCluster)) assert.ok(n >= 2 && n <= 5, `${c}: ${n} rocks`);
+  assert.ok(m.largestPiece <= 4, `largest piece ${m.largestPiece}%`);
+  assert.ok(m.piecesAndRocksShare >= 20 && m.piecesAndRocksShare <= 35, `taken ${m.piecesAndRocksShare}%`);
+  assert.ok(m.bareShare >= 35 && m.bareConnectedShare >= 90, `bare ${m.bareShare}%, connected ${m.bareConnectedShare}%`);
+  assert.ok(m.silverPieces >= 33.3, `silver ${m.silverPieces}%`);
+  assert.ok(m.longestStraight <= 30, `straight run ${m.longestStraight}`);
+  const {parts} = preparePlate(PLATES[ward]());
+  for (const id of ['palace-ground', 'inari-yama', 'ridge-far']) assert.ok(!parts.some(p => p.id === id), `${ward} no longer has ${id}`);
+});
+test('doha: the other wards have not moved to doha pieces yet', () => {
+  const doha = new Set([MAT.bankGold, MAT.bankSilver, MAT.sandGold, MAT.sandSilver]);
+  for (const ward of Object.keys(PLATES).filter(w => !dohaWards.has(w))) assert.ok(!preparePlate(PLATES[ward]()).parts.some(p => doha.has(p.mat)), `${ward} is not redone yet`);
+});
+test('doha: a bank sinks at both ends and slopes down; a tongue has no straight run past 30', () => {
+  for (let seed = 1; seed <= 12; seed++) {
+    const b = bankShape(0, 0, 120, 40, .2 * seed - 1, seed), n = b.ridge.length;
+    assert.ok(b.ridge[0][2] < .02 && b.ridge[n - 1][2] < .02, 'ridge strength is 0 at both ends');
+    assert.ok(b.ridge.some(q => q[2] > .6), 'and strong in the middle');
+    const down = [-Math.sin(.2 * seed - 1), Math.cos(.2 * seed - 1)];
+    assert.ok(b.ridge.every(q => q[3] * down[0] + q[4] * down[1] >= 0), 'normals point down the slope');
+    const t = tongueShape(0, 0, 110, 40, .3 * seed, seed);
+    assert.ok(t.outline.length > 40);
+  }
 });

@@ -24,6 +24,12 @@ export const MATERIALS = {
   // Roof faces: gold powder under clear lacquer (takamakie). Broad, soft sheen rather than a mirror; the grain and the
   // unevenness come from the shader (PART_POWDER_GLSL), not from a normal map.
   [MAT.roofPowder]: {name: 'roofPowder', aged: {color: '#b99d5f', roughness: .68, clearcoat: 0, envMapIntensity: .5}, color: '#c4973f', paint: '#d6a640', metalness: .92, roughness: .6, clearcoat: .06, clearcoatRoughness: .5, envMapIntensity: .7, flake: 0},
+  // Doha: the ground pieces are painted into the lid by the ground shader (the mat id is read from the ident map), not meshed; these
+  // entries give each a plain stand-in colour for the glb export and the material table's checks.
+  [MAT.bankGold]: {name: 'bankGold', color: '#c29a46', paint: '#b8903a', metalness: .85, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5},
+  [MAT.bankSilver]: {name: 'bankSilver', color: '#9c9a92', paint: '#8e8c85', metalness: .85, roughness: .4, clearcoat: .3, clearcoatRoughness: .1, flake: .3},
+  [MAT.sandGold]: {name: 'sandGold', color: '#d6ad55', paint: '#cfa44a', metalness: .9, roughness: .4, clearcoat: .4, clearcoatRoughness: .1, flake: .3},
+  [MAT.sandSilver]: {name: 'sandSilver', color: '#a9a8a0', paint: '#9b9a93', metalness: .85, roughness: .35, clearcoat: .3, clearcoatRoughness: .1, flake: .3},
   [MAT.silver]: {name: 'silver', aged: {color: '#d9d6cc', roughness: .27, metalness: .7, clearcoat: .2, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#e6e8e4', paint: '#d8dad6', metalness: 1, roughness: .2, clearcoat: .3, clearcoatRoughness: .08, flake: .3},
   [MAT.kirikane]: {name: 'kirikane', aged: {color: '#dcc892', roughness: .52}, color: '#f2c65e', paint: '#e0b650', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12},
   [MAT.kirigin]: {name: 'kirigin', aged: {color: '#d0ccc1', roughness: .45, metalness: .66, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#d8dbd6', paint: '#bfc0b8', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12},
@@ -703,6 +709,26 @@ vec3 mGyobuShade(vec2 id,out vec3 glint){
   glint=foil*(M_KEY*.45*pow(max(dot(nf,mHk),0.),70.)*mKeyC+M_POOL*mAtt*pow(max(dot(nf,mHp),0.),70.)*mPoolC)*mSh*2.*mix(1.,.4,uAge);
   return col;
 }
+// Silver hirame (the silver sand and the silver banks): coarse silver flakes of two sizes lie close under the lacquer, each a
+// little brighter or darker than its neighbours. dS (0..1) is how thickly they lie; c is what they lie on.
+vec3 mHirame(vec3 c,vec2 kp,float dS,float rise){
+    vec2 id1,c1,id2,c2;
+    float b1=mVoro(M_R3*kp/2.3,id1,c1),b2=mVoro(M_R1*kp/1.25+7.3,id2,c2);
+    float a1=max(uPx,.05)*.75/2.3,a2=max(uPx,.05)*.75/1.25;
+    float g1=.09+(1.-dS)*.40+.04*mHash(id1+6.1),g2=.10+(1.-dS)*.40+.04*mHash(id2+6.1);
+    float v1=step(mHash(id1+2.9),min(dS*1.2,1.))*smoothstep(g1-a1,g1+a1,b1+(mVnoise(kp*.9)-.5)*.1);
+    float v2=step(mHash(id2+2.9),min(dS*1.2,1.))*smoothstep(g2-a2,g2+a2,b2+(mVnoise(kp*1.3+4.)-.5)*.1);
+    float cv=max(v1,v2*(1.-v1)),pick=v1>.5?1.:0.;
+    vec2 fid=pick>.5?id1:id2;
+    float fh=mHash(fid+8.8);vec2 fr=mHash2(fid+3.3);
+    vec3 fs0=mAgedSilver(M_SILVER*1.1,kp,.3)*(1.-.12*uAge*step(.86,mHash(fid+1.7)));
+    vec3 sc=mMetal(kp,fs0,rise)*(.98+.40*fh);
+    vec3 snf=normalize(mN+vec3(fr.x-.5,0.,fr.y-.5)*.3);
+    sc+=mix(fs0,vec3(1.),.4)*(M_KEY*.5*pow(max(dot(snf,mHk),0.),48.)*mKeyC+M_POOL*mAtt*pow(max(dot(snf,mHp),0.),48.)*mPoolC)*mSh*mix(1.,.4,uAge);
+    // Between the flakes the ground is the same silver, a shade down, so the grain is in the flakes and not in dark joints.
+    c=mix(c,mMetal(kp,mAgedSilver(M_SILVER*.85,kp,.3),rise)*1.12,dS*.92);
+    return mix(c,sc,cv);
+}
 vec4 mFinish(vec3 c,float a){
   c*=1.25;float l=max(dot(c,vec3(.3,.55,.15)),1e-4),t=l/(1.+l*.42);
   c=mix(c*(t/l),vec3(t),smoothstep(.9,2.6,l)*.55);c=min(c,vec3(1.));
@@ -718,6 +744,8 @@ uniform float uDensView, uDensMean;
 // Where things stand they shut out the room: the lid gets less of the sky's light there (M_OCC_AMB) and a little
 // less of everything else (M_OCC_ALL). It is light withheld, never a colour laid on, and it fades out with no edge.
 const float M_OCC_AMB=.85, M_OCC_ALL=.16;
+// Banks (doha.js): how steeply the wedge's height (the G channel, 0..1) tilts the surface's normal, in the same units as cH below.
+const float M_BANK_CH=15.;
 const float M_DENS_MORE=${DENSITY.more.toFixed(3)}, M_DENS_LESS=${DENSITY.less.toFixed(3)};
 varying vec2 vKyotoPlate;
 varying vec3 vKyotoWorld, vKyotoNormal, vKyotoTanX, vKyotoTanZ;
@@ -741,7 +769,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   ivec2 im=mIdent0(kp);int id=im.x,mat=im.y;
   float rise=texelFetch(uState,ivec2(id,0),0).z,glow=texelFetch(uState,ivec2(id,0),0).w;
   vec4 fine=texture(uFine0,mPuv(kp));float hs=texture(uSoft0,mPuv(kp)).r;
-  float eS=3.,sH=M_SWELL*mix(.3,1.,rise),cH=2.4,lH=.7,eC=max(uPx*.9,.55);
+  float eS=3.,sH=M_SWELL*mix(.3,1.,rise),cH=(mat==19||mat==20)?M_BANK_CH:2.4,lH=.7,eC=max(uPx*.9,.55);
   vec4 st=vec4(texture(uSoft0,mPuv(kp+vec2(eS,0.))).r,texture(uSoft0,mPuv(kp-vec2(eS,0.))).r,
                texture(uSoft0,mPuv(kp+vec2(0.,eS))).r,texture(uSoft0,mPuv(kp-vec2(0.,eS))).r);
   vec2 gs=vec2(st.x-st.y,st.z-st.w)/(2.*eS)*sH;
@@ -768,7 +796,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   mSetLight(normalize(normalize(vKyotoNormal)-grad.x*vKyotoTanX-grad.y*vKyotoTanZ),vKyotoWorld);
   float line=fine.b;vec3 L=mLight();
   float w=smoothstep(.02,.34,hs);
-  float dens=.82+.22*mVnoise(kp*.02),kAmt=0.,wN=0.,wM=0.,wS=0.,bigD=0.,bigCell=6.6,bigSq=0.,kiriV=0.;
+  float dens=.82+.22*mVnoise(kp*.02),kAmt=0.,wN=0.,wM=0.,wS=0.,bigD=0.,bigCell=6.6,bigSq=0.,kiriV=0.,kiriB=0.;
   vec3 tint=M_GOLD,f0=M_GOLD,c=vec3(0.);
   // A flat inlay (cut foil, sheet, coral) is exactly its own outline: the plain ground runs right up to its edge.
   float inlay=clamp((fine.g-.5)/max(fwidth(fine.g),.004)+.5,0.,1.);
@@ -793,6 +821,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(mat==10){wS=inlay;wN=1.-inlay;f0=M_PALE;c=M_PALE*glow*.5*inlay;}
   else if(mat==11){wS=inlay;wN=1.-inlay;f0=mAgedSilver(M_SILVER,kp,.3);}
   else if(mat==13){wS=.82;wM=.18;f0=M_GOLD;tint=M_GOLD;}
+  else if(mat>=19&&mat<=22){wN=mat<21?1.:1.-inlay;}
   else if(mat==17){wN=1.-inlay;c=(M_CORAL*(.12+.70*L)+mCoat()*.55)*inlay;}
   else if(mat==14)c=M_LACQ*(.8+1.4*L)+mCoat()*2.2+M_GOLD*line*(.16+.80*L)*mix(.5,1.,rise);
   else c=mix(vec3(.10,.06,.025)*(.4+.5*L),vec3(1.,.62,.22)*1.15,glow)+M_LACQ;
@@ -802,6 +831,46 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     vec3 foil=mat==7?M_PALE:mAgedSilver(M_SILVER,kp,.6);bigX*=inlay;bigG*=inlay;
     c=mix(c,mSheet(foil)+foil*(.10+.25*L)+foil*glow*(.45+.45*sin(kp.x*.31+kp.y*.17-uTime*9.)),bigX)+foil*bigG*.6;
   }else c=mix(c,tint*vec3(1.,.80,.44)*(.07+.74*L),bigX*.92)+tint*M_AMBER*bigG;
+  if(mat>=19&&mat<=22){
+    // Doha. kiri: the string of cut gold squares (B channel at full strength; a rim line is half that).
+    float kiri=smoothstep(.86,.98,fine.b);
+    if(mat<=20){
+      // A bank. fine.g is its height: 1 at the ridge, falling to 0 where the wedge ends in the lacquer, so its colour fades out with it.
+      float Hh=fine.g,ha=smoothstep(.01,.2,Hh),crest=smoothstep(.58,.9,Hh);
+      const float eW=3.5;
+      vec2 gw=vec2(texture(uFine0,mPuv(kp+vec2(eW,0.))).g-texture(uFine0,mPuv(kp-vec2(eW,0.))).g,texture(uFine0,mPuv(kp+vec2(0.,eW))).g-texture(uFine0,mPuv(kp-vec2(0.,eW))).g);
+      float sl=smoothstep(.015,.25,length(gw)),face=-dot(gw/max(length(gw),1e-4),normalize(uKey.xz))*sl;
+      if(mat==19){
+        // Gold: dense powder at the crest, thinning down the wedge into the ground's own; large flakes of gyobu on it.
+        c=mix(c,mix(mNashiji(kp,mix(1.2,2.2,crest),mix(M_GOLD,M_PALE,.5)),mMetal(kp,mix(M_GOLD,M_PALE,.5+.3*crest),max(rise,.75)),.55)*(1.05+.2*crest),ha*.92);
+        vec2 gid,gcen;float gbd=mVoro(M_R2*kp/M_GY_CELL,gid,gcen);
+        float hC=texture(uFine0,mPuv(transpose(M_R2)*(gcen*M_GY_CELL))).g;
+        float gcov=mGyobuCov(kp,gbd,gid,smoothstep(.01,.3,Hh),smoothstep(.01,.3,hC));
+        vec3 gg,gcol=mGyobuShade(gid,gg);
+        c=mix(c,gcol,gcov*ha)+gg*gcov*ha;
+        c=mix(c,mMetal(kp,mix(M_GOLD,M_PALE,.7),max(rise,.7)),crest*.5*ha);
+      }else{
+        // Silver: a sheet of sulphided silver over the wedge; it fades into the ground the same way.
+        c=mix(mHirame(c,kp,ha*.96,max(rise,.7)),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,.28*ha);
+      }
+      // The side turned from the light carries the sulphide (silver is the shade of a bank).
+      c=mix(c,mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,clamp(max(-face,0.)*1.3,0.,.75)*ha*(mat==19?1.:.6));
+      // Below the crest, away from the light, the powder lies deeper under the lacquer: a darker, redder gold.
+      if(mat==19)c*=1.-.34*clamp(max(-face,0.)*1.2,0.,1.)*ha;
+      kiriB=ha;
+    }else{
+      // A suhama tongue: a flat sheet inside its own outline (inlay), gold or silver; the plain ground runs up to its edge.
+      if(mat==21){
+        // Gold suhama: polished, finely raked sand; brighter and yellower than the ground it lies on.
+        float rake=.93+.07*sin(kp.y*2.1+mVnoise(kp*.06)*7.)*(.6+.4*mVnoise(kp*.4));
+        c=mix(c,mix(mNashiji(kp,2.7,mix(M_GOLD,M_PALE,.35)),mMetal(kp,M_GOLD,max(rise,.8)),.3)*vec3(1.3,1.18,.96)*rake,inlay);
+      }
+      else c=mix(c,mix(mHirame(mMetal(kp,mAgedSilver(mix(M_SILVER,M_OXID,.4),kp,.8),max(rise,.8))*.9,kp,.8,max(rise,.8)),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,.25),inlay);
+      kiriB=inlay;
+    }
+    c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.8))*mix(1.5,1.,uAge)+M_PALE*.12*kiri,kiri);
+    kiriV=kiri;
+  }
   if(kAmt>0.){
     // Halftone kirikane on banks: light-facing slopes and the rim of the bank get the big pieces.
     // Which way the bank faces the light, from the soft relief's slope: the lit face gets big pieces, the far face
@@ -836,22 +905,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     float inn=1.;
     for(int k=0;k<8;k++){float a=float(k)*.7854;vec2 dv=vec2(cos(a),sin(a));inn+=float(mIdent0(kp+dv*5.).x==id)+float(mIdent0(kp+dv*10.).x==id)+float(mIdent0(kp+dv*16.).x==id);}
     float dS=smoothstep(.45,.9,inn/25.+(mVnoise(kp*.25)-.5)*.16);
-    vec2 id1,c1,id2,c2;
-    float b1=mVoro(M_R3*kp/2.3,id1,c1),b2=mVoro(M_R1*kp/1.25+7.3,id2,c2);
-    float a1=max(uPx,.05)*.75/2.3,a2=max(uPx,.05)*.75/1.25;
-    float g1=.09+(1.-dS)*.40+.04*mHash(id1+6.1),g2=.10+(1.-dS)*.40+.04*mHash(id2+6.1);
-    float v1=step(mHash(id1+2.9),min(dS*1.2,1.))*smoothstep(g1-a1,g1+a1,b1+(mVnoise(kp*.9)-.5)*.1);
-    float v2=step(mHash(id2+2.9),min(dS*1.2,1.))*smoothstep(g2-a2,g2+a2,b2+(mVnoise(kp*1.3+4.)-.5)*.1);
-    float cv=max(v1,v2*(1.-v1)),pick=v1>.5?1.:0.;
-    vec2 fid=pick>.5?id1:id2;
-    float fh=mHash(fid+8.8);vec2 fr=mHash2(fid+3.3);
-    vec3 fs0=mAgedSilver(M_SILVER*1.1,kp,.3)*(1.-.12*uAge*step(.86,mHash(fid+1.7)));
-    vec3 sc=mMetal(kp,fs0,rise)*(.98+.40*fh);
-    vec3 snf=normalize(mN+vec3(fr.x-.5,0.,fr.y-.5)*.3);
-    sc+=mix(fs0,vec3(1.),.4)*(M_KEY*.5*pow(max(dot(snf,mHk),0.),48.)*mKeyC+M_POOL*mAtt*pow(max(dot(snf,mHp),0.),48.)*mPoolC)*mSh*mix(1.,.4,uAge);
-    // Between the flakes the ground is the same silver, a shade down, so the grain is in the flakes and not in dark joints.
-    c=mix(c,mMetal(kp,mAgedSilver(M_SILVER*.85,kp,.3),rise)*1.12,dS*.92);
-    c=mix(c,sc,cv);
+    c=mHirame(c,kp,dS,rise);
   }
   if(mat==9){
     vec2 r=mHash2(floor(kp/2.3));
@@ -885,7 +939,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(uDensView>1.5)c=mat==1?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
   else if(uDensView>.5)c=vec3(dField*.8);
   outgoingLight=mFinish(c,1.).rgb;
-  if(uDensView>3.5)outgoingLight=vec3(kiriV,0.,(mat>=2&&mat<=4)?1.-kiriV:0.); // dev: red = kirikane, blue = other hill ground (?dens=kiri)
+  if(uDensView>3.5)outgoingLight=vec3(kiriV,0.,(mat>=2&&mat<=4)?1.-kiriV:kiriB*(1.-kiriV)); // dev: red = kirikane, blue = other hill ground (?dens=kiri)
   diffuseColor.a=1.;
 }`;
 
