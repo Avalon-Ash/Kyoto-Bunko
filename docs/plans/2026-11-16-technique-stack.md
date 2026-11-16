@@ -1,6 +1,6 @@
 # 蒔繪技法的堆疊：大面積改刑部地、切金只做點睛、銀庭要有質地（開案書）
 
-日期：2026-11-16。狀態：**已派工（Sonnet 子代理，工作樹 `C:\Git\_wt_kyoto_clip`，分支 `agent/stack-1116`，base `5e6c89f`），等回報**。開案：Claude Fable 5.2（主席，不實作）。
+日期：2026-11-16。狀態：**T1–T3 做完並整合進 `claude/clip-1116`，尚未合併 `main`**。子代理的報告（切金佔比前後表、調子、效能、回退指南）在 [`agent-runs/2026-11-16-technique-stack.md`](../agent-runs/2026-11-16-technique-stack.md)。主席審查：看了中京高台與上京南庭的放大前後對照、十一區不放大的總覽，在主資料夾重跑四項驗收（lint exit 0；validate ERROR 0／WARN 0；test 129/129、17/17；build exit 0，`three-renderer` gzip 200.3 kB）。開案：Claude Fable 5.2（主席，不實作）。
 
 ## 1. 使用者的意見（2026-11-16，原話）
 

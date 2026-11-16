@@ -7,10 +7,10 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main` 在 `9a58516`（2026-11-16，使用者同意合併與 push，部署成功）：開案書 R0–R10、銀的補強、作舊與珊瑚都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/clip-1116`（從 `main` 開）：穿插修正已整合（樹躺著時逐點貼地，`5e6c89f`）。[技法堆疊](plans/2026-11-16-technique-stack.md)已派 Sonnet 子代理，在工作樹 `C:\Git\_wt_kyoto_clip`（分支 `agent/stack-1116`）實作。**尚未合併 `main`** |
+| 工作分支 | `claude/clip-1116`（從 `main` 開）：穿插修正（樹躺著時逐點貼地）與技法堆疊（大面積改刑部梨子地、切金成群點睛、銀庭改銀的平目地）都已整合。**尚未合併 `main`、尚未 push** |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
-| 子代理工作樹 | 放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除。本輪用過的兩個已移除；目前有哪些以 `git worktree list` 為準 |
+| 子代理工作樹 | 放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除；`node_modules` 用 junction 連到主資料夾（`cmd /c mklink /J`），**刪工作樹前先 `cmd /c rmdir` 拿掉 junction**，否則會刪到主資料夾的套件。目前有哪些以 `git worktree list` 為準 |
 | 遠端與部署 | GitHub repo `Avalon-Ash/Kyoto-Bunko`；GitHub Pages（`https://avalon-ash.github.io/Kyoto-Bunko/`）由 `.github/workflows/deploy.yml` 在 push `main` 時自動部署 |
 | 參考資源 | ThreeRT 原始碼與參考圖在 `C:\Git\_ext`（不在本 repo）；用法見 `MAKIE_THREERT_REFERENCE.md` |
 | 不提交 | `.claude/`、`.shots/`、`dist/`、`node_modules/`、驗收截圖與日誌 |
@@ -31,7 +31,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 |---|---|
 | 資料 | **792 筆**，`validate_data.js --strict` ERROR 0／WARN 0。2026-11-16 查完十一區所有食處（Tabelog）與「世界遺產」「國寶」標籤：退役 17 筆、改區 27 筆。「營業中」的依據是 Tabelog 英文版沒有閉店類標示，不是現場確認。寺社、商店等其他類型的事實查核還沒做 |
 | 首頁文庫 | 十一區文箱，每區一面蒔繪盤；單指盒面移光，長拖換函，雙指捏合／滾輪／快捷鍵放大（上限 3 倍），點蓋／Enter／空白鍵開蓋直入 `DetailView`；月光預設、閒置移光 |
-| 蒔繪盤 | **只有 three.js 一條管線**（`plate/three-renderer.js`＋`three-pack.js`）。舊的自寫 WebGL2 管線、2.5D 浮雕與 `?three=0` 已刪。狐、鳳凰、鶯、銀沙灘與向月台、石垣都是 three 網格，沒有平塗佔位。岩面是菱形切金（受光大而密、背光小而疏），銀岩是銀。地有疏密場（靠近物較密）。九區有依附小景（`plate/<區>.js` 裡帶 `on` 欄位的部件）。**銀的分工**（2026-11-16 對照德川美術館「初音蒔絵文台・硯箱（部分）」照片）：葉是金的樹，幹與枝是銀（背光氧化銀灰、受光淡銀、上面是切銀）；開銀花的櫻保留金幹；霞帶的金裡躺著細長的灰銀條。**作舊**（已上線）：總開關 `?age=0..1`（預設 .85，0 是全新）；地是深棕橙的梨子地、圖的金比地淡、岩與樹幹的陰面是硫化銀的暖深灰；部件腳邊只有光影（環境光遮蔽與投影），沒有畫上去的汙；粉的疏密過渡加強；銀、切銀、平文銀（砂、狐、花、腳印）保持淡；平嵌小物依輪廓裁切，邊界只留 0.5 單位（`reach: .5`），否則旁邊會多一圈材質；紅珊瑚（`MAT.coral`）用在楓葉、梅心、「大」字 |
+| 蒔繪盤 | **只有 three.js 一條管線**（`plate/three-renderer.js`＋`three-pack.js`）。舊的自寫 WebGL2 管線、2.5D 浮雕與 `?three=0` 已刪。狐、鳳凰、鶯、銀沙灘與向月台、石垣都是 three 網格，沒有平塗佔位。岩面是菱形切金（受光大而密、背光小而疏），銀岩是銀。地有疏密場（靠近物較密）。土坡、高台、庭的面是刑部梨子地（不規則的大金片，沒有格子），切金只在稜邊成群；上京南庭與左京銀沙灘是銀的平目地（`claude/clip-1116`，未上線）。九區有依附小景（`plate/<區>.js` 裡帶 `on` 欄位的部件）。**銀的分工**（2026-11-16 對照德川美術館「初音蒔絵文台・硯箱（部分）」照片）：葉是金的樹，幹與枝是銀（背光氧化銀灰、受光淡銀、上面是切銀）；開銀花的櫻保留金幹；霞帶的金裡躺著細長的灰銀條。**作舊**（已上線）：總開關 `?age=0..1`（預設 .85，0 是全新）；地是深棕橙的梨子地、圖的金比地淡、岩與樹幹的陰面是硫化銀的暖深灰；部件腳邊只有光影（環境光遮蔽與投影），沒有畫上去的汙；粉的疏密過渡加強；銀、切銀、平文銀（砂、狐、花、腳印）保持淡；平嵌小物依輪廓裁切，邊界只留 0.5 單位（`reach: .5`），否則旁邊會多一圈材質；紅珊瑚（`MAT.coral`）用在楓葉、梅心、「大」字 |
 | 降級 | 沒有 WebGL2、three 載入或啟動失敗、context 遺失、或網址加 `?plate=static` 時，顯示預渲染的靜態圖（`plate/static/` 22 張 webp，十一區 × 日夜），換函與開蓋照常，盒面不動。**盤面有改動就要重拍**：`node scripts/plate-fallback-shots.mjs`（dev server 在 3000） |
 | 全站 UI | 手機優先、深色預設；暖日／月光、語系、減少動態全站共用（色票唯一來源 `src/theme.css`）。卡片有傾斜與柔光（觸控只有按壓回饋）、篩選後新卡片淡入；30 張以上的列表分批渲染（`src/lib/batch-render.ts`） |
 | 背景 | すやり霞＋和紙＋金箔／銀塵、障子格光與卓面光澤（`backdrop.js`）；十一區各自的紋樣與一行短句（`ward-art.js`，2026-11-16 改寫為「地標＋該區另一個重點」） |
@@ -52,7 +52,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ## 4. 下一步
 
-1. **進行中**：[技法堆疊](plans/2026-11-16-technique-stack.md)（刑部地、切金點睛、銀庭質地）。子代理回報後主席審查、整合；合併 `main`、push 各自問使用者。穿插修正已整合：偵測腳本 `node scripts/plate-clip.mjs <out.json>`（dev server 要開）；沒有量的種類是樹 × 樹、霞的邊緣、同群組內的接合。
+1. **等使用者決定**：`claude/clip-1116` 合併進 `main`、push（各自分開問）。內容：穿插修正、技法堆疊。穿插偵測 `node scripts/plate-clip.mjs <out.json>`；切金佔比 `PLATE_KIRI=1 node scripts/plate-shot.mjs …`（都要 dev server）。沒有量的穿插種類：樹 × 樹、霞的邊緣、同群組內的接合。
 2. 地圖：使用者 2026-11-16 決定不做（現況夠用）。[備忘錄](plans/2026-11-16-r10-map-evaluation.md)留作紀錄。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
 4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核；各食處報告裡列的描述細節（米其林、創業年）；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
