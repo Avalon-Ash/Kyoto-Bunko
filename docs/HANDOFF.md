@@ -7,7 +7,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main` 在 `1b3db65`（2026-11-17，使用者同意合併與 push；GitHub Pages 部署成功，`gh run list` 確認）：開案書 R0–R10、銀的補強、作舊與珊瑚、穿插修正、技法堆疊、屋頂金粉、疊坡（遠山、岸、洲浜）、地與調子、包漿、九區重做都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/finish-1117`（從 `main` 開）：盤面修整 P1–P4 的程式、降級圖、開案書與這份交接，**尚未合併 `main`**（合併與 push 要分開問使用者）。本機還留著已併入 `main` 的 `claude/doha-1116`、`claude/roof-1116`、`claude/handoff-1116` 與 `agent/*`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
+| 工作分支 | `claude/finish-1117`（從 `main` 開）：盤面修整 P1–P5 的程式、降級圖、開案書與這份交接，**尚未合併 `main`**（合併與 push 要分開問使用者）。本機還留著已併入 `main` 的 `claude/doha-1116`、`claude/roof-1116`、`claude/handoff-1116` 與 `agent/*`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 現有一個：`C:\Git\_wt_kyoto_doha`（分支 `agent/next-1116`，等於 `1b3db65`，乾淨），可以直接重用：`git checkout -B agent/<主題> claude/finish-1117`。規矩：放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除；`node_modules` 用 junction 連到主資料夾（`cmd /c mklink /J`），**刪工作樹前先 `cmd /c rmdir` 拿掉 junction**，否則會刪到主資料夾的 `node_modules` |
@@ -38,25 +38,25 @@ npm run dev -- --host 127.0.0.1 --strictPort
 | 歲時記 | 只有[計畫](SEASONAL_PLAN.md)；首頁入口已移除 |
 | 文箱架構 | `study.js`（`mountBunko`：手勢、移光、縮放、換函、開蓋）、`renderer.js`（選 three 或靜態圖）、`plate/three-renderer.js`＋`three-pack.js`、`plate/static-plate.js`、`plate/parts.js`＋`vocab.js`＋`mat.js`＋`<區>.js`（構圖資料）、`plate/creature-mesh.js`／`rock-mesh.js`／`architecture-mesh.js` 等（網格）、`backdrop.js`＋`ward-art.js`（背景） |
 
-## 3. 最近一次驗收（2026-11-17，`main` `1b3db65`）
+## 3. 最近一次驗收（2026-11-17，`claude/finish-1117`）
 
 | 檢查 | 結果 |
 |---|---|
 | `npm run lint` | exit 0 |
 | `npx --no-install tsx validate_data.js --strict` | ERROR 0、WARN 0，792 筆 |
-| `npm test` | `scripts/*.test.mjs` 145/145、`src/lib/*.test.ts` 17/17 |
+| `npm test` | `scripts/*.test.mjs` 146/146、`src/lib/*.test.ts` 17/17 |
 | `npm run build` | exit 0 |
-| 穿插 | `node scripts/plate-clip.mjs <out.json>`：十一區 0（子代理量的） |
-| 盤面調子 | `PLATE_TONE=1 node scripts/plate-shot.mjs <outDir> <job…>`；各區數字在 [`agent-runs/2026-11-16-nine-wards.md`](agent-runs/2026-11-16-nine-wards.md) |
-| 部署 | GitHub Pages 對 `1b3db65` 的部署成功 |
+| 穿插 | `node scripts/plate-clip.mjs <out.json>`：十一區 0 |
+| 盤面調子 | `PLATE_TONE=1 node scripts/plate-shot.mjs <outDir> <job…>`；數字在 [`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md) §8–§11 |
+| 部署 | `main` 仍是 `1b3db65`（九區那一版）；`claude/finish-1117` 還沒合併，所以還沒部署 |
 
-主席在主資料夾重跑的是前四項；其餘是子代理報告的數字。截圖都是無頭 Chrome（桌機 GPU）拍的，放在 `.shots/`（不提交）；十一區日夜總覽是 `.shots/nine/overview-day.png`、`overview-night.png`。**11/16–17 上線的畫面使用者都還沒在實機（手機）上看過。**
+前四項是主席在主資料夾重跑的。截圖都是無頭 Chrome（桌機 GPU）拍的，放在 `.shots/`（不提交）；修整後的十一區日夜總覽是 `.shots/finish/FINAL-day.png`、`FINAL-night.png`。**11/16–17 的畫面使用者都還沒在實機（手機）上看過。**
 
 ## 4. 下一步
 
 ### 4.1 現在停在哪裡（2026-11-17）
 
-使用者說：「這版先合併推上去，因為今天一整天下來你自己都不滿意，先擬下一批計畫。視覺要不要你自己跳下來作？」已合併並 push；下一批寫成 [`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md)。**P1–P4 已由 Fable 主席自己做完**（岸與洲浜改成研出、遠山沿整條稜線淡出、霞改成金粉、岸與山面的金粉會閃、東山的山腰、左京的「大」、下京堂前的庭），在 `claude/finish-1117`，等使用者看（開案書 §8–§11）；P5（效能）派給 Sonnet 子代理。山腳暗三角的原因是山與岸底下的地沒有套用疏密場，不是烘焙的楔形。
+使用者說：「這版先合併推上去，因為今天一整天下來你自己都不滿意，先擬下一批計畫。視覺要不要你自己跳下來作？」已合併並 push；下一批寫成 [`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md)。**P1–P4 已由 Fable 主席自己做完**（岸與洲浜改成研出、遠山沿整條稜線淡出、霞改成金粉、岸與山面的金粉會閃、東山的山腰、左京的「大」、下京堂前的庭），在 `claude/finish-1117`，等使用者看（開案書 §8–§11）；P5（效能）由 Sonnet 子代理做完、已整合：烘焙時間各區降 16–27 ms，畫面沒有變（開案書 §12）。**P1–P5 都在 `claude/finish-1117`，等使用者看；要合併 `main` 與 push 請分開問。**山腳暗三角的原因是山與岸底下的地沒有套用疏密場，不是烘焙的楔形。
 
 **誰做定調的視覺：已定案。** 使用者要主席和「CODE合約總管」（另一個工作階段，管全域合約）討論，總管擬稿、使用者同意後，2026-11-17 改了全域 `~/.claude/CLAUDE.md`「跨模型派工」（主席讀檔核對過）。新增的「動手原則」不分 Fable 或 Opus：
 
@@ -73,7 +73,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 2. `git fetch --prune; git status -sb`，確認在 `claude/finish-1117`、`main` 是 `1b3db65` 或更新。
 3. 看參考圖與現況圖（都在本機 `.shots/`，不在 repo；雲端工作階段看不到）：`.shots/ref/user-hatsune-suzuribako-lid.png`、`shioyama-2.jpg`、`user-toyama-cup-a.png`、`hirasan-3.jpg`、`user-hatsune-three-grounds.png`；`.shots/nine/overview-day.png`、`overview-night.png`。
 4. 確認這個工作階段的模型與推理強度：定調（開案書 P1–P3）由主代理自己做，預設 Opus 5.5 medium（§4.1）。
-5. 做 P1（岸與洲浜）→ P2（山、青金、山腳）→ P3（霞），每一包先拍修前、一個 commit；三包做完停下來給使用者看。之後 P4（五區構圖修正）、P5（效能）派 Sonnet 子代理，兩者檔案不重疊，可以同時。
+5. P1–P5 都已做完（開案書 §8–§12）。先問使用者看過之後的意見；主席自己列的不滿意處在開案書 §11 末尾。
 6. 合併 `main`、push 分開問使用者。
 
 ### 4.3 盤面修整要解決的（開案書 §1、§3）
@@ -113,6 +113,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ### 4.6 其他待辦
 
+0. 建盤的另一半時間在建部件網格（`creature-mesh.js` 的 `makePillow`、`architecture-mesh.js` 的 `meshWall`、`meshRoof`、`meshSandCone`），可以再拿回幾十毫秒與換區的長幀（開案書 §12 的發現）；還沒做。
 1. 用 ThreeRT 算每區俯視遮蔽圖給地用（[研究](plans/2026-11-16-lighting-research.md) 實驗 2），還沒做。
 2. 使用者還沒在實機上看 11/16–17 上線的畫面。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
