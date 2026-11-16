@@ -12,7 +12,13 @@ const PIECE_MATS = new Set([MAT.bankGold, MAT.bankSilver, MAT.sandGold, MAT.sand
 export const visible = f => {
   // A shore that runs in under the water is measured by its outline as written (f.drawn): the stretch under the water is not seen.
   if (!f.wedge) return f.drawn ?? f.d;
-  // (A far head is still measured as the band its powder shows in, 0.62 of its depth below the ridge, not as its whole dome.)
+  // A far head is measured as the band its powder shows in: 0.62 of its depth below the ridge, and no lower than its dome's closing
+  // line (the chord of the ridge's two ends, set down by wedge.drop), below which it has no powder at all.
+  if (f.wedge.far) {
+    const {ridge, depth, drop = 0} = f.wedge, a = ridge[0], b = ridge[ridge.length - 1];
+    const chord = x => a[1] + (b[1] - a[1]) * (b[0] === a[0] ? 0 : (x - a[0]) / (b[0] - a[0])) + drop;
+    return [...ridge.map(p => [p[0], p[1]]), ...ridge.map(p => [p[0], Math.max(p[1], Math.min(p[1] + depth * .62, chord(p[0])))]).reverse()];
+  }
   const {ridge, depth, rear = 0} = f.wedge;
   return [...ridge.map(p => [p[0], p[1] - rear * Math.min(1, p[2] * 3)]), ...ridge.map(p => [p[0], p[1] + depth * (p[5] ?? 1) * .62]).reverse()];
 };

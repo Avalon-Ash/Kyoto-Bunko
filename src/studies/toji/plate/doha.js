@@ -21,7 +21,7 @@ const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a
 export const WEDGE_PROFILE = [[0, 1], [.06, .82], [.2, .55], [.45, .24], [.75, .06], [1, 0]];
 /** The fade of a far mountain's powder down from its ridge: [distance from the ridge / depth, density]. Long and even; it ends in the ground. */
 /** How far below the chord of its two ends a far head's dome is closed, as a share of its depth (mountain(); bake.js paintFar). */
-export const FAR_DROP = .12;
+export const FAR_DROP = .26;
 export const TOYAMA_PROFILE = [[0, 1], [.025, .74], [.07, .62], [.24, .49], [.5, .3], [.78, .12], [1, 0]];
 /** How tall a bank's crest stands in the soft (geometry) channel, as a share of the soft swell (three-pack.js K_SWELL). */
 export const BANK_SOFT = .3;

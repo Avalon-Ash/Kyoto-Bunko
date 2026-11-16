@@ -10,6 +10,10 @@ import {tongues} from './doha.js';
 /// The pieces, far to near (a later piece lies over an earlier one). Each outline is written as a few broad lobes (a big lobe 40-70 wide, a small
 /// one 15-25) with bays of different depths between, the lobes toward the halls on the back edge and toward the viewer on the front.
 const BANK = [
+  // the court under the two halls: its back edge is hidden behind their walls, its front thins toward the viewer, with one lobe
+  // reaching forward under the pair of lanterns. Why: the halls and the lanterns need ground to stand on; bare lacquer left them floating.
+  {p: [[-226, -50], [-196, -64], [-168, -66], [-140, -72], [-116, -60], [-90, -60], [-66, -50], [-40, -52], [-10, -46], [16, -50], [40, -66], [66, -70], [90, -82], [118, -90], [148, -80], [176, -84], [200, -82], [228, -62], [232, -44], [222, -22], [204, -6],
+    [196, 14], [190, 36], [178, 54], [150, 62], [122, 58], [100, 62], [78, 54], [66, 36], [58, 14], [40, -2], [10, -10], [-20, -4], [-54, -16], [-90, -20], [-130, -14], [-168, -26], [-204, -30], [-222, -40]], tone: 'gold', seed: 80},
   // left: under the great ginkgo and the fallen fans; its back edge has two big lobes and two small, its right end round and low
   {p: [[-336, 178], [-334, 160], [-322, 148], [-300, 145], [-282, 152], [-270, 157], [-262, 149], [-252, 150], [-246, 158], [-232, 143], [-214, 138], [-196, 144], [-186, 158], [-178, 152], [-160, 145],
     [-140, 148], [-126, 154], [-118, 150], [-106, 146], [-92, 152], [-84, 154], [-76, 162], [-68, 168], [-64, 176], [-62, 188], [-70, 204], [-84, 214], [-100, 220], [-122, 221], [-140, 216], [-150, 211], [-160, 218], [-180, 221],

@@ -535,7 +535,7 @@ export function farPagoda(id, x, zBase, h, {on} = {}) {
  * The character 大 laid out in small squares of cut gold on a slope (`on`), as the bonfire on the mountain is: a bar and
  * two legs, and one square in three of red coral, for the fire. cx, cz is the middle of the bar; size is the bar's full width.
  */
-export function daimonji(id, cx, cz, size, {on, tile = 3.8} = {}) {
+export function daimonji(id, cx, cz, size, {on, tile = 3.8, stretch = 1} = {}) {
   need('daimonji', id, on);
   const p = part(id, KIND.still, 0, MAT.kirikane, [cx, cz], {reach: .5, on}), h = size * .5, s = tile / 2;
   const fire = part(`${id}-fire`, KIND.still, 0, MAT.coral, [cx, cz], {reach: .5, on});
@@ -544,9 +544,11 @@ export function daimonji(id, cx, cz, size, {on, tile = 3.8} = {}) {
     const n = Math.max(2, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / (tile * 1.5)));
     for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); (count++ % 3 === 1 ? fire : p).fills.push({d: [[x - s, z - s], [x + s, z - s], [x + s, z + s], [x - s, z + s]], soft: 0, crisp: 1}); }
   };
+  // stretch draws the character taller up the plate: the lid is seen at a slant, which presses it flat.
+  const v = h * stretch;
   put([cx - h, cz], [cx + h, cz]);                    // the bar
-  put([cx, cz - h * .55], [cx - h * .95, cz + h]);    // the left-falling leg, begun above the bar
-  put([cx, cz + h * .05], [cx + h * .95, cz + h]);    // the right-falling leg
+  put([cx, cz - v * .55], [cx - h * .95, cz + v]);    // the left-falling leg, begun above the bar
+  put([cx, cz + v * .05], [cx + h * .95, cz + v]);    // the right-falling leg
   return [p, fire];
 }
 /**

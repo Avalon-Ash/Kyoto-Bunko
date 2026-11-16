@@ -21,6 +21,10 @@ const OTOWA = [
   {ridge: [[-136, -94], [-118, -124], [-94, -148], [-58, -154], [-16, -138], [22, -116], [50, -96]], depth: 92},
   // 4 (gold) in front on the right: a small head with its peak toward the right, the last of the range
   {ridge: [[226, -96], [238, -112], [258, -132], [290, -150], [324, -156], [346, -138], [356, -116]], depth: 72},
+  // 5 (gold) the flank the stage is thrust out of, the nearest: it rises from under the stage's left posts, passes behind the lattice and
+  // climbs to the right of the hall. Why: without it the stage stands on open ground; with it the posts stand on a falling slope
+  // and the deck hangs clear of it on the left (kake-zukuri).
+  {ridge: [[-28, 80], [4, 62], [48, 36], [96, 8], [146, -22], [200, -56], [252, -90], [300, -112], [336, -108], [360, -86], [370, -62]], depth: 96},
 ];
 // Nishiyama, at the far upper left: one pale head in the blue metal, a second behind it, a small gold one in front on the right.
 const WEST = [
