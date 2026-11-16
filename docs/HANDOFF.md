@@ -7,7 +7,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main` 在 `d958327`（2026-11-16，使用者同意合併與 push，部署成功）：開案書 R0–R10、銀的補強、作舊與珊瑚、穿插修正、技法堆疊都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/roof-1116`（從 `main` 開）：屋頂改成金粉、貼金透木紋，已整合，**尚未合併 `main`**。`claude/doha-1116`（疊在它上面）：疊坡的樣板（中京、伏見），**等使用者看圖，不要合併**。子代理工作樹 `C:\Git\_wt_kyoto_doha`（分支 `agent/doha-1116`）保留給修訂用 |
+| 工作分支 | 屋頂、疊坡、地與調子、包漿、九區都已合併進 `main` 並 push（`1b3db65`，2026-11-17）。`claude/finish-1117`（從 `main` 開）：只有下一批的開案書 [`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md)，尚未合併。子代理工作樹 `C:\Git\_wt_kyoto_doha` 保留 |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除；`node_modules` 用 junction 連到主資料夾（`cmd /c mklink /J`），**刪工作樹前先 `cmd /c rmdir` 拿掉 junction**，否則會刪到主資料夾的套件。目前有哪些以 `git worktree list` 為準 |
@@ -52,7 +52,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ## 4. 下一步
 
-1. **等使用者看圖**：`claude/doha-1116`（疊在 `claude/roof-1116` 上）包含屋頂、疊坡樣板（中京、伏見；[開案書](plans/2026-11-16-doha.md)）、地與調子（[開案書](plans/2026-11-16-ground-tone.md)）、包漿（[開案書](plans/2026-11-16-coat.md)：沉在漆裡／研出／在漆上三類，`?coat=0` 可關）。都還沒合併 `main`。岩目前是使用者指定的尖岩簇那一版，使用者說先不動；之後要修哪裡由使用者指著圖說（`2026-11-16-doha.md` §18）。九區的丘與台地正在拆（[開案書](plans/2026-11-16-nine-wards.md)）：九區都已整合，`vocab.js` 的 `hill()`、`gardenGround()` 已刪，等使用者看十一區總覽；修整那一包（岸像墊高的板、山面太透、青金山頭像月亮、山腳暗三角、霞、烘焙時間等，開案書 §9.2）還沒開。還沒做：用 ThreeRT 算俯視遮蔽圖（[研究](plans/2026-11-16-lighting-research.md) 實驗 2）。參考圖在 `.shots/ref/`（不提交）。
+1. **下一批：盤面修整**（[開案書](plans/2026-11-17-finish.md)，草案；等使用者決定定調由誰做）。已上線的（`main` `1b3db65`）包含屋頂、疊坡樣板（中京、伏見；[開案書](plans/2026-11-16-doha.md)）、地與調子（[開案書](plans/2026-11-16-ground-tone.md)）、包漿（[開案書](plans/2026-11-16-coat.md)：沉在漆裡／研出／在漆上三類，`?coat=0` 可關）。岩目前是使用者指定的尖岩簇那一版，使用者說先不動；之後要修哪裡由使用者指著圖說（`2026-11-16-doha.md` §18）。九區的丘與台地正在拆（[開案書](plans/2026-11-16-nine-wards.md)）：九區都已整合，`vocab.js` 的 `hill()`、`gardenGround()` 已刪，使用者 11/17 說先合併推上、再擬下一批；修整那一包（岸像墊高的板、山面太透、青金山頭像月亮、山腳暗三角、霞、烘焙時間等，九區開案書 §9.2）已寫成上面那份開案書。還沒做：用 ThreeRT 算俯視遮蔽圖（[研究](plans/2026-11-16-lighting-research.md) 實驗 2）。參考圖在 `.shots/ref/`（不提交）。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
 4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核；各食處報告裡列的描述細節（米其林、創業年）；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
 5. 已知的小缺口：鳳凰不放大時頭與喙偏小；細小的草、葦、「大」字不放大時幾乎看不到；`parts.js` 的 `act()` 會讓任何 `MAT.lamp` 的部件在游標停留時發橘光，所以小景不要用 `MAT.lamp`。
