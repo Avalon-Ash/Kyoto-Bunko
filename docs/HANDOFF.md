@@ -63,7 +63,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 ## 5. 不變條件（摘要；全文見 `AGENTS.md` §2）
 
 - 十一區、古地名與地標保留；蒔繪和區界是同一畫面，不恢復切換或下方清單當主要入口。
-- 設計語言一律依初音調度（`MAKIE_THREE_PLAN.md` §2a）。明暗差用光照與遮蔽做，不往表面混暗色；任何兩種表面相接都要有漸變（使用者 2026-11-16）。技法的堆疊照 [`plans/2026-11-16-technique-stack.md`](plans/2026-11-16-technique-stack.md) §2.3：大面積的土坡、高台、庭用刑部梨子地或平目地；切金、切銀只散在岩、樹幹與邊緣做點睛，不整面鋪（使用者 2026-11-16）。小景只能依附於物、逐區設計，不可隨機撒（`MAKIE_COMPOSITION_PLAN.md` §7）。立體做大形，特徵用平嵌的切金銀意象。
+- 設計語言一律依初音調度（`MAKIE_THREE_PLAN.md` §2a）。初音是技法與材質的定標，不是構圖的範本：它多是近景的物語畫，我們是地標建築加山水的遠景，構圖由主代理設計（使用者 2026-11-16）。明暗差用光照與遮蔽做，不往表面混暗色；任何兩種表面相接都要有漸變（使用者 2026-11-16）。技法的堆疊照 [`plans/2026-11-16-technique-stack.md`](plans/2026-11-16-technique-stack.md) §2.3：大面積的土坡、高台、庭用刑部梨子地或平目地；切金、切銀只散在岩、樹幹與邊緣做點睛，不整面鋪（使用者 2026-11-16）。小景只能依附於物、逐區設計，不可隨機撒（`MAKIE_COMPOSITION_PLAN.md` §7）。立體做大形，特徵用平嵌的切金銀意象。
 - `municipalityId: 'M_OTSU'` 是唯一授權過的受保護型別擴充；其餘受保護檔案仍不可改。
 - 所有導航共用 `buildGoogleMapsUrl`；地標座標只讀 `SPOT_POSITIONS`。
 - `theme.css`、`index.css`、`bunko-ui.css`、`ClusterMap.tsx`、`study.css`、`bunko.css`、`backdrop.js`、`ward-art.js` 屬同一視覺工作線，同時只能有一個寫入者。
