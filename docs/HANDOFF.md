@@ -7,7 +7,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main` 在 `9a58516`（2026-11-16，使用者同意合併與 push，部署成功）：開案書 R0–R10、銀的補強、作舊與珊瑚都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/clip-1116`（從 `main` 開）：穿插全面修正，[開案書](plans/2026-11-16-clip.md)已派 Sonnet 子代理，在工作樹 `C:\Git\_wt_kyoto_clip`（分支 `agent/clip-1116`）實作，交未提交的 diff；主席審完才併入。**尚未合併 `main`** |
+| 工作分支 | `claude/clip-1116`（從 `main` 開）：穿插修正已整合（樹躺著時逐點貼地，`5e6c89f`）。[技法堆疊](plans/2026-11-16-technique-stack.md)已派 Sonnet 子代理，在工作樹 `C:\Git\_wt_kyoto_clip`（分支 `agent/stack-1116`）實作。**尚未合併 `main`** |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除。本輪用過的兩個已移除；目前有哪些以 `git worktree list` 為準 |
@@ -52,8 +52,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ## 4. 下一步
 
-1. **進行中**：穿插全面修正（[開案書](plans/2026-11-16-clip.md)）。子代理回報後主席審查、整合；合併 `main`、push 各自問使用者。
-   之後接著派 [技法堆疊](plans/2026-11-16-technique-stack.md)（刑部地、切金點睛、銀庭質地）：同一組著色器檔，要等穿插修正整合完才能發。
+1. **進行中**：[技法堆疊](plans/2026-11-16-technique-stack.md)（刑部地、切金點睛、銀庭質地）。子代理回報後主席審查、整合；合併 `main`、push 各自問使用者。穿插修正已整合：偵測腳本 `node scripts/plate-clip.mjs <out.json>`（dev server 要開）；沒有量的種類是樹 × 樹、霞的邊緣、同群組內的接合。
 2. 地圖：使用者 2026-11-16 決定不做（現況夠用）。[備忘錄](plans/2026-11-16-r10-map-evaluation.md)留作紀錄。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
 4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核；各食處報告裡列的描述細節（米其林、創業年）；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
