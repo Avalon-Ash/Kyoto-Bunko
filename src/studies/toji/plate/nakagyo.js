@@ -22,53 +22,53 @@ const SHORE = [
   {p: [[356,170],[358,120],[357,60],[354,10],[346,-30],[334,-62],[322,-90],[302,-108],[276,-114],[252,-108],[238,-92],[234,-72],[238,-62],[246,-44],[252,-22],[250,0],[242,18],[236,30],[240,42],[250,58],[256,80],[254,100],[246,114],[242,120],[248,132],[262,146],[270,160],[274,172],[300,176],[330,176]], tone: 'gold', seed: 54, kiri: [.34, .5]},
 ];
 
-// Rocks (docs/plans/2026-11-16-doha.md §15.1): each against something it belongs to, on the shore. A cluster is one large crag of
-// three or four blocks (a ridge each: [dx, dz, height, radius]; a block listed later lies in front of the one before), one small
-// crag beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is
-// relative to (x, z). on: what it stands against; why: the reason it is there.
+// Rocks (docs/plans/2026-11-16-doha.md §15.1, §16): each against something it belongs to, on the shore. A cluster is one large crag of
+// four lobes (a hand-written outline each, [dx, dz] points round it; h its height; a lobe listed later lies over the one before), one
+// small lobe beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares.
+// Everything is relative to (x, z). on: what it stands against; why: the reason it is there.
 export const ROCKS = [
   // the east pine's roots: one tall crown leaning toward the trunk, a silver shoulder in front on the left, a gold step on the right
-  {id: 'east-pine', x: 257, z: -66, scale: 1.2,
+  {id: 'east-pine', x: 257, z: -66,
     crags: [
-      {seed: 5, blocks: [
-        {mat: 'olive', ridge: [[-10, -4, 13, 7], [-2, -8, 18, 8], [8, -6, 16, 7]], strata: {ang: -.7, period: 4.2, amp: 0.6, w: 1.1}},
-        {mat: 'silver', ridge: [[-14, 1, 9, 5.5], [-8, 4, 10, 5]], q: .85},
-        {mat: 'gold', ridge: [[6, 3, 8, 6], [13, 1, 11, 5]], strata: {ang: .8, period: 3.6, amp: 0.5, w: 1}},
-        {mat: 'olive', ridge: [[-4, 3, 8, 5], [1, 5, 6, 4]]},
-      ], grooves: [{p: [[3, -9], [4, -3], [3, 3]], w: 2.4, depth: 2.4}]},
-      {at: [-28, 5], blocks: [{mat: 'silver', ridge: [[0, 0, 6, 4], [4, -1, 5, 3.4]]}]},
+      {lobes: [
+        {mat: 'olive', h: 25, d: [[-14, -3], [-12, -10], [-8, -14], [-6, -21], [-1, -18], [3, -22], [7, -15], [10, -11], [14, -7], [11, -1], [5, -2], [-1, 1], [-8, 0]]},
+        {mat: 'silver', h: 10, d: [[-22, 2], [-20, -4], [-15, -6], [-12, -1], [-13, 5], [-18, 8], [-23, 7]]},
+        {mat: 'gold', h: 11, d: [[6, 0], [10, -4], [16, -5], [20, -1], [19, 5], [13, 8], [7, 6]]},
+        {mat: 'olive', h: 7, d: [[-9, 3], [-3, 1], [3, 2], [6, 6], [2, 10], [-5, 10], [-10, 8]]},
+      ]},
+      {at: [-32, 5], lobes: [{mat: 'silver', h: 4, d: [[-5, -1], [-2, -5], [3, -4], [5, 0], [2, 4], [-3, 4]]}, {mat: 'olive', h: 3, d: [[3, 2], [7, 0], [10, 3], [7, 6]]}]},
     ],
-    lines: [[[-2, -9], [-4, -4], [-6, 1], [-8, 5]], [[1, -8], [2, -3], [2, 3]], [[9, -7], [11, -2], [13, 2]], [[-13, 2], [-15, 5]], [[7, 4], [10, 6], [14, 5]]],
-    pebbles: [[-18, 9, 3.2, 1.9, .8, .2, 'silver'], [4, 11, 2.4, 1.6, .7, -.2, 'olive'], [19, 9, 3, 1.8, .7, .3, 'silver']],
+    lines: [[[-3, -17], [-5, -11], [-6, -5], [-7, 0]], [[3, -17], [4, -11], [4, -5]], [[11, -9], [12, -4], [12, 1]], [[-17, -1], [-18, 4]], [[8, 2], [13, 2], [17, 0]]],
+    pebbles: [[-18, 12, 3.2, 1.9, .8, .2, 'silver'], [4, 14, 2.4, 1.6, .7, -.2, 'olive'], [20, 11, 3, 1.8, .7, .3, 'silver']],
     on: 'the roots of the east pine, on the east arm of the shore', why: 'the pine grips a stone; the stone is what holds its foot'},
-  // the west pine: a tall thin leaning stone with a flat shoulder at its side
-  {id: 'west-pine', x: -279, z: 74, scale: 1.2,
+  // the west pine: a tall thin leaning stone with a broad shoulder at each side
+  {id: 'west-pine', x: -279, z: 74,
     crags: [
-      {seed: 9, blocks: [
-        {mat: 'gold', ridge: [[-4, -4, 14, 6], [2, -10, 21, 6], [4, -4, 16, 6]], strata: {ang: 1.3, period: 4, amp: 0.6, w: 1}},
-        {mat: 'silver', ridge: [[-10, 2, 9, 5], [-6, 6, 8, 5]], q: .85},
-        {mat: 'olive', ridge: [[8, 4, 10, 5], [12, 0, 8, 4]]},
-        {mat: 'olive', ridge: [[-3, 3, 10, 5], [3, 4, 11, 4.5]], strata: {ang: -.4, period: 3.5, amp: 0.45, w: 1}},
-      ], grooves: [{p: [[0, -12], [-1, -5], [-2, 1]], w: 2.2, depth: 2.6}]},
-      {at: [2, 15], blocks: [{mat: 'olive', ridge: [[0, 0, 4, 5], [5, 0, 5, 3.5]]}]},
+      {lobes: [
+        {mat: 'gold', h: 28, d: [[-6, -4], [-7, -12], [-4, -18], [-3, -26], [1, -22], [4, -27], [7, -19], [6, -11], [9, -6], [6, -1], [0, 0]]},
+        {mat: 'silver', h: 9, d: [[-19, 2], [-17, -5], [-12, -7], [-9, -2], [-10, 5], [-15, 8], [-20, 7]]},
+        {mat: 'olive', h: 9, d: [[6, 0], [11, -6], [17, -5], [18, 1], [14, 6], [8, 6]]},
+        {mat: 'olive', h: 11, d: [[-8, 2], [-2, -1], [5, 0], [8, 4], [4, 9], [-3, 10], [-9, 8]]},
+      ]},
+      {at: [2, 17], lobes: [{mat: 'olive', h: 3, d: [[-6, -3], [-2, -5], [4, -4], [7, 0], [2, 3], [-4, 2]]}]},
     ],
-    lines: [[[2, -11], [1, -6], [0, -1], [-2, 4]], [[4, -9], [6, -4], [8, 1]], [[-4, -6], [-7, -2], [-9, 2]], [[-10, 3], [-8, 7]], [[10, 2], [12, 6]]],
-    pebbles: [[-17, 8, 2.6, 1.6, .7, .3, 'silver'], [3, 12, 3.2, 1.8, .8, -.1, 'olive'], [-14, -2, 2, 1.4, .6, 0, 'silver'], [14, 11, 2.2, 1.5, .6, .2, 'silver']],
+    lines: [[[1, -23], [0, -17], [-1, -11], [-3, -5]], [[4, -22], [5, -15], [5, -9]], [[-15, -3], [-14, 2], [-14, 6]], [[11, -3], [14, 0], [15, 4]], [[-4, 2], [1, 4], [6, 4]]],
+    pebbles: [[-19, 12, 2.6, 1.6, .7, .3, 'silver'], [3, 14, 3.2, 1.8, .8, -.1, 'olive'], [-17, -4, 2, 1.4, .6, 0, 'silver'], [17, 11, 2.2, 1.5, .6, .2, 'silver']],
     on: 'the roots of the west pine, on the left lobe of the shore', why: 'a tall thin stone leaning at the pine, as a lantern stone stands by an old tree'},
-  // the foot of the cusped gate, its east side: two crowns, one of silver, bridged by a gold step
-  {id: 'karamon-foot', x: -86, z: 173, scale: 1.2,
+  // the foot of the cusped gate, its east side: two crowns, the right one silver and pierced, bridged by a gold step
+  {id: 'karamon-foot', x: -86, z: 173,
     crags: [
-      {seed: 13, blocks: [
-        {mat: 'olive', ridge: [[-14, -2, 13, 6], [-9, -6, 16, 7]], strata: {ang: .9, period: 4, amp: 0.6, w: 1}},
-        {mat: 'silver', ridge: [[8, -6, 17, 7], [13, -2, 12, 5]], q: .9},
-        {mat: 'gold', ridge: [[-4, 2, 8, 7], [4, 3, 9, 6]], strata: {ang: -.3, period: 3.6, amp: 0.45, w: 1}},
-        {mat: 'olive', ridge: [[-12, 4, 6, 4], [-6, 6, 7, 4]]},
-      ], grooves: [{p: [[-1, -9], [-1, -2], [0, 3]], w: 2.6, depth: 3}]},
-      {at: [-24, 6], blocks: [{mat: 'gold', ridge: [[0, 0, 5, 4], [3, 1, 6, 3.4]]}]},
+      {lobes: [
+        {mat: 'olive', h: 21, d: [[-24, -2], [-22, -9], [-17, -12], [-13, -18], [-8, -13], [-5, -9], [-4, -3], [-8, 1], [-16, 2]]},
+        {mat: 'silver', h: 25, d: [[3, -6], [5, -14], [10, -16], [14, -22], [19, -15], [20, -8], [23, -3], [18, 2], [10, 1]], holes: [[[11, -10], [14, -11], [15, -8], [12, -7]]]},
+        {mat: 'gold', h: 9, d: [[-12, 0], [-5, -4], [3, -3], [11, -1], [17, 3], [12, 8], [3, 9], [-6, 8], [-13, 6]]},
+        {mat: 'olive', h: 6, d: [[-24, 3], [-19, 1], [-15, 5], [-18, 10], [-24, 9]]},
+      ]},
+      {at: [-34, 7], lobes: [{mat: 'gold', h: 4, d: [[-4, -2], [0, -5], [4, -3], [4, 2], [0, 4], [-4, 3]]}]},
     ],
-    lines: [[[-9, -7], [-11, -2], [-13, 3]], [[-7, -4], [-4, 0], [-3, 4]], [[8, -7], [9, -2], [10, 3]], [[13, -3], [15, 1]], [[0, 3], [4, 5], [8, 4]]],
-    kiri: [{at: [-10, -3], cols: 3, rows: 2, turn: .25}],
-    pebbles: [[-14, 9, 3, 1.8, .8, .2, 'silver'], [8, 10, 3.4, 2, .8, -.2, 'olive'], [20, 5, 2.2, 1.5, .6, .3, 'silver']],
+    lines: [[[-14, -14], [-13, -8], [-14, -3]], [[-9, -10], [-8, -5]], [[11, -18], [10, -12], [11, -6], [12, -1]], [[18, -11], [20, -5]], [[-6, 2], [0, 3], [8, 3]]],
+    kiri: [{at: [-13, -6], cols: 3, rows: 2, turn: .25}],
+    pebbles: [[-14, 12, 3, 1.8, .8, .2, 'silver'], [8, 11, 3.4, 2, .8, -.2, 'olive'], [24, 7, 2.2, 1.5, .6, .3, 'silver']],
     on: 'the footing of the cusped gate, at its east side, on the bank', why: 'the gate foot is steadied by a stone, the way a garden gate has one'},
 ];
 
