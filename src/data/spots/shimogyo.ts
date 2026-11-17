@@ -55,7 +55,6 @@ export const SHIMOGYO_SCHEMA: SpotSchema[] = [
   { id: 'SG-019', wardId: 'W_SHIMOGYO', areaId: 'A01', typeId: 'T_MODERN', tagIds: ['現代', '打卡', '博物館'] },
   { id: 'SG-020', wardId: 'W_SHIMOGYO', areaId: 'A01', typeId: 'T_MODERN', tagIds: ['現代', '打卡', '博物館'] },
   { id: 'SG-021', wardId: 'W_SHIMOGYO', areaId: 'A01', typeId: 'T_TEMPLE', tagIds: ['神社', '隱密'] },
-  { id: 'SG-022', wardId: 'W_SHIMOGYO', areaId: 'A01', typeId: 'T_TEMPLE', tagIds: ['神社', '隱密'] },
   { id: 'SG-023', wardId: 'W_SHIMOGYO', areaId: 'A04', typeId: 'T_SHOP', tagIds: ['歷史'] },
   { id: 'SG-024', wardId: 'W_SHIMOGYO', areaId: 'A04', typeId: 'T_TEMPLE', tagIds: ['打卡', '歷史'] },
   { id: 'SG-025', wardId: 'W_SHIMOGYO', areaId: 'A04', typeId: 'T_MODERN', tagIds: ['打卡', '歷史'] },

@@ -70,7 +70,7 @@ export const NISHIKYO_SCHEMA: SpotSchema[] = [
   { id: 'NS-043', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_SHOP', tagIds: ['購物'] },
   { id: 'NS-054', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_MODERN', tagIds: ['打卡', '現代'] },
   { id: 'NS-065', wardId: 'W_NISHIKYO', areaId: 'A19', typeId: 'T_TEMPLE', municipalityId: 'M_NAGAOKAKYO', tagIds: ['神社', '賞花', '打卡'] },
-  { id: 'NS-066', wardId: 'W_NISHIKYO', areaId: 'A19', typeId: 'T_TEMPLE', tagIds: ['寺院', '楓葉', '打卡'] },
+  { id: 'NS-066', wardId: 'W_NISHIKYO', areaId: 'A19', typeId: 'T_TEMPLE', municipalityId: 'M_NAGAOKAKYO', tagIds: ['寺院', '楓葉', '打卡'] },
   { id: 'NS-068', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_FOOD', tagIds: ['正餐', '燒肉', '放題'] },
   { id: 'NS-081', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_FOOD', tagIds: ['正餐', '蕎麥', '名物', '打卡'], reservationRequired: true },
   { id: 'NS-082', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_FOOD', tagIds: ['正餐', '拉麵', '現代', '打卡'] },
