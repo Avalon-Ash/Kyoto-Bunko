@@ -455,3 +455,22 @@ npm run build
 
 - 第 0、1 步驗收通過即可合併與 push；第 2 步若觸發 §5 的停損，不推第 2 步，回報停在哪。
 - 這次合併會連帶帶上 `claude/data-1117` 上還沒進 `main` 的文件 commit（skill 的交接與備份、本提案）。
+
+### 8.6 停在這裡（2026-11-18 01:12，使用者：5 小時額度快到，一個段落先停）
+
+**已完成、已提交在 `claude/mat-table`（都沒有合併、沒有 push）**
+- `49978c8` 第 0 包的工具：`?clock=`（時鐘釘在渲染器裡）、`plate-shot.mjs` 的 `PLATE_CLOCK`（只拍盤、核對區與日夜、錯了重拍）與 `PLATE_VIEW`、`scripts/plate-diff.mjs`、`?matSwap=`、`scripts/plate-matrix.sh`；包漿視圖修好（不再是黑的：實拍右京，紅 9%、藍 7%，其餘是盤外的黑）。
+- 零雜訊已達成：固定時鐘下同一份程式拍兩次（南夜、需要換區的北日），`plate-diff` 0 個像素不同。只驗了這兩張，整組 22 張的重拍還沒做。
+- `71aecab` `.gitattributes`（shell 腳本維持 LF）。
+- lint exit 0；test 149/149、17/17（第 0 包之後）。
+
+**做到一半**
+- 「改前」的基準矩陣（`.shots/mat-table/before/`，不提交）：`base` 22 張、`coat0` 11 張拍完，`new` 拍到一半時停掉，其餘（`v4 v5 v6 swapA swapB lightoff mobile`）還沒拍；`before2`（驗零雜訊的重拍）還沒拍。基準對應的程式是 `49978c8`（之後沒有改 `src/`）。
+- 第 1 步的修改腳本寫好了、還沒套用：[`material-table/step1-patch.py`](material-table/step1-patch.py)（在 repo 根目錄執行 `python docs/plans/material-table/step1-patch.py`）。它做三件事：`mat.js` 加 `MAT_LOOK`；`three-pack.js` 由表生成常數陣列，並把 §8.3 列的判斷式換成讀表；`plate.test.mjs` 加窮舉檢查與圍欄。在暫存副本上試跑過：每個取代都對得上，地著色器的材質編號比較從 47 行 84 個降到 29 行 34 個（剩下的是第 2 步的配方）。還沒有在瀏覽器裡編譯過。
+
+**接下來的順序**
+1. 補拍基準：`bash scripts/plate-matrix.sh .shots/mat-table/before new v4 v5 v6 swapA swapB lightoff mobile`，再 `bash scripts/plate-matrix.sh .shots/mat-table/before2 base v6 swapA` 並用 `plate-diff` 確認三組都是 0。一輪約 20 分鐘，背景指令有 10 分鐘上限，要分批跑。拍的時候不改 `src/`。
+2. 套用第 1 步的腳本 → `npm test`（窮舉檢查要過）→ 拍 `.shots/mat-table/after1` → 每一組 `node scripts/plate-diff.mjs before/<組> after1/<組>` 都要 0 個像素不同（甲級）→ 提交。
+3. 第 2 步照 §8.4。做法的補充：配方函式的本體用腳本從現有程式**逐字切出來**（不重打），struct 的欄位用 `#define` 對回原本的區域變數名（函式定義完就 `#undef`），所以本體一字不改；struct 參數取名 `S`（丘那一段有區域變數叫 `g`）。`bigX`、`bigG` 的宣告要改成賦值。7、8 的大金片參數（.4、7、方片 1）一併進表。配方：`ground hill gyobu gold hirame foil aogai sheet ryusui kasumi lacquer coral bank suhama toyama lamp`；`bank`、`suhama`、`toyama`、`foil`、`sheet` 在函式裡讀 `tone` 欄分金銀。套用後先看 console 有沒有編譯錯誤、拍一區，再跑全矩陣（乙級）。
+4. 四項檢查、效能（375×812、`PLATE_CPU=4`）、降級圖；然後合併 `main` 並 push（使用者已同意：做完並驗收後推上去），確認部署。
+5. 最後寫圖資那條線的交接與計劃（使用者要另開工作階段做，不在這裡接）。
