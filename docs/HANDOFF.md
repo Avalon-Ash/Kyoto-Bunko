@@ -8,6 +8,7 @@
 |---|---|
 | 主線 | `main` 與 `origin/main` 在 `ee7c89d`（2026-11-17 下午，使用者同意合併與 push；GitHub Pages 部署成功，`gh run list` 確認；含建部件網格的效能與開案書 §13、§14 的修整）：開案書 R0–R10、銀的補強、作舊與珊瑚、穿插修正、技法堆疊、屋頂金粉、疊坡（遠山、岸、洲浜）、地與調子、包漿、九區重做、盤面修整 P1–P5 都已上線。實際 HEAD 以 `git log -1 main` 為準 |
 | 工作分支 | `claude/finish-1117`：P1–P5（`470293f`）與「建部件網格的效能」（`creature-mesh.js`、`architecture-mesh.js`、`rock-mesh.js`，報告 [`agent-runs/2026-11-17-mesh-perf.md`](agent-runs/2026-11-17-mesh-perf.md)）都已併入 `main`（`5c988da`）並上線。2026-11-17 下午主席自己做的修整（水面、夜間照明、金山與青金、霞、北的蘆葦、銀杏落葉、銀洲浜、盒內梨子地、卷軸；開案書 §13）也已併入 `main`（`bdde162`）。最後一批（盒內的紙、左京的白砂與「大」、岩的表面與形；開案書 §14）也已併入 `main`（`f3ffe45`）並上線。「岩頂依種子偏向一側」也已併入 `main`（`a919d81`）並上線。「漆經年變透」、年代參數 `?years=N` 與演示時會走的漆齡（開案書 §15–§15.2）也已併入 `main`（`d409aff`）並上線。分支上之後只多了更新這份交接的文件 commit；新的工作合併與 push 要使用者同意。本機還留著已併入 `main` 的 `claude/doha-1116`、`claude/roof-1116`、`claude/handoff-1116` 與 `agent/*`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
+| 資料分支 | `claude/data-1117`（自 `claude/finish-1117`，2026-11-17 晚）：拿掉 `getLatLng` 的假座標、YS-045 改商店類、食處描述只留有來源的說法（報告 [`agent-runs/2026-11-17-data-cleanup.md`](agent-runs/2026-11-17-data-cleanup.md)）。四項驗收過、地圖用瀏覽器面板開過中京區；**未合併 `main`、未 push** |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 現有一個：`C:\Git\_wt_kyoto_doha`（分支 `agent/perf-1117`，`73ef7d7`，盤的程式與 `470293f` 相同，乾淨），可以直接重用：`git checkout -B agent/<主題> claude/finish-1117`。規矩：放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除；`node_modules` 用 junction 連到主資料夾（`cmd /c mklink /J`），**刪工作樹前先 `cmd /c rmdir` 拿掉 junction**，否則會刪到主資料夾的 `node_modules` |
@@ -127,7 +128,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 1. 用 ThreeRT 算每區俯視遮蔽圖給地用（[研究](plans/2026-11-16-lighting-research.md) 實驗 2），還沒做。
 2. 使用者還沒在實機上看 11/16–17 上線的畫面。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。
-4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核；各食處報告裡列的描述細節（米其林、創業年）；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
+4. 還沒做的：歲時記（R11）；寺社與商店類的事實查核（建議順序：商店 82、ACG 34、寺社 218、其餘）；NK-084、NK-085 是哪一家分店；SK-100 中文名的「(Lyan)」；個別景點地圖（T4.3，[R10 備忘錄](plans/2026-11-16-r10-map-evaluation.md)）與 MapLibre（T4.4）等使用者決定，使用者 2026-11-17 說地圖最後也可能整個拔掉；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
 5. 已知的小缺口：鳳凰不放大時頭與喙偏小；細小的草、葦不放大時幾乎看不到；夜間濃梨子地與圖案差距小；`parts.js` 的 `act()` 會讓任何 `MAT.lamp` 的部件在游標停留時發橘光，所以小景不要用 `MAT.lamp`。
 
 使用者的常設決定：資料查不到就退役（ID 留給日後補資料）；「國寶」標籤含國寶建造物與國寶藏品。**合併 `main`、push、新增大型依賴仍要逐次問，合併與 push 分開問。**
