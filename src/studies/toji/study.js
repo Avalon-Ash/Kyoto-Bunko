@@ -38,6 +38,11 @@ let dragOffset=0,dragAnimation=null,kick=0;
 // Close-up: current and target zoom/pan; a pinch or pan writes both, the tick eases current toward target.
 let zoom=1,zoomTarget=1,panX=0,panY=0,panTX=0,panTY=0,pinch=null,lastTap=null;
 let lastActivity=-Infinity,idlePhase=0,autoPlaying=false;
+// The lid's age in years while it is being shown off (null: the age it was made with). The demonstration runs it once from a lid fresh
+// from the workshop to the Hatsune set's age (1639 to now); the unattended cabinet breathes between the two. A small label says the year.
+const HATSUNE_YEARS=new Date().getFullYear()-1639;let years=null;
+const era=document.createElement('p');era.className='era';era.setAttribute('aria-hidden','true');root.querySelector('.seal')?.after(era);
+const syncEra=()=>{era.hidden=years===null;if(years!==null)era.textContent=`${language==='ja'?'漆齢':'漆齡'} ${Math.round(years)} 年`;};syncEra();
 let projection,render,dispose,poke,paintGhost=null;
 const backdrop=mountBackdrop($('stage'),{night,motion:!still(),wardId:cabinet.id});
 // The cabinets either side of this one stand on the same track. Each is a still picture of that cabinet at rest,
@@ -191,6 +196,7 @@ function tick(time){
     if(t>7||still()){demoStart=0;hover=false;tx=ty=0;notify();}
     else{tx=Math.sin(t*1.25)*.9;ty=Math.cos(t*.9)*.7;addTrail(tx*.63,ty*.45,time);}
   }
+  years=demoStart?Math.min(1,(time-demoStart)/6500)*HATSUNE_YEARS:autoPlaying?HATSUNE_YEARS*(.5-.5*Math.cos(idlePhase*.16)):null;syncEra();
   bookProgress=progressToward(bookProgress,bookTarget,dt,still());
   if(bookProgress===1&&bookState==='opening'){bookState='unrolling';bookReadyAt=time+(still()?0:420);syncBook();}
   if(bookState==='unrolling'&&(time>=bookReadyAt||still()))enterReading();
@@ -429,7 +435,7 @@ const resize=new ResizeObserver(()=>{syncBackdrop();schedule();queueSnapshot();}
 function init(settings){
   const renderer=createRenderer(canvas,cabinet.id,()=>{if(!destroyed){$('loading').hidden=true;$('loading').dataset.kind='';queueSnapshot();schedule();}},{...settings,night});
   updateMesh=()=>renderer.setMesh(cabinet.id);setMeshRaw=id=>renderer.setMesh(id);rawDraw=frame=>renderer.draw(frame);queueSnapshot();
-  render=(time,moving)=>{projection=renderer.draw({time,moving,still:still(),flat,night,ground,lift,opening:bookProgress,px,py,zoom,panX,panY,trails,presence:hover||autoPlaying||demoStart?1:0,offset:dragOffset,kick});kick=0;};
+  render=(time,moving)=>{projection=renderer.draw({time,moving,still:still(),flat,night,ground,lift,opening:bookProgress,px,py,zoom,panX,panY,trails,presence:hover||autoPlaying||demoStart?1:0,offset:dragOffset,kick,years});kick=0;};
   paintGhost=(ghost,ward)=>renderer.paintNeighbour(ghost,ward,night);
   poke=renderer.poke;
   dispose=renderer.dispose;failed=false;{const pending=Boolean(renderer.loading());$('loading').hidden=!pending;$('loading').dataset.kind=pending?'plate':'';}canvas.dataset.renderer=renderer.mode();schedule();

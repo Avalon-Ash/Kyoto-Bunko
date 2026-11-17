@@ -902,6 +902,8 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     shared.uLamp.value.set(lampAt[0], lampAt[1], lampAt[2]);
     shared.uTime.value = (f.time / 1000) % 3600;
     shared.uNight.value = night ? 1 : 0;
+    // A frame may carry the lid's age in years (the demonstration runs it from new to the Hatsune set's age); without one, the age it was made with.
+    shared.uAge.value = f.years == null ? ageValue : ageFromYears(f.years);
     shared.uPresence.value = presence.x;
     shared.uPx.value = unitsPerPx;
     for (let i = 0; i < 20; i++) {

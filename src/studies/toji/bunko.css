@@ -20,6 +20,8 @@
 .bunko canvas[data-plate="true"] { filter:none; }
 .bunko .loading { position:absolute; inset:0; display:grid; place-content:center; background:var(--panel); padding:40px; text-align:center; line-height:2; }
 .bunko .loading[hidden] { display:none; }
+.bunko .era { position:absolute; left:28px; top:98px; margin:0; color:var(--entry-seal); font:12px/1.5 var(--bunko-title); letter-spacing:.14em; writing-mode:vertical-rl; pointer-events:none; opacity:.85; }
+.bunko .era[hidden] { display:none; }
 .bunko .seal { position:absolute; left:28px; top:26px; color:var(--entry-seal); border:1px solid var(--entry-seal); font:19px/1.3 var(--bunko-title); padding:5px; pointer-events:none; }
 .bunko .stage-caption { position:absolute; left:30px; bottom:24px; display:flex; flex-direction:column; gap:6px; pointer-events:none; color:var(--ink); }
 .bunko .stage-caption small { font-size:10px; letter-spacing:.12em; }
