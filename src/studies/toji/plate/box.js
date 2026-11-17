@@ -79,7 +79,12 @@ export function buildBox() {
       for (const [x, nx] of [[x0, -1], [x1, 1]]) { v([x, y, z], [nx, 0, 0], [0, 0], mat, 2); v(at(x, t)[0], [nx, 0, 0], [0, 0], mat, 2); v(at(x, s)[0], [nx, 0, 0], [0, 0], mat, 2); }
     }
   };
-  for (const z of [-135, 0, 135]) { cylinder(-88, 300, -70, z, 17, 23); cylinder(-104, 318, -70, z, 4.5, 24, 12); }
+  for (const z of [-135, 0, 135]) {
+    cylinder(-88, 300, -70, z, 17, 23); cylinder(-104, 318, -70, z, 4.5, 24, 12);
+    // Each roll is dressed as a handscroll is: a band of gold at either end of the paper, and a red cord tied round its middle.
+    cylinder(-88, -68, -70, z, 17.5, 24); cylinder(280, 300, -70, z, 17.5, 24);
+    cylinder(102, 107, -70, z, 17.9, 27);
+  }
   // Himo-kanagu: a domed seat and a ring on each side that faces the viewer. Local axes: u along the wall, w outward.
   for (const {anchor: [ax, , az], out: [ox, oz]} of FITTINGS) {
     const at = (u, vy, w) => [ax - oz * u + ox * (w - 4), vy, az + ox * u + oz * (w - 4)], dir = (u, vy, w) => normalize([-oz * u + ox * w, vy, ox * u + oz * w]);
