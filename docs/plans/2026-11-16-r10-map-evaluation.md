@@ -201,6 +201,7 @@ MapLibre 整套約 **461 kB**（主檔＋worker＋CSS；表內 kB 都是 1024 �
 
 - 純靜態自架圖資**可行**：Range 可用、全京都 z15 約 34 MB。要做就走 `protomaps-leaflet`（+36 kB），不走 MapLibre。
 - 但它只換掉「底圖從哪裡來、長什麼樣」；換來的是：不再依賴 OSM 官方圖磚伺服器、可以自訂日夜配色。代價是每次部署多 34 MB 的檔案、多一套樣式要維護。
+- **使用者決定（2026-11-17）：維持現狀**，不做 B-1、不導入 MapLibre，T4.3 也擱著。
 - 還沒驗證的：`.pmtiles` 在 Pages 上的 Content-Type 與壓縮；`protomaps-leaflet` 的日文標籤與字型；手機上 Canvas 畫向量圖磚的速度。這三項要做 B-1（獨立 demo 頁）才知道。
 
 ## 附錄：沒能查到或只有推測的項目
