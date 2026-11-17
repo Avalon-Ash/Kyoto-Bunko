@@ -113,9 +113,7 @@ export const HIGASHIYAMA_SCHEMA: SpotSchema[] = [
   { id: 'HY-092', wardId: 'W_HIGASHIYAMA', areaId: 'A07', typeId: 'T_FOOD', tagIds: ['正餐', '涮涮鍋', '壽喜燒', '放題'] },
   { id: 'HY-094', wardId: 'W_HIGASHIYAMA', areaId: 'A05', typeId: 'T_FOOD', tagIds: ['正餐', '燒肉', '名物'] },
   { id: 'HY-088', wardId: 'W_HIGASHIYAMA', areaId: 'A07', typeId: 'T_SHOP', tagIds: ['超市'] },
-  { id: 'HY-089', wardId: 'W_HIGASHIYAMA', areaId: 'A07', typeId: 'T_SHOP', tagIds: ['超市'] },
   { id: 'HY-096', wardId: 'W_HIGASHIYAMA', areaId: 'A07', typeId: 'T_TEMPLE', tagIds: ['寺院', '打卡', '展望'] },
   { id: 'HY-097', wardId: 'W_HIGASHIYAMA', areaId: 'A05', typeId: 'T_SHOP', tagIds: ['老舖', '名物', '打卡'] },
-  { id: 'HY-098', wardId: 'W_HIGASHIYAMA', areaId: 'A05', typeId: 'T_SHOP', tagIds: ['老舖', '名物'] },
   { id: 'HY-099', wardId: 'W_HIGASHIYAMA', areaId: 'A05', typeId: 'T_FOOD', tagIds: ['和菓子', '老舖', '名物'] },
 ];

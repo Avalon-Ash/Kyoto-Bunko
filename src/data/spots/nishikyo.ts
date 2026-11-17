@@ -70,7 +70,6 @@ export const NISHIKYO_SCHEMA: SpotSchema[] = [
   { id: 'NS-041', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_TEMPLE', tagIds: ['神社', '歷史'] },
   { id: 'NS-042', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_FOOD', tagIds: ['和菓子', '老舖', '名物'] },
   { id: 'NS-043', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_SHOP', tagIds: ['購物'] },
-  { id: 'NS-044', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_SHOP', tagIds: ['購物'] },
   { id: 'NS-054', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_MODERN', tagIds: ['打卡', '現代'] },
   { id: 'NS-065', wardId: 'W_NISHIKYO', areaId: 'A19', typeId: 'T_TEMPLE', tagIds: ['神社', '賞花', '打卡'] },
   { id: 'NS-066', wardId: 'W_NISHIKYO', areaId: 'A19', typeId: 'T_TEMPLE', tagIds: ['寺院', '楓葉', '打卡'] },
