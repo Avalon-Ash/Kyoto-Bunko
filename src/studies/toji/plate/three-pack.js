@@ -930,7 +930,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     else if(mat==2||mat==3||mat==4){mKS=1.-smoothstep(.01,.14,hs);mKT=1.-mKS;}
     else if(mat==19||mat==20||mat==23||mat==24){mKS=1.-smoothstep(.0,.3,fine.g);mKT=1.-mKS;}
     else if(mat==21){mKS=1.-smoothstep(.0,.35,fine.g);mKT=1.-mKS;}
-    else if(mat==22){mKS=1.-inlay;mKT=inlay;}
+    else if(mat==22){mKS=1.-smoothstep(.0,.35,fine.g);mKT=1.-mKS;}
     else if(mat==12){mFlat=1.;mKE=.3*smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.02,.06));mKT=1.-mKE;}
     else if(mat==5||mat==7||mat==8||mat==10||mat==11){mFlat=1.;float ke=smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.42,.58));mKE=ke*smoothstep(0.,.25,inlay);mKS=(1.-inlay)*(1.-mKE);mKT=inlay*(1.-ke);}
     else if(mat==9||mat==17){mKT=0.;mKS=0.;mKE=0.;}
@@ -951,7 +951,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   // further (M_AGE_BOKASHI times as strong at age 1): it is what joins a form to the ground it stands on.
   // (Under a bank, a gold suhama or a far mountain the ground is the plain ground itself: their powder is laid over it and thins into it,
   // so nothing marks where their outline runs.)
-  if(mat==1||mat==12||(mat>=19&&mat<=21)||mat==23||mat==24){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
+  if(mat==1||mat==12||(mat>=19&&mat<=22)||mat==23||mat==24){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
   else if(mat==2||mat==3){
     float cloud=mat==3?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
     // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
@@ -969,7 +969,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(mat==10){wS=inlay;wN=1.-inlay;f0=M_PALE;c=(M_PALE*glow*.5+mix(M_GOLD,M_PALE,.4)*(.10+.46*L))*inlay;} // gold sheet is polished: the brightest flat gold on the lid, brighter than any powder it lies on
   else if(mat==11){wS=inlay;wN=1.-inlay;f0=mAgedSilver(M_SILVER,kp,.3);}
   else if(mat==13){wS=.82;wM=.18;f0=M_GOLD;tint=M_GOLD;}
-  else if(mat>=19&&mat<=22){wN=mat<22?1.:1.-inlay;}
+  else if(mat>=19&&mat<=22){wN=1.;}
   else if(mat==23||mat==24){wN=1.;}
   else if(mat==17){wN=1.-inlay;c=(M_CORAL*(.12+.70*L)+mCoat()*.55)*inlay;}
   else if(mat==14)c=M_LACQ*(.8+1.4*L)+mCoat()*2.2+M_GOLD*line*(.16+.80*L)*mix(.5,1.,rise);
@@ -1024,8 +1024,14 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
         c=mix(c,mMetal(kp,mix(M_GOLD,M_PALE,.7),1.)*1.2,smoothstep(.1,.45,line)*.9);
         kiriB=a;
       }else{
-        c=mix(c,mix(mHirame(mMetal(kp,mAgedSilver(mix(M_SILVER,M_OXID,.4),kp,.8),max(rise,.8))*.9,kp,.8,max(rise,.8)),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,.25),inlay);
-        kiriB=inlay;
+        // Silver suhama, made the way the gold is: fine.g is how thick the powder lies, 1 along the drawn edge, thinning away from it into
+        // the ground's own sprinkle. Thick, it is a matt grey-white body with flat flakes in it; thin, single silver flakes on the lacquer.
+        float dn=fine.g,body=smoothstep(.3,.85,dn),a=smoothstep(.0,.1,dn);
+        vec3 sil=mAgedSilver(mix(M_SILVER,M_OXID,.4),kp,.8);
+        vec3 pw=mix(mNashiji(kp,mix(dens,2.6,pow(dn,1.3)),mix(tint,sil,.35+.5*a)),mix(mHirame(mMetal(kp,sil,max(rise,.8))*.9,kp,.8,max(rise,.8)),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,.25),.2+.7*body);
+        c=mix(c,pw,a);
+        c=mix(c,mMetal(kp,mix(M_SILVER,M_PALE,.25),1.)*1.1,smoothstep(.1,.45,line)*.8);
+        kiriB=a;
       }
     }
     c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.8))*mix(1.5,1.,uAge)+M_PALE*.12*kiri,kiri);

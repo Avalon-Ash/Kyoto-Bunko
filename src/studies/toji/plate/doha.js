@@ -117,11 +117,14 @@ export function tongues(id, pieces, all = {}) {
   pieces.forEach((piece, i) => {
     const q = {...all, ...piece}, s = geoms[i], tone = q.tone ?? 'gold';
     const p = out[tone] ??= part(`${id}-${tone}`, id, tone === 'silver' ? MAT.sandSilver : MAT.sandGold, centre, {reach: 1.6, order: tone === 'silver' ? 1 : 0});
-    let outline = s.outline, fade = tone === 'silver' ? null : tongueFade(outline, q);
-    if (fade && q.toward && (q.under ?? 16) > 0) {
+    // Silver is sprinkled and ground flush the way gold is (it used to be a cut sheet, and read as a grey slab lying on the lid). It does not
+    // run in under the water unless asked: a silver shore is the waterline itself, thinning inland.
+    const underBy = q.under ?? (tone === 'silver' ? 0 : 16);
+    let outline = s.outline, fade = tongueFade(outline, q);
+    if (fade && q.toward && underBy > 0) {
       // A shore that lies along water runs in under it: its water side is carried `under` units toward the water, so that the
       // waterline is the water's own outline (the pond or stream is listed after the shores) and no lobe of the shore shows in it.
-      const n = outline.length, pts = Array.isArray(q.toward[0]) ? q.toward : [q.toward], under = q.under ?? 16;
+      const n = outline.length, pts = Array.isArray(q.toward[0]) ? q.toward : [q.toward], under = underBy;
       outline = outline.map((pt, k) => {
         if (!fade.on[k]) return pt;
         let e = 1; while (e < 8 && fade.on[(k + e) % n] && fade.on[(k - e + n) % n]) e++;
