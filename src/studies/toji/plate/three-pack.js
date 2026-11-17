@@ -73,17 +73,31 @@ export function agedSpec(spec, age) {
 }
 
 /** The box has its own small material ids (see buildBox in box.js). 25 is the shadow underlay and is not drawn here. */
+/**
+ * The inside of the box and its tray (box ids 22, 28): plain nashiji, as the insides of the Hatsune boxes are: amber lacquer over an even
+ * scatter of gold flake, no picture. three.js has already lit the face (the lamp's glow, the shade under the rolls); that light is kept
+ * as the light on the flake, so the inside is not a flat brown.
+ */
+export const BOX_INNER_FRAG_GLSL = `
+{
+  mWake=0.;mSh=1.;mSetLight(normalize(vKyotoSideN),vKyotoSideW);
+  vec3 nn=abs(normalize(vKyotoSideN)),w=vKyotoSideW;
+  vec2 sp=nn.y>.6?w.xz:(nn.x>nn.z?w.zy:w.xy);
+  float lit=dot(outgoingLight,vec3(.3,.55,.15));
+  vec3 nj=mNashiji(sp,1.05,M_GOLD)*vec3(1.,.86,.62);
+  outgoingLight=mix(outgoingLight*.55,nj*(.5+2.3*lit),.8);
+}`;
 export const BOX_MATERIALS = {
   // Hatsune: the whole body is nashiji (amber lacquer over gold powder), not black lacquer (user decision, handoff §3).
   20: {name: 'side', color: '#a8722e', metalness: .72, roughness: .45, clearcoat: 1, clearcoatRoughness: .06, flake: 0, nashijiSide: true},
   // The lid's lip: gold, as on the Hatsune boxes (museum photos show no silver rim).
   21: {name: 'rim', aged: {color: '#ad9668', roughness: .46}, color: '#c39345', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .2},
-  22: {name: 'inner', color: '#8c6a2d', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5},
+  22: {name: 'inner', color: '#8c6a2d', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5, nashijiInner: true},
   23: {name: 'paper', color: '#cdbd98', metalness: 0, roughness: .9, clearcoat: 0, clearcoatRoughness: 0, flake: 0},
   24: {name: 'gold', aged: {color: '#c2aa76', roughness: .46}, color: '#d7a64a', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3},
   26: {name: 'edge', aged: {color: '#b39c6c', roughness: .46}, color: '#c99a42', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3},
   27: {name: 'cord', color: '#85100a', metalness: 0, roughness: .6, clearcoat: 0, clearcoatRoughness: 0, flake: 0},
-  28: {name: 'tray', color: '#b4843a', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5},
+  28: {name: 'tray', color: '#b4843a', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5, nashijiInner: true},
 };
 
 /** The lid's own ground (box ids 0): the picture is painted on it. */

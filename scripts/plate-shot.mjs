@@ -76,6 +76,11 @@ for (const job of jobs) {
   // PLATE_CPU=4 slows the page's CPU fourfold before PLATE_EVAL runs (for frame-time readings).
   if (process.env.PLATE_CPU) await send('Emulation.setCPUThrottlingRate', {rate: Number(process.env.PLATE_CPU)});
   if (process.env.PLATE_EVAL) console.log(name, 'eval', await evalJs(process.env.PLATE_EVAL));
+  // PLATE_EVAL_SHOT=1 takes a second picture of the whole viewport after PLATE_EVAL (the opened box, a dialog): <name>-after.png.
+  if (process.env.PLATE_EVAL && process.env.PLATE_EVAL_SHOT) {
+    const after = await send('Page.captureScreenshot', {format: 'png'});
+    writeFileSync(join(outDir, `${name}-after.png`), Buffer.from(after.result.data, 'base64'));
+  }
   if (process.env.PLATE_KIRI) {
     // Dev view 4 (?dens=kiri): kirikane pixels red, the rest of the bank ground (materials 2-4) blue, all else black. Prints red / (red + blue).
     const clip = {x: Math.max(0, r[0] + r[4]), y: Math.max(0, r[1] + r[5]), width: r[2], height: r[3], scale: 1};

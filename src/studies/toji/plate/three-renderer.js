@@ -24,7 +24,7 @@ import {
   mistGeometryData, PART_MOTION_GLSL, PART_LIGHT_GLSL, PART_POWDER_GLSL, PART_KIRIKANE_GLSL, BOX_MOTION_GLSL, BOX_GROUND_GLSL, BOX_GROUND_DEPTH_GLSL,
   TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, DENSITY, COAT, COAT_GLSL,
   MAKIE_GROUND_PARS_GLSL, MAKIE_GROUND_FRAG_GLSL, MAKIE_MIST_VERT_GLSL, MAKIE_MIST_FRAG_GLSL,
-  BOX_SIDE_VERT_GLSL, BOX_SIDE_PARS_GLSL, BOX_SIDE_FRAG_GLSL,
+  BOX_SIDE_VERT_GLSL, BOX_SIDE_PARS_GLSL, BOX_SIDE_FRAG_GLSL, BOX_INNER_FRAG_GLSL,
 } from './three-pack.js';
 
 const EYE = [430, 720, 920], TARGET = [0, 40, 0];
@@ -455,6 +455,19 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
         shader.fragmentShader = shader.fragmentShader
           .replace('#include <common>', `#include <common>\n${COAT_DEFINE}${BOX_SIDE_PARS_GLSL}`)
           .replace('#include <opaque_fragment>', `${BOX_SIDE_FRAG_GLSL}\n#include <opaque_fragment>`);
+      };
+    } else if (spec.nashijiInner) {
+      // The inside and the tray are plain nashiji over three.js's own lighting (three-pack BOX_INNER_FRAG_GLSL).
+      const hinge = boxMaterial.onBeforeCompile;
+      boxMaterial.customProgramCacheKey = () => `kyoto-box-inner-${spec.name}`;
+      boxMaterial.onBeforeCompile = shader => {
+        hinge(shader);
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <common>', `#include <common>\n${BOX_SIDE_VERT_GLSL}`)
+          .replace('vec3 transformed = kyotoP;', 'vec3 transformed = kyotoP; vKyotoSide = uv; vKyotoSideW = kyotoP; vKyotoSideN = objectNormal;');
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', `#include <common>\n${COAT_DEFINE}${BOX_SIDE_PARS_GLSL}`)
+          .replace('#include <opaque_fragment>', `${BOX_INNER_FRAG_GLSL}\n#include <opaque_fragment>`);
       };
     }
     boxGroup.add(mesh(buffers(slice.position, slice.normal, slice.uv, slice.part), boxMaterial, boxDepth));
