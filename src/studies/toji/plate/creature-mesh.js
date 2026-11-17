@@ -56,48 +56,109 @@ function earClip(poly) {
   return tris;
 }
 
+/**
+ * The polygon's edges laid out flat for distance queries: per edge its start, direction, squared length and bounding box.
+ * `edgeDist` only evaluates an edge whose box could still hold something nearer than the best so far; the result is the
+ * same number the plain loop over every edge gives (the box bound is padded far beyond rounding error).
+ */
+function edgeIndex(poly) {
+  const n = poly.length, s = new Float64Array(n * 9);
+  for (let i = 0; i < n; i++) {
+    const a = poly[i], b = poly[(i + 1) % n], o = i * 9, dx = b[0] - a[0], dz = b[1] - a[1];
+    s[o] = a[0]; s[o + 1] = a[1]; s[o + 2] = dx; s[o + 3] = dz; s[o + 4] = dx * dx + dz * dz;
+    s[o + 5] = Math.min(a[0], b[0]); s[o + 6] = Math.max(a[0], b[0]); s[o + 7] = Math.min(a[1], b[1]); s[o + 8] = Math.max(a[1], b[1]);
+  }
+  return s;
+}
+function edgeDist(x, z, s) {
+  let best = Infinity, lim = Infinity;
+  for (let o = 0; o < s.length; o += 9) {
+    const gx = Math.max(s[o + 5] - x, 0, x - s[o + 6]), gz = Math.max(s[o + 7] - z, 0, z - s[o + 8]);
+    if (gx * gx + gz * gz > lim) continue;
+    const l2 = s[o + 4], dx = s[o + 2], dz = s[o + 3], ax = s[o], az = s[o + 1];
+    const t = l2 > 1e-12 ? clamp(((x - ax) * dx + (z - az) * dz) / l2, 0, 1) : 0, d = hyp(x - ax - t * dx, z - az - t * dz);
+    if (d < best) { best = d; lim = d * d * (1 + 1e-9) + 1e-18; }
+  }
+  return best;
+}
+
+const EDGE_KEY = 2 ** 26;
+const edgeKey = (a, b) => (a < b ? a * EDGE_KEY + b : b * EDGE_KEY + a);
+
+/**
+ * An open-addressing table of the undirected edges of `n` triangles: per edge its (up to two) owner triangles and the index
+ * of the midpoint that has been made for it (-1 while none). Rebuilt each pass; replaces a Map of arrays.
+ */
+function edgeTable(n) {
+  let cap = 16;
+  while (cap < n * 6) cap <<= 1;
+  return {mask: cap - 1, ka: new Int32Array(cap).fill(-1), kb: new Int32Array(cap), o1: new Int32Array(cap).fill(-1), o2: new Int32Array(cap).fill(-1), mid: new Int32Array(cap).fill(-1), more: new Map(), count: 0};
+}
+function slotOf(T, a, b) {
+  if (a > b) { const t = a; a = b; b = t; }
+  let h = (Math.imul(a, 0x9E3779B1) ^ Math.imul(b, 0x85EBCA6B)) | 0;
+  h = (h ^ (h >>> 15)) & T.mask;
+  while (T.ka[h] !== -1) { if (T.ka[h] === a && T.kb[h] === b) return h; h = (h + 1) & T.mask; }
+  T.ka[h] = a; T.kb[h] = b;
+  return h;
+}
+
 /** Triangulates a polygon and bisects every edge longer than `target` (shared midpoints keep the mesh watertight). */
 function refine(poly, target, band = Infinity, coarse = target) {
-  const pts = poly.map(p => [p[0], p[1]]), near = pts.map(([x, z]) => edgeDist(x, z, poly));
+  const pts = poly.map(p => [p[0], p[1]]), index = edgeIndex(poly), distOfMid = new Map();
   let current = earClip(poly);
-  const key = (a, b) => (a < b ? `${a}_${b}` : `${b}_${a}`);
   for (let pass = 0; pass < 40; pass++) {
     // Each pass bisects only the longest edge of every triangle that is too coarse for where it lies, so thin slivers
     // grow fat rather than getting thinner; the edge's neighbours split along it too, so the mesh stays watertight.
-    const mids = new Map(), owners = new Map(), longest = tri => {
+    const n = current.length, T = edgeTable(n), lx = new Int32Array(n), ly = new Int32Array(n), ll = new Float64Array(n);
+    for (let t = 0; t < n; t++) {
+      const tri = current[t];
       let best = 0, bl = 0;
       for (let e = 0; e < 3; e++) { const x = tri[e], y = tri[(e + 1) % 3], l = hyp(pts[x][0] - pts[y][0], pts[x][1] - pts[y][1]); if (l > bl) { bl = l; best = e; } }
-      return [tri[best], tri[(best + 1) % 3], bl];
-    };
-    for (const tri of current) for (let e = 0; e < 3; e++) { const k = key(tri[e], tri[(e + 1) % 3]); if (!owners.has(k)) owners.set(k, []); owners.get(k).push(tri); }
-    const mark = (x, y) => {
-      const k = key(x, y);
-      if (mids.has(k)) return;
-      pts.push([(pts[x][0] + pts[y][0]) / 2, (pts[x][1] + pts[y][1]) / 2]); near.push(edgeDist(pts.at(-1)[0], pts.at(-1)[1], poly)); mids.set(k, pts.length - 1);
-      // Rivara closure: a neighbour that does not have this edge as its longest splits its own longest edge first.
-      for (const tri of owners.get(k)) { const [lx, ly] = longest(tri); mark(lx, ly); }
-    };
-    for (const tri of current) {
-      const [x, y, l] = longest(tri);
-      if (mids.has(key(x, y))) continue;
-      const dm = edgeDist((pts[x][0] + pts[y][0]) / 2, (pts[x][1] + pts[y][1]) / 2, poly);
-      if (l > (dm < band ? target : coarse)) mark(x, y);
+      lx[t] = tri[best]; ly[t] = tri[(best + 1) % 3]; ll[t] = bl;
+      for (let e = 0; e < 3; e++) {
+        const h = slotOf(T, tri[e], tri[(e + 1) % 3]);
+        if (T.o1[h] < 0) T.o1[h] = t; else if (T.o2[h] < 0) T.o2[h] = t; else { const l = T.more.get(h); if (l) l.push(t); else T.more.set(h, [t]); }
+      }
     }
-    if (!mids.size) break;
-    const mid = (a, b) => mids.get(key(a, b)) ?? -1;
+    const mark = (x, y) => {
+      const h = slotOf(T, x, y);
+      if (T.mid[h] >= 0) return;
+      pts.push([(pts[x][0] + pts[y][0]) / 2, (pts[x][1] + pts[y][1]) / 2]); T.mid[h] = pts.length - 1; T.count++;
+      // Rivara closure: a neighbour that does not have this edge as its longest splits its own longest edge first.
+      let t = T.o1[h]; mark(lx[t], ly[t]);
+      t = T.o2[h]; if (t >= 0) mark(lx[t], ly[t]);
+      const more = T.more.get(h);
+      if (more) for (const u of more) mark(lx[u], ly[u]);
+    };
+    for (let t = 0; t < n; t++) {
+      const x = lx[t], y = ly[t];
+      if (T.mid[slotOf(T, x, y)] >= 0) continue;
+      const k = edgeKey(x, y);
+      let dm = distOfMid.get(k);
+      if (dm === undefined) { dm = edgeDist((pts[x][0] + pts[y][0]) / 2, (pts[x][1] + pts[y][1]) / 2, index); distOfMid.set(k, dm); }
+      if (ll[t] > (dm < band ? target : coarse)) mark(x, y);
+    }
+    if (!T.count) break;
     const next = [];
     let split = false;
-    for (const [a, b, c] of current) {
-      const m = [mid(a, b), mid(b, c), mid(c, a)], v = [a, b, c], count = m.filter(i => i >= 0).length;
-      if (!count) { next.push([a, b, c]); continue; }
+    for (const tri of current) {
+      const a = tri[0], b = tri[1], c = tri[2], m0 = T.mid[slotOf(T, a, b)], m1 = T.mid[slotOf(T, b, c)], m2 = T.mid[slotOf(T, c, a)];
+      const count = (m0 >= 0) + (m1 >= 0) + (m2 >= 0);
+      if (!count) { next.push(tri); continue; }
       split = true;
-      if (count === 3) { next.push([a, m[0], m[2]], [m[0], b, m[1]], [m[2], m[1], c], [m[0], m[1], m[2]]); continue; }
+      if (count === 3) { next.push([a, m0, m2], [m0, b, m1], [m2, m1, c], [m0, m1, m2]); continue; }
       if (count === 1) {
-        const i = m.findIndex(q => q >= 0), p = v[i], q = v[(i + 1) % 3], r = v[(i + 2) % 3];
-        next.push([p, m[i], r], [m[i], q, r]); continue;
+        if (m0 >= 0) next.push([a, m0, c], [m0, b, c]);
+        else if (m1 >= 0) next.push([b, m1, a], [m1, c, a]);
+        else next.push([c, m2, b], [m2, a, b]);
+        continue;
       }
       // two edges: rotate so the unsplit edge is (v2, v0)
-      const i = m.findIndex(q => q < 0), p = v[(i + 1) % 3], q = v[(i + 2) % 3], r = v[i], mpq = m[(i + 1) % 3], mqr = m[(i + 2) % 3];
+      let p, q, r, mpq, mqr;
+      if (m0 < 0) { p = b; q = c; r = a; mpq = m1; mqr = m2; }
+      else if (m1 < 0) { p = c; q = a; r = b; mpq = m2; mqr = m0; }
+      else { p = a; q = b; r = c; mpq = m0; mqr = m1; }
       // edges: p-q (mpq), q-r (mqr); unsplit r-p.
       next.push([mpq, q, mqr]);
       const d1 = hyp(pts[p][0] - pts[mqr][0], pts[p][1] - pts[mqr][1]), d2 = hyp(pts[mpq][0] - pts[r][0], pts[mpq][1] - pts[r][1]);
@@ -109,11 +170,6 @@ function refine(poly, target, band = Infinity, coarse = target) {
   return {pts, tris: current};
 }
 
-function segDist(x, z, a, b) {
-  const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz, t = l2 > 1e-12 ? clamp(((x - a[0]) * dx + (z - a[1]) * dz) / l2, 0, 1) : 0;
-  return hyp(x - a[0] - t * dx, z - a[1] - t * dz);
-}
-const edgeDist = (x, z, poly) => { let best = Infinity; for (let i = 0; i < poly.length; i++) best = Math.min(best, segDist(x, z, poly[i], poly[(i + 1) % poly.length])); return best; };
 const insidePoly = (x, z, poly) => {
   let inside = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -158,13 +214,13 @@ export function makePillow(poly, {h, round = h, dome = .1, target, coarse} = {})
   if (outline.length < 3 || !(h > 0)) throw new Error('makePillow: need a polygon of at least 3 points and h > 0');
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
   for (const [x, z] of outline) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
-  const fine = target ?? clamp(round / 1.2, 1.3, 3.4), mesh = refine(outline, fine, round * 1.15, coarse ?? Math.max(fine * 3, 6));
+  const fine = target ?? clamp(round / 1.2, 1.3, 3.4), mesh = refine(outline, fine, round * 1.15, coarse ?? Math.max(fine * 3, 6)), index = edgeIndex(outline);
   let maxD = 0;
-  for (const [x, z] of mesh.pts) maxD = Math.max(maxD, edgeDist(x, z, outline));
+  for (const [x, z] of mesh.pts) maxD = Math.max(maxD, edgeDist(x, z, index));
   const R = Math.max(.4, Math.min(round, maxD * .9));
   const height = (x, z) => {
     if (!insidePoly(x, z, outline)) return 0;
-    const d = edgeDist(x, z, outline), t = clamp(d / R, 0, 1), centre = clamp(d / maxD, 0, 1);
+    const d = edgeDist(x, z, index), t = clamp(d / R, 0, 1), centre = clamp(d / maxD, 0, 1);
     return h * (1 - Math.pow(1 - t, 2.6)) * (1 - dome * (1 - centre));
   };
   return {outline, mesh, height, h};

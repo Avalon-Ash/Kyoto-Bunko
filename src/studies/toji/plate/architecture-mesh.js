@@ -28,12 +28,21 @@ const unit = (v, fallback = [0, 1, 0]) => { const l = Math.hypot(v[0], v[1], v[2
  * are used for shading instead of the face normal.
  */
 function tri(out, a, b, c, hint, na, nb, nc, ua, ub, uc) {
-  const n = cross(sub(b, a), sub(c, a)), area = .5 * Math.hypot(n[0], n[1], n[2]);
+  // Written without temporary arrays; the arithmetic is the same cross / hypot / scale sequence as before.
+  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+  let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+  const len = Math.hypot(nx, ny, nz), area = .5 * len;
   if (!(area > 1e-7)) return;
-  let f = unit(n);
-  if (dot(f, hint) < 0) { f = scale(f, -1); [b, c, nb, nc, ub, uc] = [c, b, nc, nb, uc, ub]; }
+  let fx = 0, fy = 1, fz = 0;
+  if (len > 1e-12) { const k = 1 / len; fx = nx * k; fy = ny * k; fz = nz * k; }
+  if (fx * hint[0] + fy * hint[1] + fz * hint[2] < 0) { fx *= -1; fy *= -1; fz *= -1; [b, c, nb, nc, ub, uc] = [c, b, nc, nb, uc, ub]; }
   // uv is the plan position unless the caller gives one (a roof slab gives its own surface coordinates).
-  for (const [p, q, uv] of [[a, na, ua], [b, nb, ub], [c, nc, uc]]) out.push(p[0], p[1], p[2], ...(q || f), ...(uv || [p[0], p[2]]));
+  let q = na || null, uv = ua;
+  out.push(a[0], a[1], a[2], q ? q[0] : fx, q ? q[1] : fy, q ? q[2] : fz, uv ? uv[0] : a[0], uv ? uv[1] : a[2]);
+  q = nb; uv = ub;
+  out.push(b[0], b[1], b[2], q ? q[0] : fx, q ? q[1] : fy, q ? q[2] : fz, uv ? uv[0] : b[0], uv ? uv[1] : b[2]);
+  q = nc; uv = uc;
+  out.push(c[0], c[1], c[2], q ? q[0] : fx, q ? q[1] : fy, q ? q[2] : fz, uv ? uv[0] : c[0], uv ? uv[1] : c[2]);
 }
 const quadFace = (out, a, b, c, d, hint, na, nb, nc, nd, uvs) => { uvs = uvs || []; tri(out, a, b, c, hint, na, nb, nc, uvs[0], uvs[1], uvs[2]); tri(out, a, c, d, hint, na, nc, nd, uvs[0], uvs[2], uvs[3]); };
 
@@ -172,10 +181,13 @@ export function roofSurface(cx, zEave, halfW, rise, ridgeHalf, upturn) {
   const L = s.slopeL, Q = [...s.slopeR].reverse(), L0 = L[0], L1 = L.at(-1), Q0 = Q[0], Q1 = Q.at(-1);
   const at = (u, t) => {
     const a = (u + 1) / 2, x = cx + halfW * u;
-    const r = [cx + ridgeHalf * u, zEave - rise], e = [x, eaveZAt(s.eave, x)], l = polyAt(L, t), q = polyAt(Q, t);
-    const xz = [0, 1].map(c => (1 - t) * r[c] + t * e[c] + (1 - a) * l[c] + a * q[c]
-      - ((1 - a) * ((1 - t) * L0[c] + t * L1[c]) + a * ((1 - t) * Q0[c] + t * Q1[c])));
-    return [xz[0], k * (14 + 4 * Math.sin(Math.PI * t) - 3 * t), xz[1]];
+    const rx = cx + ridgeHalf * u, rz = zEave - rise, ez = eaveZAt(s.eave, x), l = polyAt(L, t), q = polyAt(Q, t);
+    // Same terms and order as the componentwise sum over (x, z), written out without a temporary array.
+    const px = (1 - t) * rx + t * x + (1 - a) * l[0] + a * q[0]
+      - ((1 - a) * ((1 - t) * L0[0] + t * L1[0]) + a * ((1 - t) * Q0[0] + t * Q1[0]));
+    const pz = (1 - t) * rz + t * ez + (1 - a) * l[1] + a * q[1]
+      - ((1 - a) * ((1 - t) * L0[1] + t * L1[1]) + a * ((1 - t) * Q0[1] + t * Q1[1]));
+    return [px, k * (14 + 4 * Math.sin(Math.PI * t) - 3 * t), pz];
   };
   return {at, shape: s, k, mountY: 14 * k, eaveY: 11 * k};
 }

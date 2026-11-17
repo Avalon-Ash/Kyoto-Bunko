@@ -21,16 +21,16 @@ const unit = (v, fallback = [0, 1, 0]) => {
 };
 
 function pushTri(out, a, b, c, hint, na, nb, nc, ua, ub, uc) {
-  const n = cross(sub(b, a), sub(c, a)), area = .5 * Math.hypot(n[0], n[1], n[2]);
-  if (!(area > 1e-7)) return;
-  let f = unit(n);
-  if (dot(f, hint) < 0) {
-    f = scale(f, -1);
-    [b, c, nb, nc, ub, uc] = [c, b, nc, nb, uc, ub];
-  }
-  for (const [p, q, uv] of [[a, na, ua], [b, nb, ub], [c, nc, uc]]) {
-    out.push(p[0], p[1], p[2], ...(q || f), ...(uv || [p[0], p[2]]));
-  }
+  // Without temporary arrays; the arithmetic is the same cross / hypot / divide sequence as before.
+  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+  const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, len = Math.hypot(nx, ny, nz);
+  if (!(.5 * len > 1e-7)) return;
+  let fx = 0, fy = 1, fz = 0;
+  if (len > 1e-12) { fx = nx / len; fy = ny / len; fz = nz / len; }
+  if (fx * hint[0] + fy * hint[1] + fz * hint[2] < 0) { fx *= -1; fy *= -1; fz *= -1; [b, c, nb, nc, ub, uc] = [c, b, nc, nb, uc, ub]; }
+  out.push(a[0], a[1], a[2], na ? na[0] : fx, na ? na[1] : fy, na ? na[2] : fz, ua ? ua[0] : a[0], ua ? ua[1] : a[2]);
+  out.push(b[0], b[1], b[2], nb ? nb[0] : fx, nb ? nb[1] : fy, nb ? nb[2] : fz, ub ? ub[0] : b[0], ub ? ub[1] : b[2]);
+  out.push(c[0], c[1], c[2], nc ? nc[0] : fx, nc ? nc[1] : fy, nc ? nc[2] : fz, uc ? uc[0] : c[0], uc ? uc[1] : c[2]);
 }
 
 function pushQuad(out, a, b, c, d, hint, na, nb, nc, nd) {
