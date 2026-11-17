@@ -140,7 +140,9 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1,
       for (const l of grooves) { const dl = distPoly(x, z, l); if (dl < 1.4) gr += Math.pow(1 - dl / 1.4, 1.5) * .75; }
       return Math.max(0, Math.max(top * smoothstep(1, .6, u), H * .2 * dome) - gr * smoothstep(.96, .74, u));
     }
-    const baseDome = Math.pow(Math.max(0, 1 - Math.pow(u, 2.4)), .62);
+    // Each sector of the outline is one flat face rising to the crown (u is linear across a sector, so 1 - u is a plane): the faces meet in
+    // ridges, as the planes of a rock do. A share of the old dome rounds the crown and the foot a little. (All dome, it was a smooth lump.)
+    const baseDome = lerp(Math.pow(Math.max(0, 1 - Math.pow(u, 2.4)), .62), Math.pow(Math.max(0, 1 - u), .8), .7);
     // Broad tilted shoulder steps per face instead of tight radial pinches.
     const facetTilt = .95 + .07 * Math.sin(s * 2.1 + seed) + .04 * Math.sin((f - .5) * Math.PI);
     const facetBlend = lerp(1, facetTilt, smoothstep(.22, .58, u) * smoothstep(1, .84, u));
@@ -341,12 +343,16 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1,
       ];
 
       let minS = Infinity, maxS = -Infinity;
-      for (let k = 0; k < 5; k++) {
-        const ch = k === 0 ? hit : sampleMesh(baseCorners[k - 1][0], baseCorners[k - 1][2]);
-        if (!ch || (k > 0 && distLines(baseCorners[k - 1][0], baseCorners[k - 1][2]) < .15)) {
+      // The tile is checked at its centre, its corners, the middles of its sides and its quarter points: a ridge between two faces of the
+      // rock can pass under a tile between its corners, and the tile must clear it there too.
+      const mid = (i, j, t = .5) => baseCorners[i].map((v, c) => lerp(v, baseCorners[j][c], t));
+      const checks = [...baseCorners, mid(0, 1), mid(1, 2), mid(2, 3), mid(3, 0), mid(0, 2, .25), mid(0, 2, .75), mid(1, 3, .25), mid(1, 3, .75)];
+      for (let k = 0; k <= checks.length; k++) {
+        const ch = k === 0 ? hit : sampleMesh(checks[k - 1][0], checks[k - 1][2]);
+        if (!ch || (k > 0 && k < 5 && distLines(checks[k - 1][0], checks[k - 1][2]) < .15)) {
           ok = false; break;
         }
-        const refY = k === 0 ? midCenter[1] : baseCorners[k - 1][1];
+        const refY = k === 0 ? midCenter[1] : checks[k - 1][1];
         const dY = refY - ch.y;
         const dMin = Math.min(dY * N[1], dY * ch.nrm[1]);
         const dMax = Math.max(dY * N[1], dY * ch.nrm[1]);
@@ -355,8 +361,10 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1,
       }
       if (!ok || maxS - minS > .095) continue;
 
-      const baseOff = clamp(.095 - minS, .078, .135);
-      if (baseOff + minS < .074 || baseOff + maxS + tileThick > .188) continue;
+      // (The clearance is measured at sample points; a ridge can pass between them, so the tile is set a little higher than the
+      // bare minimum and one whose lowest sample is still near the body is left out.)
+      const baseOff = clamp(.11 - minS, .078, .15);
+      if (baseOff + minS < .095 || baseOff + maxS + tileThick > .188) continue;
       const topOff = baseOff + tileThick;
       const bPts = baseCorners.map(c => add(c, scale(N, baseOff)));
       const tPts = baseCorners.map(c => add(c, scale(N, topOff)));
