@@ -1,0 +1,87 @@
+# 2026-11-17 ACG 與寺社的事實查核
+
+任務：交接 §4.6 的事實查核，接在商店類之後（[商店類報告](2026-11-17-shop-audit.md)）。使用者 2026-11-17：「資料你直接判斷，總之保留真實性是第一優先」。
+請求模型／強度：Sonnet 子代理（研究員，唯讀，每包一個）；實際設定：未確認。主代理（Opus 5.5）審報告、補查、套用。
+共同派工單在 repo 外（`C:\Git\_handoff_kyoto_audit\BRIEF.md`）：每一筆都要附實際搜到的 URL，「知識」「通說」不算來源。查核日一律 2026-11-17。
+子代理的第一版報告都只看搜尋摘要、有一半沒查（寺社第一包把存在的崇徳天皇御廟、根上がり松判成查不到；ACG 把 Nintendo KYOTO 判成查不到），主代理退回補查後才採用。
+
+## 1. ACG（34 筆）
+
+判準：ACG 分類從「作品」的角度收地點，和寺社、公園的主條目重複是設計上的安排；所以一筆 ACG 條目的去留，看它和作品的關聯有沒有來源。沒有來源的整筆退役；地點本身值得留的，拿掉作品說法改到別的類型。
+
+### 退役 19 筆、改區 1 筆
+
+| ID | 名稱 | 理由 |
+|---|---|---|
+| FS-041 | 墨染 (ユーフォ聖地) | 京阪官方《響け！》舞台探訪 MAP 只有宇治側，沒有墨染；Wikipedia 也沒有（https://www.keihan.co.jp/euphonium/index.php） |
+| HY-052 | 巽橋 | 「狸と狐」的作品關聯沒有來源 |
+| HY-054 | 白川 | 『迷宮の十字路』的舞台列表沒有白川（https://mangapedia.com/gd/w285k4o3j） |
+| KG-051 | 晴明神社 (ACG) | 沒有作品來源；神社本身是 KG-012 |
+| KG-052 | 北野天滿宮 (髭切) | 「刀剣乱舞のファンも多い」沒有來源；髭切是北野天滿宮所藏重要文化財這件事有來源（京博 2026 新聞稿），改記在主條目 KG-001 |
+| KG-053 | 一条戻橋 (有頂天家族) | 『有頂天家族』的舞台列表沒有一条戻橋（ja.wikipedia 兩頁）；橋本身是 KG-016 |
+| KG-054 | 露地 | 名稱無法對應實體 |
+| KG-055 | 同志社 彰栄館 | 沒有作品來源；校區本身是 KG-009 |
+| KG-085 | 北野天満宮（けいおん!） | K-ON! 的實景列表沒有北野天滿宮（https://mangapedia.com/gd/bci6yya52） |
+| KT-050 | 船岡山 | 沒有作品來源；山本身是 KT-020 |
+| KT-054 | 賀茂川 北大路橋 | 「多くの京アニ作品」沒有來源 |
+| KT-074 | 松ヶ崎橋 | OP 關聯沒有來源；而且地點其實在左京區 |
+| NK-057 | ガシャポンのデパート 寺町店 | 官方店舖頁與兩輪搜尋都沒有京都寺町店 |
+| SG-052 | 京都駅 ピアノ (ACG) | 不是 ACG 地點；現況也未確認 |
+| SG-053 | 梅小路公園 (ACG) | 『HELLO WORLD』的報導沒有梅小路公園；公園本身是 SG-007 |
+| UK-061 | キモノ・フォレスト (ACG) | 「多くのアニメのイメージ源」沒有來源；景物在 UK-001 描述裡 |
+| YS-056 | GiGO 山科 | 查不到山科的 GiGO |
+| YS-057 | ジョーシン 山科店 | 店存在，但「プラモ・フィギュア充実」沒有來源，作為 ACG 地點不成立 |
+| YS-058 | TSUTAYA 山科駅前 | 查不到 |
+| NK-056 → **SG-124** | 駿河屋 京都寺町店 | 改區：下京区恵美須之町 534-2（https://uridoki.net/shops/15729） |
+
+### 保留並改寫（只留有來源的說法）
+
+| ID | 改了什麼 | 來源 |
+|---|---|---|
+| FS-042 | 名稱「三棲」→「三栖閘門」；拿掉ユーフォ，改成 `T_MODERN`、標籤 `歷史 打卡`；1929 年竣工、近代化產業遺產、土木遺產 | https://ja.wikipedia.org/wiki/三栖閘門 |
+| FS-043 | いなこん：伏見稲荷大社全面協力製作 | https://ja.wikipedia.org/wiki/いなり、こんこん、恋いろは。 |
+| FS-036 | 拿掉沒有來源的「狐姿」 | https://matcha-jp.com/jp/23753 |
+| FS-040 | 京アニ第 1 スタジオ跡地：事件現場、現為空地 | https://www.sakigake.jp/news/article/20260718CO0052/ |
+| MN-046 | 拿掉「圧倒的な台数」；イオンモール KYOTO 4F | https://local-media.heteml.net/?p=40656 |
+| MN-050 | 「任天堂開発センター」→ 官方名「本社開発棟」；拿掉「真っ白」「聖地」 | https://www.nintendo.co.jp/corporate/offices/index.html |
+| NK-019 | 「30 万冊」錯 → 資料約 30 萬點、可閱覽約 5 萬冊；舊龍池小學、2006 年開館 | https://www.museum.or.jp/museum/13880 |
+| NK-046 | 「京都最大級」沒有來源 → 新京極パッサージオ 2F | https://www.animate.co.jp/shop/kyoto/ |
+| NK-051 | 樓層的說法互相矛盾，拿掉 | — |
+| SG-045 | 「屋上のフォトスポット」沒有來源 → 京都髙島屋 S.C.「T8」、2023-10-17 開店 | https://www.nintendo.co.jp/corporate/release/2023/230414.html |
+| SG-046 | 丸福樓：拿掉 `老舖`（2022 年開業）與「ライブラリー」 | https://www.famitsu.com/news/202201/20248415.html |
+| SG-047 | SUINA 室町 2F、舞妓皮卡丘；拿掉「京都限定グッズも豊富」 | https://www.famitsu.com/news/201903/14173252.html |
+| SG-051 | 「京都駅 大階段」→「京都駅ビル」：Wikipedia 只寫演奏會在京都駅ビル，沒有指明大階段 | https://ja.wikipedia.org/wiki/響け!ユーフォニアム |
+| SK-058 | 拿掉「けいおん!」（叡電在 K-ON! 的記述是車站，不是きらら）→ 芳文社「きらら×きらら」企劃 | https://eizandensha.co.jp/wp-content/uploads/sites/2/2021/03/news_2021.03.10.pdf （摘要） |
+| KG-001 | 補「重要文化財の太刀『髭切（鬼切丸）』を所蔵」 | https://www.kyohaku.go.jp/jp/assets/press/2026_kitano_press.pdf （摘要） |
+
+## 2. 寺社第一包（44 筆：FS-006–HY-096）
+
+44 筆都存在；子代理第一輪判成查不到的兩筆補查後都找到：HY-046 崇徳天皇御廟（祇園町南側，白峯神宮管理，只能從外參拜）、FS-017 根上がり松（奧社奉拜所附近）。
+
+| ID | 改了什麼 | 來源 |
+|---|---|---|
+| HY-003、HY-004、HY-006 | 拿掉 `ACG`（描述沒有作品，也查不到） | — |
+| HY-035 豊国神社 | 補 `國寶`（唐門） | https://www.mlit.go.jp/tagengo-db/R1-01728.html |
+| HY-038 東福寺 | 補 `國寶`（三門） | https://tabi-mag.jp/ky0583/ （二手） |
+| HY-015 智積院 | 補 `國寶`（長谷川等伯一門の障壁画）；日文描述「障壁畫」改成正確的日文 | https://rurubu.jp/andmore/spot/80026789 |
+| 上面三處 | 國寶景點依規則要有座標：加進 `SPOT_POSITIONS`，取自 Wikidata P625（Q11090279、Q709822、Q2166743）；`audit-data.ts` 確認都在東山區界內 | https://www.wikidata.org/wiki/Q2166743 等 |
+| FS-025 御香宮神社 | 拿掉 `老舖`（商店用語） | — |
+| FS-023 伏見桃山陵 | 拿掉 `山岳`；描述改成明治天皇陵、230 段石段、伏見城跡 | https://smtrc.jp/town-archives/city/katsura/p05.html |
+| HY-037 耳塚 | 補 `歷史`；「悲劇を伝える」改成國史跡的事實 | https://online.bunka.go.jp/db/heritages/detail/216869 |
+| FS-017 根上がり松 | 「商売繁盛」→「値上がり」諧音、證券金融業者的信仰 | https://fushimiinari-guide.com/neagari-no-matsu/ |
+| FS-009 長建寺 | 「伏見で唯一弁財天」沒有來源 → 1699 年創建、「島の弁天さん」、朱紅龍宮門 | https://www.mlit.go.jp/tagengo-db/common/001554327.pdf |
+| FS-033 西岸寺 | 補「油かけは金曜 13–15 時のみ」 | https://www.keihan.co.jp/navi/kyoto_tsu/tsu201805.html |
+| HY-027 六道珍皇寺 | 補「井戸は特別拝観か 5 名以上の予約で」 | https://www.walkerplus.com/spot/ar0726s577759/ |
+| HY-046 崇徳天皇御廟 | 「強力な神域」是評語 → 白峯神宮管理、從外參拜 | https://www.kyototuu.jp/Sightseeing/Goryou75SutokuGobyo.html |
+
+沒動、留給日後：HY-041 光明院（拜觀是否平時公開，來源互相矛盾）、HY-024 地主神社（修復閉門的期間未確認）、FS-026 宝塔寺的拜觀條件、FS-028 墨染寺的墨染櫻傳說、清水寺等的國寶只有二手來源（標籤原本就有、與通識一致，沒動）。
+
+## 3. 檢查
+
+| 命令 | 結果 |
+|---|---|
+| `npx --no-install tsx validate_data.js --strict` | ERROR 0、WARN 0，**761 筆**（780 − 退役 20 + 改區新增 1） |
+| `npx --no-install tsx scripts/audit-data.ts` | `coordinatesOutsideAssignedWard: []` |
+| `npm run lint` | exit 0 |
+| `npm test` | 149／149、17／17 |
+| `npm run build` | exit 0 |

@@ -84,8 +84,6 @@ export const NAKAGYO_SCHEMA: SpotSchema[] = [
   { id: 'NK-053', wardId: 'W_NAKAGYO', areaId: 'A03', typeId: 'T_NATURE', tagIds: ['賞花', '打卡'] },
   { id: 'NK-054', wardId: 'W_NAKAGYO', areaId: 'A01', typeId: 'T_NATURE', tagIds: ['賞花', '打卡'] },
   { id: 'NK-055', wardId: 'W_NAKAGYO', areaId: 'A03', typeId: 'T_NATURE', tagIds: ['庭園', '賞花'] },
-  { id: 'NK-056', wardId: 'W_NAKAGYO', areaId: 'A01', typeId: 'T_ACG', tagIds: ['ACG', '打卡'] },
-  { id: 'NK-057', wardId: 'W_NAKAGYO', areaId: 'A01', typeId: 'T_ACG', tagIds: ['ACG', '打卡'] },
   { id: 'NK-058', wardId: 'W_NAKAGYO', areaId: 'A01', typeId: 'T_FOOD', tagIds: ['喫茶', '老舖', '打卡'] },
   { id: 'NK-059', wardId: 'W_NAKAGYO', areaId: 'A01', typeId: 'T_FOOD', tagIds: ['喫茶', '老舖', '名物', '打卡'] },
   { id: 'NK-060', wardId: 'W_NAKAGYO', areaId: 'A01', typeId: 'T_FOOD', tagIds: ['喫茶', '打卡'] },
