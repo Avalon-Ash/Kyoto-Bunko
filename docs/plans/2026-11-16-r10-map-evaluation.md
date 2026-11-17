@@ -153,6 +153,56 @@ AGENTS.md 注意：導入 MapLibre 是「新增大型依賴」，須先取得使
 
 ---
 
+## B-0 量測結果（2026-11-17，主代理 Opus 5.5）
+
+使用者 2026-11-17 要求做 B-0，前提是「地圖最後拔掉也有可能」；當初用 OSM 是因為 Google 要金鑰又要錢。現有 `ClusterMap.tsx` 沒有改。
+
+### 1. GitHub Pages 支援 Range 請求：是
+
+| 請求 | 回應 |
+|---|---|
+| `curl -r 100-199 https://avalon-ash.github.io/Kyoto-Bunko/assets/W_FUSHIMI.day-6tHakxS9.webp` | `206 Partial Content`，`Content-Range: bytes 100-199/90554`，沒有 `Content-Encoding`（加 `Accept-Encoding: gzip, br` 也一樣） |
+| 同上不帶 Range | `200`，`Accept-Ranges: bytes` |
+| `curl -r 100-199 -H "Accept-Encoding: gzip" https://avalon-ash.github.io/Kyoto-Bunko/`（HTML） | `206`，但 `Content-Encoding: gzip`、`Content-Range: …/576`：**可壓縮的類型，Range 切的是壓縮後的位元組** |
+
+所以二進位類型可用。`.pmtiles` 會被當成哪一種 Content-Type、會不會被壓縮，要實際部署一個檔才知道（要 push，這次沒做）；推測是 `application/octet-stream` 而不壓縮，與 webp 一樣，**未驗證**。
+
+### 2. 京都範圍的 PMTiles 大小
+
+對 Protomaps 每日建置 `https://build.protomaps.com/20261116.pmtiles`（z0–15、全球 129.6 GiB）只讀目錄、加總範圍內每張圖磚的長度（同內容的圖磚只算一次）。指令：`node scripts/pmtiles-bbox-size.mjs <url> <W,S,E,N> <maxzoom…>`。官方 `pmtiles extract --dry-run` 沒跑（下載的執行檔被本機權限擋下），所以數字不含新檔案的目錄與 metadata（量級是 KB）。
+
+| 範圍 | z0–12 | z0–14 | z0–15 |
+|---|---|---|---|
+| 市中心 `135.65,34.90,135.85,35.10` | 2.0 MiB（26 張） | 7.2 MiB（182 張） | 21.8 MiB（619 張） |
+| 全京都市＋北部＋大津延暦寺 `135.55,34.86,135.92,35.33` | — | 12.9 MiB（659 張） | 34.0 MiB（2461 張） |
+| 對照：太平洋 `150.0,20.0,150.2,20.2` | — | — | 0.2 MiB（535 張） |
+
+太平洋那一列是檢查用的：圖磚編號算錯的話，京都會抓到別處（多半是海），大小會接近這一列。京都與海差了兩個數量級，所以編號是對的。
+
+都在停損線 40 MB 以內，也遠低於 Pages 的 1 GB。但 **34 MB 的二進位檔不適合直接 commit**（現在整個 `.git` 是 76 MB，每次更新圖資又會多一份）。要做的話，改成部署流程裡下載或抽出後放進 `dist`，不進 Git 歷史。z15 以上可以放大既有的 z15 圖磚（overzoom）。
+
+### 3. 打包大小（gzip -9）
+
+在 repo 外的暫存資料夾裝 `maplibre-gl` 6.19.0、`protomaps-leaflet` 5.1.0、`pmtiles` 4.5.0、`leaflet` 1.9.4，用 repo 的 esbuild 各自打包、壓縮後量。
+
+| 東西 | gzip |
+|---|---|
+| 現在的地圖 chunk（`dist/assets/ClusterMap-*.js`：Leaflet＋react-leaflet＋元件） | 59.8 kB（CSS 6.3 kB） |
+| `leaflet` 單獨 | 42.4 kB |
+| `protomaps-leaflet`（Leaflet 已經有，不重複算；含 pmtiles 讀取） | **＋36.2 kB** |
+| `maplibre-gl` 主檔 | 297.7 kB |
+| `maplibre-gl` 的 worker（另一個檔，開地圖時載入） | 153.2 kB |
+| `maplibre-gl` 的 CSS | 9.9 kB |
+| `maplibre-gl`＋`pmtiles` 主檔 | 304.9 kB |
+
+MapLibre 整套約 **461 kB**（主檔＋worker＋CSS；表內 kB 都是 1024 位元組），是現在地圖 chunk 的 7–8 倍，而且要重寫 `ClusterMap.tsx`、多一個 WebGL context。`protomaps-leaflet` 只多 36 kB，不需要 WebGL，現有程式幾乎不動。
+
+### 4. 結論
+
+- 純靜態自架圖資**可行**：Range 可用、全京都 z15 約 34 MB。要做就走 `protomaps-leaflet`（+36 kB），不走 MapLibre。
+- 但它只換掉「底圖從哪裡來、長什麼樣」；換來的是：不再依賴 OSM 官方圖磚伺服器、可以自訂日夜配色。代價是每次部署多 34 MB 的檔案、多一套樣式要維護。
+- 還沒驗證的：`.pmtiles` 在 Pages 上的 Content-Type 與壓縮；`protomaps-leaflet` 的日文標籤與字型；手機上 Canvas 畫向量圖磚的速度。這三項要做 B-1（獨立 demo 頁）才知道。
+
 ## 附錄：沒能查到或只有推測的項目
 
 - 京都範圍 PMTiles 的實際檔案大小（只有名古屋 9.8 MB 的第三方自述）。
