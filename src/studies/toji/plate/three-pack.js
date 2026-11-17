@@ -1093,9 +1093,12 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     // Powder lies thick and pale along the shore and thins toward the middle, where the lines carry the water (maki-bokashi).
     vec3 shoal=mMetal(kp,mix(M_GOLD,M_PALE,.15)*.86,.9)*.95+tint*vec3(.36,.17,.045)*(.10+.30*L);
     vec3 pool=mNashiji(kp,1.3,mix(M_GOLD,M_PALE,.15))*.9;
-    vec3 base=mix(shoal,pool,deep*.9)*mix(.8,1.16,sw)+mKeyC*mBand*.10;
+    vec3 base=mix(shoal,pool,deep*.75)+mKeyC*mBand*.10;
     vec3 crest=mSheet(M_PALE)*.45+mix(M_PALE,M_GOLD,.3)*(.10+.62*L)*(.8+.2*flow)+M_PALE*mBand*.12;
     vec3 wtr=mix(base,crest,ln)+M_SILVER*line*(.08+.36*L)*(.5+.5*flow)+M_SILVER*max(ring,0.)*.5*(.2+L)+mCoat()*.6;
+    // The depth and the swells are laid over the whole of it (lines and gloss too): the lines and the lid's gloss are most of the water's
+    // brightness away from the light, so a depth carried by the powder alone is lost there, and on a phone, where no light follows a pointer.
+    wtr*=mix(vec3(1.),vec3(.80,.69,.54),deep)*mix(.9,1.1,sw);
     // A silver shore just inside the water's edge (the Hatsune sandbars and banks are grey silver).
     float e=.25*(texture(uFine0,mPuv(kp+vec2(7.,0.))).g+texture(uFine0,mPuv(kp-vec2(7.,0.))).g+texture(uFine0,mPuv(kp+vec2(0.,7.))).g+texture(uFine0,mPuv(kp-vec2(0.,7.))).g);
     float shore=1.-smoothstep(.5,.95,e/max(fine.g,.01));
