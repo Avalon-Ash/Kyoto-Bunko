@@ -126,6 +126,13 @@ export function createThreeRenderer(gl, canvas) {
   const dummySoft = own(new THREE.DataTexture(new Uint16Array([0]), 1, 1, THREE.RedFormat, THREE.HalfFloatType)); dummySoft.unpackAlignment = 1; dummySoft.needsUpdate = true;
   // Dev only: ?dens=off leaves the ground's powder at its flat density (and skips the bake), ?dens=view paints the field, ?dens=mask paints plain ground magenta (for measuring), ?dens=contact paints the contact field.
   const densMode = import.meta.env.DEV ? new URLSearchParams(location.search).get('dens') : null;
+  // Dev only: ?clock=<ms> pins every clock the picture depends on (the shader's uTime, the creatures' time; the pointer's trails are
+  // left out), so that two pictures of the same code are the same pixels (scripts/plate-diff.mjs). The app's own animation clock is not
+  // touched: cabinets still switch and the lid still opens.
+  const clockParam = import.meta.env.DEV ? new URLSearchParams(location.search).get('clock') : null;
+  const fixedClock = clockParam !== null && clockParam !== '' && !Number.isNaN(Number(clockParam)) ? Number(clockParam) : null;
+  // Dev only: ?matSwap=21:19,2:3 draws material 21 as 19 and 2 as 3 on the lid, so that ground-shader paths no ward uses can be exercised.
+  const matSwap = new Map(import.meta.env.DEV ? (new URLSearchParams(location.search).get('matSwap') ?? '').split(',').filter(Boolean).map(pair => pair.split(':').map(Number)) : []);
   // ?age=0..1 sets how old the box looks (0 is as new); every ageing effect is scaled by it.
   const ageParam = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('age') : null;
   // ?years=N sets the lid's age in years (0: fresh from the workshop; 387: the Hatsune trousseau's age); ?age=0..1 sets uAge itself.
@@ -596,6 +603,8 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
 
       t = performance.now();
       const mw = Math.round(w / 2), mh = Math.round(h / 2), {maps, packed} = identMaps(doc, parts, mw, mh, LAYERS, MAT.ground);
+      // The ident map is (part, material) byte pairs: the swap rewrites the material byte only.
+      if (matSwap.size) for (let i = 1; i < packed[0].length; i += 2) { const to = matSwap.get(packed[0][i]); if (to !== undefined) packed[0][i] = to; }
       const ident0Tex = new THREE.DataTexture(packed[0], mw, mh, THREE.RGFormat, THREE.UnsignedByteType);
       ident0Tex.minFilter = ident0Tex.magFilter = THREE.NearestFilter; ident0Tex.unpackAlignment = 1; ident0Tex.needsUpdate = true;
       textures.push(ident0Tex);
@@ -857,7 +866,8 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     if (f.still) { presence.x = want; presence.v = 0; } else stepSpring(presence, want, want > presence.x ? 8 : 2.2, dt);
     const [lx, lz] = groundPoint(projection, f.px, -f.py).map(value => Math.max(-430, Math.min(430, value)));
     const LAMP_H = 70, lampAt = [lx - VIEW[0] / VIEW[1] * LAMP_H, LAMP_H, lz - VIEW[2] / VIEW[1] * LAMP_H];
-    const state = life.update(dt, {time: f.time, light: [lx, lz], presence: presence.x, still: f.still, lift: f.lift, maps: plate.maps, mapW: plate.mw, mapH: plate.mh});
+    const now = fixedClock ?? f.time;
+    const state = life.update(dt, {time: now, light: [lx, lz], presence: presence.x, still: f.still, lift: f.lift, maps: plate.maps, mapW: plate.mw, mapH: plate.mh});
     canvas.dataset.under = state.under ? plate.parts[state.under - 1].id : '';
     packLifeState(state.a, state.b, stateData); stateTexture.needsUpdate = true;
     // Dev only (?export=glb): once the plate has settled, download it at rest for a ThreeRT reference render
@@ -900,7 +910,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     lamp.position.set(lampAt[0], lampAt[1], lampAt[2]); lamp.intensity = (night ? 120000 : 50000) * (.15 + presence.x);
 
     shared.uLamp.value.set(lampAt[0], lampAt[1], lampAt[2]);
-    shared.uTime.value = (f.time / 1000) % 3600;
+    shared.uTime.value = (now / 1000) % 3600;
     shared.uNight.value = night ? 1 : 0;
     // A frame may carry the lid's age in years (the demonstration runs it from new to the Hatsune set's age); without one, the age it was made with.
     shared.uAge.value = f.years == null ? ageValue : ageFromYears(f.years);
@@ -908,7 +918,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     shared.uPx.value = unitsPerPx;
     for (let i = 0; i < 20; i++) {
       const p = f.trails?.[i];
-      if (p) trails[i].set(p.x, p.z, trailIntensity(p.time, f.time, f.still));
+      if (p && fixedClock === null) trails[i].set(p.x, p.z, trailIntensity(p.time, f.time, f.still));
       else trails[i].set(0, 0, 0);
     }
 

@@ -1173,7 +1173,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(uDensView>2.5)c=vec3(texture(uContact,mPuv(kp)).r*.8);
   else if(uDensView>1.5)c=mat==1?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
   else if(uDensView>.5)c=vec3(dField*.8);
-  if(uDensView>.5){mKS=0.;mKE=0.;mKT=0.;} // dev views are data, not a picture: no coat on them
+  if(uDensView>.5&&uDensView<5.5){mKS=0.;mKE=0.;mKT=0.;} // dev views are data, not a picture: no coat on them (the coat view itself needs the three amounts)
   outgoingLight=mFinish(c,1.).rgb;
   if(uDensView>5.5)outgoingLight=vec3(mKS,mKE,mKT); // dev ?dens=coat: sunk red, wrapped edge green, thin film blue
   if(uDensView>3.5&&uDensView<4.5)outgoingLight=vec3(kiriV,0.,(mat>=2&&mat<=4)?1.-kiriV:kiriB*(1.-kiriV)); // dev: red = kirikane, blue = other hill ground (?dens=kiri)

@@ -37,10 +37,14 @@ const send = (method, params = {}) => new Promise(r => { const id = ++seq; pendi
 const evalJs = async expression => (await send('Runtime.evaluate', {expression, awaitPromise: true, returnByValue: true})).result?.result?.value;
 await send('Runtime.enable'); await send('Page.enable');
 
-for (const job of jobs) {
+// The eleven cabinets in the order the next button walks them from Minami; a job's steps index into it.
+const RING = ['MINAMI', 'UKYO', 'NISHIKYO', 'YAMASHINA', 'FUSHIMI', 'KITA', 'KAMIGYO', 'SAKYO', 'NAKAGYO', 'HIGASHIYAMA', 'SHIMOGYO'];
+const query = new URLSearchParams((process.env.PLATE_SHOT_QUERY ?? '').replace(/^\?/, ''));
+if (process.env.PLATE_CLOCK) query.set('clock', process.env.PLATE_CLOCK);
+const shoot = async job => {
   const [name, steps, theme, size, zoom, at] = job.split(':'), [w, h] = size.split('x').map(Number), [fx, fy] = at.split(',').map(Number);
   await send('Emulation.setDeviceMetricsOverride', {width: w, height: h, deviceScaleFactor: w < 700 ? 2 : 1, mobile: false});
-  await send('Page.navigate', {url: 'http://127.0.0.1:3000/toji-study/index.html' + (process.env.PLATE_SHOT_QUERY ?? '')});
+  await send('Page.navigate', {url: 'http://127.0.0.1:3000/toji-study/index.html' + (query.size ? '?' + query : '')});
   for (let i = 0; i < 60 && !(await evalJs(`Boolean(document.querySelector('#scene')?.dataset.lift)`)); i++) await sleep(200);
   if (theme.endsWith('still')) { await evalJs(`document.querySelector('#motion').click()`); await sleep(200); }
   if (theme.startsWith('day')) { await evalJs(`document.querySelector('#night').click()`); await sleep(300); }
@@ -66,10 +70,20 @@ for (const job of jobs) {
   }
   // PLATE_LIGHT=fx,fy rests the light elsewhere after the zoom, so a close view of a roof is not under the light's own pool.
   if (process.env.PLATE_LIGHT) { const [lx, ly] = process.env.PLATE_LIGHT.split(',').map(Number); x = r[0] + r[2] * lx; y = r[1] + r[3] * ly; await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x, y}); await sleep(300); }
+  // PLATE_CLOCK: the picture is the lid alone (the cloud bands behind it are other canvases, and they drift).
+  if (process.env.PLATE_CLOCK) await evalJs(`(()=>{const s=document.createElement('style');s.textContent='html,body{background:#000!important}body *,body *::before,body *::after{visibility:hidden!important}#scene{visibility:visible!important}';document.head.append(s);})()`);
+  // PLATE_VIEW=n paints a dev view instead of the picture: 2 plain-ground mask, 4 kirikane, 5 tone layers, 6 coat (three-pack.js).
+  if (process.env.PLATE_VIEW) await evalJs(`window.__kyotoPlateUniforms.uDensView.value = ${Number(process.env.PLATE_VIEW)}`);
   await sleep(2800);
   await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x: x + 1, y});
   await sleep(400);
   const info = await evalJs(`JSON.stringify(Object.assign({}, document.querySelector('#scene').dataset))`);
+  // The picture must be of the ward and theme the job asked for: a swallowed click leaves the previous ward or theme on screen.
+  const want = 'W_' + RING[((Number(steps) % 11) + 11) % 11], isNight = await evalJs(`Boolean(document.querySelector('#scene').closest('.night'))`);
+  if (JSON.parse(info).renderedWard !== want || isNight !== theme.startsWith('night')) {
+    console.log(name, 'WRONG', JSON.parse(info).renderedWard, isNight ? 'night' : 'day', '(wanted', want, theme + ')');
+    return false;
+  }
   const shot = await send('Page.captureScreenshot', {format: 'png', clip: {x: Math.max(0, r[0] + r[4]), y: Math.max(0, r[1] + r[5]), width: r[2], height: r[3], scale: 1}});
   writeFileSync(join(outDir, `${name}.png`), Buffer.from(shot.result.data, 'base64'));
   console.log(name, info);
@@ -137,7 +151,12 @@ for (const job of jobs) {
     })()`);
     console.log(name, 'tone', tone);
   }
-}
+  return true;
+};
+// A job whose picture is of the wrong ward or theme is shot once more; if it is wrong again the run fails.
+let failed = 0;
+for (const job of jobs) if (!await shoot(job) && !await shoot(job)) failed++;
+if (failed) { console.log('FAILED', failed, 'job(s)'); process.exitCode = 1; }
 if (logs.length) console.log('CONSOLE:', [...new Set(logs)].slice(0, 12).join('\n'));
 await send('Target.closeTarget', {targetId: target.id}).catch(() => {});
 ws.close();
