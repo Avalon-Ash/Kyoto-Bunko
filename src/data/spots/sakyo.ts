@@ -36,7 +36,7 @@ import { SpotSchema } from '../../types';
 export const SAKYO_SCHEMA: SpotSchema[] = [
   { id: 'SK-001', wardId: 'W_SAKYO', areaId: 'A02', typeId: 'T_HUB', tagIds: ['鐵道'] },
   { id: 'SK-002', wardId: 'W_SAKYO', areaId: 'A02', typeId: 'T_TEMPLE', tagIds: ['神社', '世界遺產', '打卡', 'ACG', '國寶'] },
-  { id: 'SK-003', wardId: 'W_SAKYO', areaId: 'A02', typeId: 'T_NATURE', tagIds: ['打卡', '自然', 'ACG'] },
+  { id: 'SK-003', wardId: 'W_SAKYO', areaId: 'A02', typeId: 'T_NATURE', tagIds: ['打卡', '自然'] },
   { id: 'SK-004', wardId: 'W_SAKYO', areaId: 'A06', typeId: 'T_TEMPLE', tagIds: ['寺院', '打卡', '庭園', '國寶'] },
   { id: 'SK-005', wardId: 'W_SAKYO', areaId: 'A06', typeId: 'T_TEMPLE', tagIds: ['寺院', '楓葉', '打卡', '國寶'] },
   { id: 'SK-006', wardId: 'W_SAKYO', areaId: 'A06', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '庭園', '國寶'] },
@@ -54,7 +54,7 @@ export const SAKYO_SCHEMA: SpotSchema[] = [
   { id: 'SK-018', wardId: 'W_SAKYO', areaId: 'A06', typeId: 'T_TEMPLE', tagIds: ['寺院', '楓葉', '隱密'] },
   { id: 'SK-019', wardId: 'W_SAKYO', areaId: 'A06', typeId: 'T_TEMPLE', tagIds: ['寺院', '隱密'] },
   { id: 'SK-020', wardId: 'W_SAKYO', areaId: 'A06', typeId: 'T_TEMPLE', tagIds: ['寺院', '隱密'] },
-  { id: 'SK-021', wardId: 'W_SAKYO', areaId: 'A06', typeId: 'T_MODERN', tagIds: ['打卡', '現代'] },
+  { id: 'SK-021', wardId: 'W_SAKYO', areaId: 'A06', typeId: 'T_MODERN', tagIds: ['打卡', '國寶'] },
   { id: 'SK-022', wardId: 'W_SAKYO', areaId: 'A06', typeId: 'T_MODERN', tagIds: ['打卡', '賞花'] },
   { id: 'SK-023', wardId: 'W_SAKYO', areaId: 'A02', typeId: 'T_SHOP', tagIds: ['打卡'] },
   { id: 'SK-024', wardId: 'W_SAKYO', areaId: 'A16', typeId: 'T_TEMPLE', tagIds: ['寺院', '隱密'] },
