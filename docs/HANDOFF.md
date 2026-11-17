@@ -7,7 +7,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main` 在 `5c988da`（2026-11-17，使用者同意合併與 push；GitHub Pages 部署成功，`gh run view 43995941654` 確認；含建部件網格的效能）：開案書 R0–R10、銀的補強、作舊與珊瑚、穿插修正、技法堆疊、屋頂金粉、疊坡（遠山、岸、洲浜）、地與調子、包漿、九區重做、盤面修整 P1–P5 都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/finish-1117`：P1–P5（`470293f`）與「建部件網格的效能」（`creature-mesh.js`、`architecture-mesh.js`、`rock-mesh.js`，報告 [`agent-runs/2026-11-17-mesh-perf.md`](agent-runs/2026-11-17-mesh-perf.md)）都已併入 `main`（`5c988da`）並上線。分支上之後只多了更新這份交接的文件 commit；新的工作合併與 push 仍要分開問使用者。本機還留著已併入 `main` 的 `claude/doha-1116`、`claude/roof-1116`、`claude/handoff-1116` 與 `agent/*`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
+| 工作分支 | `claude/finish-1117`：P1–P5（`470293f`）與「建部件網格的效能」（`creature-mesh.js`、`architecture-mesh.js`、`rock-mesh.js`，報告 [`agent-runs/2026-11-17-mesh-perf.md`](agent-runs/2026-11-17-mesh-perf.md)）都已併入 `main`（`5c988da`）並上線。分支上之後多的是 2026-11-17 下午主席自己做的一批修整（水面、夜間照明、金山與青金、霞、北的蘆葦、銀杏落葉、盒內梨子地、卷軸；開案書 §13），**尚未合併 `main`**；合併與 push 要分開問使用者。本機還留著已併入 `main` 的 `claude/doha-1116`、`claude/roof-1116`、`claude/handoff-1116` 與 `agent/*`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 現有一個：`C:\Git\_wt_kyoto_doha`（分支 `agent/perf-1117`，`73ef7d7`，盤的程式與 `470293f` 相同，乾淨），可以直接重用：`git checkout -B agent/<主題> claude/finish-1117`。規矩：放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除；`node_modules` 用 junction 連到主資料夾（`cmd /c mklink /J`），**刪工作樹前先 `cmd /c rmdir` 拿掉 junction**，否則會刪到主資料夾的 `node_modules` |
@@ -48,7 +48,8 @@ npm run dev -- --host 127.0.0.1 --strictPort
 | `npm run build` | exit 0 |
 | 穿插 | `node scripts/plate-clip.mjs <out.json>`：十一區 0 |
 | 盤面調子 | `PLATE_TONE=1 node scripts/plate-shot.mjs <outDir> <job…>`；數字在 [`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md) §8–§11 |
-| 部署 | `main` 在 `5c988da`（P1–P5 與網格效能），GitHub Pages 部署成功（run 43995941654）；線上頁面與實機沒有人看過 |
+| 部署 | `main` 在 `5c988da`（P1–P5 與網格效能），GitHub Pages 部署成功（run 43995941654）；線上頁面與實機沒有人看過。下午的修整（開案書 §13）還沒合併，所以還沒部署 |
+| 下午的修整（未合併） | lint exit 0、validate --strict ERROR 0／WARN 0、test 146／146 與 17／17、build exit 0（主席重跑）；降級圖 22 張重拍；手機 375×812 拍過兩區；主站開盒流程用瀏覽器面板走過一次。十一區日夜總覽在 `.shots/polish/FINAL-day.png`、`FINAL-night.png` |
 | 網格效能（已上線） | 十一區 `PLATES[ward]()` 的輸出在修改前後逐位元相同（主代理用自己的腳本算 sha256，11／11）；lint exit 0、validate --strict ERROR 0／WARN 0、test 146／146 與 17／17、build exit 0（主代理重跑）。建盤時間降 14–101 ms、換區最長幀降 39–64% 是另一個工作階段量的，主代理沒有重量 |
 
 前四項是主席在主資料夾重跑的。截圖都是無頭 Chrome（桌機 GPU）拍的，放在 `.shots/`（不提交）；修整後的十一區日夜總覽是 `.shots/finish/FINAL-day.png`、`FINAL-night.png`。**11/16–17 的畫面使用者都還沒在實機（手機）上看過。**
@@ -57,7 +58,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ### 4.1 現在停在哪裡（2026-11-17）
 
-使用者說：「這版先合併推上去，因為今天一整天下來你自己都不滿意，先擬下一批計畫。視覺要不要你自己跳下來作？」已合併並 push；下一批寫成 [`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md)。**P1–P4 已由 Fable 主席自己做完**（岸與洲浜改成研出、遠山沿整條稜線淡出、霞改成金粉、岸與山面的金粉會閃、東山的山腰、左京的「大」、下京堂前的庭），在 `claude/finish-1117`，等使用者看（開案書 §8–§11）；P5（效能）由 Sonnet 子代理做完、已整合：烘焙時間各區降 16–27 ms，畫面沒有變（開案書 §12）。**P1–P5 已合併 `main` 並 push（`470293f`，使用者 2026-11-17 分別同意），等使用者看圖後的意見。**之後使用者啟動了「建部件網格的效能」那一包，主代理審過後使用者同意合併與 push（`5c988da`，已上線）。山腳暗三角的原因是山與岸底下的地沒有套用疏密場，不是烘焙的楔形。
+使用者說：「這版先合併推上去，因為今天一整天下來你自己都不滿意，先擬下一批計畫。視覺要不要你自己跳下來作？」已合併並 push；下一批寫成 [`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md)。**P1–P4 已由 Fable 主席自己做完**（岸與洲浜改成研出、遠山沿整條稜線淡出、霞改成金粉、岸與山面的金粉會閃、東山的山腰、左京的「大」、下京堂前的庭），在 `claude/finish-1117`，等使用者看（開案書 §8–§11）；P5（效能）由 Sonnet 子代理做完、已整合：烘焙時間各區降 16–27 ms，畫面沒有變（開案書 §12）。**P1–P5 已合併 `main` 並 push（`470293f`，使用者 2026-11-17 分別同意），等使用者看圖後的意見。**之後使用者啟動了「建部件網格的效能」那一包，主代理審過後使用者同意合併與 push（`5c988da`，已上線）。2026-11-17 下午使用者說「現在都你自己作，讓你自己對這 REPO 的品質和畫面滿意為基準」，主席自己做了一批修整（開案書 §13），在 `claude/finish-1117`、尚未合併。山腳暗三角的原因是山與岸底下的地沒有套用疏密場，不是烘焙的楔形。
 
 **誰做定調的視覺：已定案。** 使用者要主席和「CODE合約總管」（另一個工作階段，管全域合約）討論，總管擬稿、使用者同意後，2026-11-17 改了全域 `~/.claude/CLAUDE.md`「跨模型派工」（主席讀檔核對過）。新增的「動手原則」不分 Fable 或 Opus：
 
