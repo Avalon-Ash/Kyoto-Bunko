@@ -1,7 +1,7 @@
 import {groundPoint, trailIntensity} from './geometry.js';
 import {createRenderer, cameraMatrix} from './renderer.js';
 import {translate} from '../../data/i18n';
-import {progressToward,isTap,onLid,cabinetDragDirection,cabinetOffset,switchDistance,idlePlaybackAllowed} from './interaction.js';
+import {progressToward,isTap,onLid,cabinetDragDirection,cabinetOffset,switchDistance,idlePlaybackAllowed,kanjiNumber} from './interaction.js';
 import {CABINETS,cabinetFor,adjacentCabinet} from './collection';
 import {LANDMARK_STUDIES} from './landmarks.js';
 import {viewBox,clampPan,clampZoom,isZoomed,rubberBand,panLimit,planePoint,anchorPan,dragPan,isDoubleTap,ZOOM_STEP} from './view.js';
@@ -42,7 +42,7 @@ let lastActivity=-Infinity,idlePhase=0,autoPlaying=false;
 // from the workshop to the Hatsune set's age (1639 to now); the unattended cabinet breathes between the two. A small label says the year.
 const HATSUNE_YEARS=new Date().getFullYear()-1639;let years=null;
 const era=document.createElement('p');era.className='era';era.setAttribute('aria-hidden','true');root.querySelector('.seal')?.after(era);
-const syncEra=()=>{era.hidden=years===null;if(years!==null)era.textContent=`${language==='ja'?'漆齢':'漆齡'} ${Math.round(years)} 年`;};syncEra();
+const syncEra=()=>{era.hidden=years===null;if(years!==null)era.textContent=`${language==='ja'?'漆齢':'漆齡'}${kanjiNumber(years,language)}年`;};syncEra();
 let projection,render,dispose,poke,paintGhost=null;
 const backdrop=mountBackdrop($('stage'),{night,motion:!still(),wardId:cabinet.id});
 // The cabinets either side of this one stand on the same track. Each is a still picture of that cabinet at rest,

@@ -94,3 +94,14 @@ test('idle playback yields to activity, reading, dragging, reduced motion and ba
   for(const override of [{embedded:false},{reduced:true},{visible:false},{hidden:true},{failed:true},{bookState:'reading'},{bookState:'switching'},{dragging:true},{idleFor:IDLE_RESUME_DELAY-1}])assert.equal(idlePlaybackAllowed({...idle,...override}),false);
   assert.equal(idlePlaybackAllowed({...idle,idleFor:IDLE_RESUME_DELAY}),true);
 });
+
+test('kanjiNumber: vertical text carries Chinese numerals, not digits', async () => {
+  const {kanjiNumber} = await import('../src/studies/toji/interaction.js');
+  const zh = {0: '〇', 7: '七', 10: '十', 13: '十三', 53: '五十三', 100: '一百', 105: '一百零五', 110: '一百一十', 387: '三百八十七', 1000: '一千', 1005: '一千零五'};
+  for (const [n, want] of Object.entries(zh)) assert.equal(kanjiNumber(Number(n)), want, `zh ${n}`);
+  const ja = {10: '十', 100: '百', 105: '百五', 110: '百十', 387: '三百八十七', 1000: '千'};
+  for (const [n, want] of Object.entries(ja)) assert.equal(kanjiNumber(Number(n), 'ja'), want, `ja ${n}`);
+  assert.equal(kanjiNumber(52.6), '五十三');
+  assert.equal(kanjiNumber(-4), '〇');
+  assert.ok(!/[0-9]/.test(kanjiNumber(2026)));
+});

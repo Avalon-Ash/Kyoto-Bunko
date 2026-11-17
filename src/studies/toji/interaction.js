@@ -36,3 +36,24 @@ export const IDLE_RESUME_DELAY=1800;
 export function idlePlaybackAllowed({embedded,reduced,visible,hidden,failed,bookState,dragging,idleFor}){
   return Boolean(embedded&&!reduced&&visible&&!hidden&&!failed&&bookState==='closed'&&!dragging&&idleFor>=IDLE_RESUME_DELAY);
 }
+
+/**
+ * A whole number from 0 to 9999 in Chinese numerals, for text set vertically (Arabic digits lie on their side there).
+ * zh: 一百零五, 一百一十, 三百八十七; ja: 百五, 百十, 三百八十七. 0 is 〇.
+ */
+export function kanjiNumber(value,language='zh'){
+  const n=Math.max(0,Math.min(9999,Math.round(Number(value)||0)));
+  if(n===0)return '〇';
+  const D='〇一二三四五六七八九',U=['','十','百','千'],ja=language==='ja';
+  let out='',gap=false;
+  for(let i=3;i>=0;i--){
+    const d=Math.floor(n/10**i)%10;
+    if(!d){gap=out!=='';continue;}
+    if(gap&&!ja)out+='零';
+    gap=false;
+    // 十 alone for 10..19 (both languages); in Japanese 百 and 千 also stand without 一.
+    const bare=d===1&&i>0&&(ja||(i===1&&out===''));
+    out+=(bare?'':D[d])+U[i];
+  }
+  return out;
+}
