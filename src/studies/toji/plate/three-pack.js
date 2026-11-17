@@ -87,13 +87,32 @@ export const BOX_INNER_FRAG_GLSL = `
   vec3 nj=mNashiji(sp,1.05,M_GOLD)*vec3(1.,.86,.62);
   outgoingLight=mix(outgoingLight*.55,nj*(.5+2.3*lit),.8);
 }`;
+/**
+ * The paper in the box (box id 23: the sheets in the tray, the rolls): decorated writing paper (ryoshi), as a box of this rank holds. On
+ * the faces that look up: small squares of cut gold leaf (kirihaku) and a dust of gold (sunago), gathered in a drifting cloud band, over a
+ * faint dye under the cloud. three.js's own lighting is kept as the light on it.
+ */
+export const BOX_PAPER_FRAG_GLSL = `
+{
+  vec3 nn=abs(normalize(vKyotoSideN));
+  if(nn.y>.55){
+    vec2 sp=vKyotoSideW.xz;
+    float cloud=smoothstep(.42,.68,mVnoise(sp*.017+3.)*.7+mVnoise(sp*.06)*.3);
+    vec2 g=floor(sp/7.),f=fract(sp/7.)-.5,o=(mHash2(g)-.5)*.4;float h=mHash(g+7.);
+    float sq=step(max(abs(f.x-o.x),abs(f.y-o.y)),.2+.14*h)*step(.8-.55*cloud,h);
+    float dust=step(.9-.34*cloud,mHash(floor(sp/1.5)+3.));
+    float lit=dot(outgoingLight,vec3(.3,.55,.15));
+    outgoingLight*=mix(vec3(1.),vec3(.90,.80,.62),cloud*.8);
+    outgoingLight=mix(outgoingLight,vec3(.80,.50,.13)*(.5+.7*lit),max(sq,dust*.8));
+  }
+}`;
 export const BOX_MATERIALS = {
   // Hatsune: the whole body is nashiji (amber lacquer over gold powder), not black lacquer (user decision, handoff §3).
   20: {name: 'side', color: '#a8722e', metalness: .72, roughness: .45, clearcoat: 1, clearcoatRoughness: .06, flake: 0, nashijiSide: true},
   // The lid's lip: gold, as on the Hatsune boxes (museum photos show no silver rim).
   21: {name: 'rim', aged: {color: '#ad9668', roughness: .46}, color: '#c39345', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .2},
   22: {name: 'inner', color: '#8c6a2d', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5, nashijiInner: true},
-  23: {name: 'paper', color: '#cdbd98', metalness: 0, roughness: .9, clearcoat: 0, clearcoatRoughness: 0, flake: 0},
+  23: {name: 'paper', color: '#cdbd98', metalness: 0, roughness: .9, clearcoat: 0, clearcoatRoughness: 0, flake: 0, paperFleck: true},
   24: {name: 'gold', aged: {color: '#c2aa76', roughness: .46}, color: '#d7a64a', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3},
   26: {name: 'edge', aged: {color: '#b39c6c', roughness: .46}, color: '#c99a42', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3},
   27: {name: 'cord', color: '#85100a', metalness: 0, roughness: .6, clearcoat: 0, clearcoatRoughness: 0, flake: 0},
@@ -389,9 +408,9 @@ const vec3 K_TARNISH=vec3(.46,.42,.36);
 const vec3 K_ROCK_FOOT=vec3(.43,.29,.14); // the aged ground's tone, which a rock keeps at its foot
 const float K_ROCK_FOOT_H=9., K_ROCK_FOOT_AMT=.6; // how high the ground's tone climbs the rock, and how fully it takes it
 vec3 kyotoAgedSilver(vec3 c,float k){return c*mix(vec3(1.),K_TARNISH,clamp(uAge*k,0.,1.));}
-const vec3 K_ROCK_BODY_GOLD=vec3(.36,.22,.06); // dark bronze ground between the gold foil on the lit face of a rock
+const vec3 K_ROCK_BODY_GOLD=vec3(.45,.29,.09); // dark bronze ground between the gold foil on the lit face of a rock
 const vec3 K_ROCK_BODY_SHADE=vec3(.27,.27,.26); // the ground where the rock turns away from the light: oxidized silver, dark
-const vec3 K_ROCK_BODY_SILVER=vec3(.40,.41,.41); // the ground of a silver rock, lit
+const vec3 K_ROCK_BODY_SILVER=vec3(.50,.51,.50); // the ground of a silver rock, lit
 const vec3 K_ROCK_FOIL_SILVER=vec3(.90,.91,.88); // kirigin foil on the lit face
 const vec3 K_ROCK_FOIL_OXID=vec3(.60,.60,.57); // foil where it turns from the light: oxidized silver
 const float K_TRUNK_OXID_SCALE=.76; // oxidized silver brightness on shaded gold trunks relative to K_M_OXID
@@ -407,7 +426,7 @@ const float K_TRUNK_KIRI_CELL=2.8; // trunk kirikane diagonal lattice spacing in
 const float K_ROCK_KIRI_CELL=3.0; // rock kirikane diagonal lattice spacing in plate units
 const float K_ROCK_SZ_MIN=.08, K_ROCK_SZ_MAX=.37; // half-width of a rock foil diamond in cell units: smallest in the dark, largest in the light
 const float K_ROCK_DENS_MIN=.22; // share of cells that carry foil where the rock is darkest (1 where it is lit)
-const float K_ROCK_KIRI_JITTER=.10; // rock foil position jitter in cell units
+const float K_ROCK_KIRI_JITTER=.24; // rock foil position jitter in cell units
 const float K_ROCK_AMT_LO=-.1, K_ROCK_AMT_HI=.62; // N.L range over which foil grows from small and sparse to large and dense
 const float K_ROCK_LOW_AMT=.62; // foil amount at the foot of the rock, relative to its shoulders
 const float K_ROCK_RIM_AMT=.30; // foil amount added along the outline, where the surface turns edge-on
@@ -444,8 +463,12 @@ float kyotoRockKiriPattern(vec2 p,float amt,float px,out vec2 tilt,out float ton
   float cell=K_ROCK_KIRI_CELL;
   vec2 q=mat2(.7071,-.7071,.7071,.7071)*p/cell,id=floor(q),j=kyotoHash2(id)-.5,f=fract(q)-.5-j*K_ROCK_KIRI_JITTER;
   tilt=j; tone=kyotoHash(id+2.3);
-  float a=clamp(amt,0.,1.),base=mix(K_ROCK_SZ_MIN,K_ROCK_SZ_MAX,a),dens=mix(K_ROCK_DENS_MIN,1.,a);
-  float hw=base*(.86+.28*kyotoHash(id+5.1))*step(kyotoHash(id+9.7),dens);
+  // The squares are laid by hand in loose groups, not as a net over the whole rock (an even lattice read as a pine cone): a slow
+  // field decides where a group lies; between groups the rock's own powdered body shows, with a stray square here and there.
+  vec2 gq=q/2.3,gi=floor(gq),gf=fract(gq);gf=gf*gf*(3.-2.*gf);
+  float grp=mix(mix(kyotoHash(gi+31.),kyotoHash(gi+vec2(1.,0.)+31.),gf.x),mix(kyotoHash(gi+vec2(0.,1.)+31.),kyotoHash(gi+vec2(1.,1.)+31.),gf.x),gf.y);
+  float a=clamp(amt,0.,1.),base=mix(K_ROCK_SZ_MIN,K_ROCK_SZ_MAX,a),dens=mix(K_ROCK_DENS_MIN,.92,a)*mix(.1,1.,smoothstep(.33,.5,grp));
+  float hw=base*(.62+.55*kyotoHash(id+5.1))*step(kyotoHash(id+9.7),dens);
   float pxSafe=max(px,.05),aa=pxSafe/cell*K_KIRI_AA;
   float cov=(1.-smoothstep(hw-aa,hw+aa,max(abs(f.x),abs(f.y))))*step(.02,hw);
   float vis=smoothstep(1.3,3.2,cell/pxSafe);
@@ -1088,6 +1111,8 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     for(int k=0;k<8;k++){float a=float(k)*.7854;vec2 dv=vec2(cos(a),sin(a));inn+=float(mIdent0(kp+dv*5.).x==id)+float(mIdent0(kp+dv*10.).x==id)+float(mIdent0(kp+dv*16.).x==id);}
     float dS=smoothstep(.45,.9,inn/25.+(mVnoise(kp*.25)-.5)*.16);
     c=mHirame(c,kp,dS,rise);
+    // It stands for white sand: where the flakes lie close it is lifted toward a pale, cool silver (it read as a dull taupe mat).
+    c=mix(c,c*vec3(1.3,1.33,1.36)+M_SILVER*(.05+.14*L),dS);
   }
   if(mat==9){
     vec2 r=mHash2(floor(kp/2.3));
@@ -1118,7 +1143,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     vec3 wtr=mix(base,crest,ln)+M_SILVER*line*(.08+.36*L)*(.5+.5*flow)+M_SILVER*max(ring,0.)*.5*(.2+L)+mCoat()*.6;
     // The depth and the swells are laid over the whole of it (lines and gloss too): the lines and the lid's gloss are most of the water's
     // brightness away from the light, so a depth carried by the powder alone is lost there, and on a phone, where no light follows a pointer.
-    wtr*=mix(vec3(1.),vec3(.80,.69,.54),deep)*mix(.9,1.1,sw);
+    wtr*=mix(vec3(1.),vec3(.85,.76,.62),deep)*mix(.9,1.1,sw);
     // A silver shore just inside the water's edge (the Hatsune sandbars and banks are grey silver).
     float e=.25*(texture(uFine0,mPuv(kp+vec2(7.,0.))).g+texture(uFine0,mPuv(kp-vec2(7.,0.))).g+texture(uFine0,mPuv(kp+vec2(0.,7.))).g+texture(uFine0,mPuv(kp-vec2(0.,7.))).g);
     float shore=1.-smoothstep(.5,.95,e/max(fine.g,.01));
