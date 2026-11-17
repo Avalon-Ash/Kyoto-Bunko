@@ -107,6 +107,9 @@ npm run dev -- --host 127.0.0.1 --strictPort
 - 拍圖：`node scripts/plate-shot.mjs <outDir> <job…>`，job＝`name:steps:theme:WxH:zoom:fx,fy`。步數：南 0、右京 1、西京 2、山科 3、伏見 4、北 5、上京 6、下京 -1、東山 -2、中京 -3、左京 -4。環境變數：`PLATE_TONE=1`（分層調子）、`PLATE_KIRI=1`（切金佔比）、`PLATE_CPU=4`、`PLATE_LIGHT=fx,fy`（把游標光移開）、`PLATE_SHOT_QUERY='?coat=0'`。dev server 在 127.0.0.1:3000、無頭 Chrome 用 9377。
 - 量測：`node scripts/plate-doha-measure.mjs <區…>`（佔比、留白、直線）、`plate-doha-similar.mjs`（形的相似度）、`plate-clip.mjs <out.json>`（穿插）。降級圖：`node scripts/plate-fallback-shots.mjs`（22 張；只改了幾區就把其餘 `git checkout` 還原）。
 - 改著色器不要用 `sed -i`：dev server 偵測不到，會量到舊畫面。用編輯工具或整檔寫回。
+- **外觀要在沒有光的時候也成立**：手機沒有滑鼠，光要等閒置自動移光才出現；桌機截圖的光剛好照在盤心，會把只靠金粉反光的差別（例如池心的深淺）拍得比實際明顯。檢查時加一張 `PLATE_LIGHT=.02,.95`（光移到盤外）和一張 375×812。（11/17：池的深淺第一版只在光下看得見。）
+- 批次拍圖時別讓別的頁面同時佔用 GPU（瀏覽器面板開著盤面、另一支拍圖腳本）：換區的按鍵會被吃掉，拍到別區或別的日夜（11/17 伏見兩張拍錯）。拍完核對輸出裡每張的 `"ward"`，日夜看圖的角落亮度。
+- 拍操作之後的畫面（開盒）：`PLATE_EVAL='<js>' PLATE_EVAL_SHOT=1`，會多存一張 `<name>-after.png`。
 - 收尾停 dev server 與無頭 Chrome 時，**只結束自己啟動的行程（記下 PID）**。11/17 有子代理用太寬的條件結束了 10 個行程。
 - 直線檢查（`plate-doha-measure.mjs` 的 `longestStraight`）只是防呆；不要為了過檢查在輪廓上加等距的小波浪。
 - 把整張照片的亮度中位數當成地的目標是錯的（地被調太亮過一次）；目標要分層量。
