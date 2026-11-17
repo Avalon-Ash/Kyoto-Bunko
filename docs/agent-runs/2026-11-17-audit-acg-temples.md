@@ -76,7 +76,36 @@
 
 沒動、留給日後：HY-041 光明院（拜觀是否平時公開，來源互相矛盾）、HY-024 地主神社（修復閉門的期間未確認）、FS-026 宝塔寺的拜觀條件、FS-028 墨染寺的墨染櫻傳說、清水寺等的國寶只有二手來源（標籤原本就有、與通識一致，沒動）。
 
-## 3. 檢查
+## 3. 寺社第二包（44 筆：KG-001–MN-001）
+
+44 筆都存在。這包子代理第一次就照標準做（大量引用寺社官網、京都市觀光協會、kunishitei），直接採用。
+
+| ID | 改了什麼 | 來源 |
+|---|---|---|
+| KT-041 高桐院 | **拝観休止中、再開未定**；描述原本寫成可以走參道，改成 1601 年細川忠興創建＋休止中 | https://ja.kyoto.travel/tourism/single01.php?category_id=7&tourism_id=282 、https://ja.kyoto.travel/news/format.php?id=143 |
+| KT-005 金閣寺、KT-008 平野神社、KT-015 上賀茂神社 | 拿掉 `ACG`（查不到作品） | — |
+| KG-027 妙蓮寺 | 補 `庭園`（十六羅漢の石庭） | https://myorenji.or.jp/ |
+| KG-003 相國寺 | 「幡龍圖」是錯字 → 蟠龍図（狩野光信）；補 1392 年、臨濟宗相國寺派大本山。`國寶` 保留（承天閣美術館藏國寶 5 件） | https://www.shokoku-ji.jp/about/ 、https://www.shokoku-ji.jp/museum/about/ |
+| KG-005 清浄華院 | 「四本山」與淨土宗官方的「七大本山」不合 → 大本山、以院號相稱、本尊法然上人御影 | https://otera.jodo.or.jp/honzan/shojokein/ |
+| KG-007 京都御所 | 「至高の空間」是評語 → 紫宸殿 1855 年重建、宮內廳全年免費參觀（週一、年末年初休） | https://kyoto-gosho.kunaicho.go.jp/visit |
+| KG-022 縣井 | 「北西角」不符環境省的「西側」→ 一條家跡、《大和物語》 | https://www.env.go.jp/garden/kyotogyoen/news/nature/index_32.html |
+| KG-028 雨寶院 | 「出櫻の密度」沒有來源 → 西陣聖天、大聖歓喜天、歓喜桜 | https://ja.kyoto.travel/tourism/single01.php?category_id=7&tourism_id=27 |
+| KG-030 千本ゑんま堂 | 「葬送地への入口」找不到原文 → 引接寺、小野篁開基傳承、お精霊迎え、十重石塔（1386，重文） | https://ja.kyoto.travel/tourism/single01.php?category_id=7&tourism_id=237 |
+| KG-032 幸神社 | 「平安京創建時から」「猿田彦大神」都查不到 → 守護鬼門的猿神像 | https://ja.kyoto.travel/tourism/single01.php?category_id=7&tourism_id=2867 |
+| KG-034 清荒神 | 「門跡寺院」沒有記載 → 天台宗、772 年傳承、1600 年遷至現址、敕願所 | https://ja.kyoto.travel/tourism/single01.php?category_id=7&tourism_id=288 |
+| KG-038 阿弥陀寺 | 補「本堂平時不公開，信長忌開放」；中文原本的「復仇後的祭祀地」不通，改寫 | https://ja.kyoto.travel/tourism/single01.php?category_id=7&tourism_id=225 |
+| KG-040 宥清寺 | 「広々とした境内」沒有來源；中文「日蓮宗初門」錯 → 本門佛立宗大本山、1308 年（二手） | https://ja.wikid.org/%E5%AE%A5%E6%B8%85%E5%AF%BA （二手） |
+| KT-008 平野神社 | 「江戸時代から庶民に」沒有來源 → 約 60 種 400 株、「平野の夜桜」 | https://ja.kyoto.travel/tourism/single01.php?category_id=7&tourism_id=445 |
+| KT-016 建勲神社 | 「京都市内見渡せる」與官方說法不合 → 眺望東山三十六峰 | https://kenkun-jinja.org/precincts/ |
+| KT-024 志明院 | 「秘境」是評語；中文的「《魔法公主》靈感來源」沒有來源，刪 → 650 年役行者、829 年空海重興 | https://ja.kyoto.travel/tourism/single02.php?category_id=9&tourism_id=20 |
+| KT-034 正伝寺 | 「究極の静寂」是評語 → 七五三的枯山水、本堂為重文 | https://ja.kyoto.travel/tourism/single01.php?category_id=7&tourism_id=327 |
+| KT-042 龍源院 | 「最も古い塔頭」→ 原文是「最古の建物」；「五つの庭」數不出來 → 南庭、北庭、東の壷庭など | https://ja.kyoto.travel/tourism/single01.php?category_id=7&tourism_id=483 |
+| KG-014 妙顯寺 | 「京都十六本山」的官方構成查不到 → 1321 年、洛中最初の日蓮宗寺院、兩座庭 | https://ja.kyoto.travel/tourism/single01.php?category_id=7&tourism_id=2535 |
+| KG-029 千本釋迦堂 | 補「本堂 1227 年、國寶、市內最古的木造建築」 | https://kunishitei.bunka.go.jp/heritage/detail/102/1612 、https://daihoonji.jp/cultural-heritage/architectural |
+
+沒動：KG-007 京都御所不是寺社，但現有類型裡沒有更合適的，維持 `T_TEMPLE`（寺社名所）；KG-036 菅原院天滿宮的「と伝えられる」已經是保留語氣。
+
+## 4. 檢查
 
 | 命令 | 結果 |
 |---|---|
