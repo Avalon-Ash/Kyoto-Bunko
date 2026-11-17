@@ -34,9 +34,8 @@
 import { SpotSchema } from '../../types';
 
 export const KITA_SCHEMA: SpotSchema[] = [
-  { id: 'KT-001', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_HUB', tagIds: ['鐵道', 'ACG'] },
+  { id: 'KT-001', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_HUB', tagIds: ['鐵道'] },
   { id: 'KT-002', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_HUB', tagIds: ['巴士'] },
-  { id: 'KT-003', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_HUB', tagIds: ['巴士'] },
   { id: 'KT-004', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_HUB', tagIds: ['巴士'] },
   { id: 'KT-005', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_TEMPLE', tagIds: ['寺院', '世界遺產', '打卡', '庭園'] },
   { id: 'KT-006', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_TEMPLE', tagIds: ['寺院', '庭園', '國寶'] },
@@ -84,4 +83,5 @@ export const KITA_SCHEMA: SpotSchema[] = [
   { id: 'KT-077', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_FOOD', tagIds: ['和菓子', '老舖', '隱密'] },
   { id: 'KT-078', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_FOOD', tagIds: ['喫茶', '隱密', '打卡'] },
   { id: 'KT-079', wardId: 'W_KITA', areaId: 'A12', typeId: 'T_FOOD', tagIds: ['喫茶', '現代', '打卡'] },
+  { id: 'KT-080', wardId: 'W_KITA', areaId: 'A14', typeId: 'T_HUB', tagIds: ['地鐵'] },
 ];

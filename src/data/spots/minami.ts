@@ -47,8 +47,6 @@ export const MINAMI_SCHEMA: SpotSchema[] = [
   { id: 'MN-023', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_HUB', tagIds: ['巴士'] },
   { id: 'MN-029', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_HUB', tagIds: ['巴士'] },
   { id: 'MN-030', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_HUB', tagIds: ['巴士'] },
-  { id: 'MN-034', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_HUB', tagIds: ['鐵道'] },
-  { id: 'MN-035', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_HUB', tagIds: ['地鐵'] },
   { id: 'MN-044', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_TEMPLE', tagIds: ['神社'] },
   { id: 'MN-045', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_TEMPLE', tagIds: ['寺院'] },
   { id: 'MN-046', wardId: 'W_MINAMI', areaId: 'A04', typeId: 'T_ACG', tagIds: ['ACG', '打卡'] },

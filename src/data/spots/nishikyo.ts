@@ -34,9 +34,9 @@
 import { SpotSchema } from '../../types';
 
 export const NISHIKYO_SCHEMA: SpotSchema[] = [
-  { id: 'NS-001', wardId: 'W_NISHIKYO', areaId: 'A09', typeId: 'T_HUB', tagIds: ['鐵道', 'ACG'] },
+  { id: 'NS-001', wardId: 'W_NISHIKYO', areaId: 'A09', typeId: 'T_HUB', tagIds: ['鐵道'] },
   { id: 'NS-002', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_HUB', tagIds: ['鐵道'] },
-  { id: 'NS-003', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_HUB', tagIds: ['鐵道', 'ACG'] },
+  { id: 'NS-003', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_HUB', tagIds: ['鐵道'] },
   { id: 'NS-004', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_HUB', tagIds: ['鐵道'] },
   { id: 'NS-005', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_HUB', tagIds: ['巴士'] },
   { id: 'NS-006', wardId: 'W_NISHIKYO', areaId: 'A10', typeId: 'T_TEMPLE', tagIds: ['庭園', '打卡'], reservationRequired: true },

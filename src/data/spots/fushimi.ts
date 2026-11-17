@@ -92,4 +92,6 @@ export const FUSHIMI_SCHEMA: SpotSchema[] = [
   { id: 'FS-065', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_FOOD', tagIds: ['正餐', '燒肉', '放題'] },
   { id: 'FS-066', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_MODERN', tagIds: ['打卡', '博物館'] },
   { id: 'FS-067', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_NATURE', tagIds: ['自然'] },
+  { id: 'FS-068', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_HUB', tagIds: ['鐵道'] },
+  { id: 'FS-069', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_HUB', tagIds: ['地鐵', '鐵道'] },
 ];

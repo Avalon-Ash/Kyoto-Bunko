@@ -34,7 +34,7 @@
 import { SpotSchema } from '../../types';
 
 export const YAMASHINA_SCHEMA: SpotSchema[] = [
-  { id: 'YS-001', wardId: 'W_YAMASHINA', areaId: 'A08', typeId: 'T_HUB', tagIds: ['鐵道'] },
+  { id: 'YS-001', wardId: 'W_YAMASHINA', areaId: 'A08', typeId: 'T_HUB', tagIds: ['鐵道', '地鐵'] },
   { id: 'YS-002', wardId: 'W_YAMASHINA', areaId: 'A08', typeId: 'T_HUB', tagIds: ['地鐵'] },
   { id: 'YS-003', wardId: 'W_YAMASHINA', areaId: 'A08', typeId: 'T_HUB', tagIds: ['地鐵'] },
   { id: 'YS-004', wardId: 'W_YAMASHINA', areaId: 'A08', typeId: 'T_TEMPLE', tagIds: ['寺院', '打卡', '經典', '庭園', '楓葉'] },
