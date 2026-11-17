@@ -877,8 +877,8 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     // An aged box sits in a slightly quieter day. (The ground is dark by its own structure now, so the pieces no longer need the light held down to sit above it.)
     const age = shared.uAge.value, dayDim = night ? 1 : 1 - .14 * age;
     ambient.color.set(night ? '#7f96d6' : '#fff4e0'); ambient.intensity = (night ? .5 : .55) * dayDim;
-    key.color.set(night ? '#9fb4e8' : '#fff0d6'); key.intensity = (night ? 2.5 : 3.4) * dayDim;
-    scene.environmentIntensity = (night ? .22 : .55) * dayDim;
+    key.color.set(night ? '#c4c8e2' : '#fff0d6'); key.intensity = (night ? 3.1 : 3.4) * dayDim;
+    scene.environmentIntensity = (night ? .36 : .55) * dayDim;
     lamp.position.set(lampAt[0], lampAt[1], lampAt[2]); lamp.intensity = (night ? 120000 : 50000) * (.15 + presence.x);
 
     shared.uLamp.value.set(lampAt[0], lampAt[1], lampAt[2]);

@@ -182,9 +182,9 @@ function ginkgoLeaf(cx, cz, radius, turn) {
   for (let i = 0; i <= 10; i++) { const t = i / 10, a = turn + (t - .5) * 2; d.push([cx + Math.cos(a) * radius * (i === 5 ? .62 : 1), cz + Math.sin(a) * radius * (i === 5 ? .62 : 1)]); }
   return d;
 }
-/** Fallen ginkgo leaves: a carpet of gold and silver sheet. */
+/** Fallen ginkgo leaves: a carpet of gold sheet, one in six of silver (more silver and the carpet reads as grey water from afar). */
 export function fallenFans(id, cx, cz, rx, rz, count, seed, {size = 10} = {}) {
-  return scatter(id, cx, cz, rx, rz, count, seed, size, ginkgoLeaf, [['gold', MAT.hyomonGold], ['pale', MAT.hyomonSilver]]);
+  return scatter(id, cx, cz, rx, rz, count, seed, size, ginkgoLeaf, [['gold', MAT.hyomonGold], ['pale', MAT.hyomonSilver, 6]]);
 }
 /** One cherry petal: a drop with a notched tip. */
 function petal(cx, cz, radius, turn) {

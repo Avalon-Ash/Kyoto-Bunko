@@ -877,7 +877,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   ivec2 im=mIdent0(kp);int id=im.x,mat=im.y;
   float rise=texelFetch(uState,ivec2(id,0),0).z,glow=texelFetch(uState,ivec2(id,0),0).w;
   vec4 fine=texture(uFine0,mPuv(kp));float hs=texture(uSoft0,mPuv(kp)).r;
-  float eS=3.,sH=M_SWELL*mix(.3,1.,rise),cH=(mat==19||mat==20)?M_BANK_CH:(mat==23||mat==24)?5.*smoothstep(.56,.72,fine.g):(mat==21||mat==22)?0.:2.4,lH=mat==21?.15:.7,eC=max(uPx*.9,.55);
+  float eS=3.,sH=M_SWELL*mix(.3,1.,rise),cH=(mat==19||mat==20)?M_BANK_CH:(mat==23||mat==24)?5.*smoothstep(.56,.72,fine.g):(mat==21||mat==22||mat==12)?0.:2.4,lH=mat==21?.15:.7,eC=max(uPx*.9,.55);
   vec4 st=vec4(texture(uSoft0,mPuv(kp+vec2(eS,0.))).r,texture(uSoft0,mPuv(kp-vec2(eS,0.))).r,
                texture(uSoft0,mPuv(kp+vec2(0.,eS))).r,texture(uSoft0,mPuv(kp-vec2(0.,eS))).r);
   vec2 gs=vec2(st.x-st.y,st.z-st.w)/(2.*eS)*sH;
@@ -917,7 +917,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     else if(mat==19||mat==20||mat==23||mat==24){mKS=1.-smoothstep(.0,.3,fine.g);mKT=1.-mKS;}
     else if(mat==21){mKS=1.-smoothstep(.0,.35,fine.g);mKT=1.-mKS;}
     else if(mat==22){mKS=1.-inlay;mKT=inlay;}
-    else if(mat==12){mFlat=1.;mKE=smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.02,.06));mKT=1.-mKE;}
+    else if(mat==12){mFlat=1.;mKE=.3*smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.02,.06));mKT=1.-mKE;}
     else if(mat==5||mat==7||mat==8||mat==10||mat==11){mFlat=1.;float ke=smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.42,.58));mKE=ke*smoothstep(0.,.25,inlay);mKS=(1.-inlay)*(1.-mKE);mKT=inlay*(1.-ke);}
     else if(mat==9||mat==17){mKT=0.;mKS=0.;mKE=0.;}
     // Flush inlay has no step: the relief that bevels its outline is left out (the drawn line stays, dimmed inside the ring).
@@ -937,7 +937,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   // further (M_AGE_BOKASHI times as strong at age 1): it is what joins a form to the ground it stands on.
   // (Under a bank, a gold suhama or a far mountain the ground is the plain ground itself: their powder is laid over it and thins into it,
   // so nothing marks where their outline runs.)
-  if(mat==1||(mat>=19&&mat<=21)||mat==23||mat==24){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
+  if(mat==1||mat==12||(mat>=19&&mat<=21)||mat==23||mat==24){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
   else if(mat==2||mat==3){
     float cloud=mat==3?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
     // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
@@ -951,8 +951,8 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else if(mat==6){wN=1.;dens=.95;}
   else if(mat==7){wM=inlay;wN=1.-inlay;f0=M_GOLD*.9;rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_PALE*line*(.22+.6*L)*inlay*(1.-mKE);}
   else if(mat==8){wM=inlay;wN=1.-inlay;f0=mAgedSilver(mix(M_SILVER,M_GOLD,.25)*.9,kp,.35);rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_SILVER*line*(.22+.6*L)*inlay*(1.-mKE);}
-  else if(mat==9||mat==12){wN=1.;}
-  else if(mat==10){wS=inlay;wN=1.-inlay;f0=M_PALE;c=M_PALE*glow*.5*inlay;}
+  else if(mat==9){wN=1.;}
+  else if(mat==10){wS=inlay;wN=1.-inlay;f0=M_PALE;c=(M_PALE*glow*.5+mix(M_GOLD,M_PALE,.4)*(.10+.46*L))*inlay;} // gold sheet is polished: the brightest flat gold on the lid, brighter than any powder it lies on
   else if(mat==11){wS=inlay;wN=1.-inlay;f0=mAgedSilver(M_SILVER,kp,.3);}
   else if(mat==13){wS=.82;wM=.18;f0=M_GOLD;tint=M_GOLD;}
   else if(mat>=19&&mat<=22){wN=mat<22?1.:1.-inlay;}
@@ -1024,7 +1024,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     float Ht=fine.g,a=smoothstep(.0,.85,Ht),ridgeV=smoothstep(.45,1.,Ht),edgeV=smoothstep(.6,1.,Ht);
     // A silver head (24) is made the way a gold one is: opaque pale silver powder, a warm neutral, thinning from the ridge to the ground. Its ridge is a line of gold.
     // A blue-gold head (24, aokin: gold with silver in it) is a pale, greenish gold, never white.
-    vec3 pw=mat==23?mix(M_GOLD,M_PALE,.8):vec3(.95,.90,.58);
+    vec3 pw=mat==23?mix(M_GOLD,M_PALE,.5):vec3(.86,.90,.62);
     vec3 pwd=mNashiji(kp,mix(1.4,2.5,Ht),pw)*mix(1.55,2.1,ridgeV);
     // Silver is laid thick: opaque over most of the face (the ground's flakes do not show through), and only the last of the slope thins into the ground.
     if(mat==24){pwd=mix(mMetal(kp,pw*.9,.9)*1.1,pwd*1.05,.35);a=1.-pow(1.-smoothstep(.0,.4,Ht),2.4);}
@@ -1084,13 +1084,22 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     float fw=fwidth(ph),d=abs(fract(ph)-.5)*2.;
     float ln=mix(1.-smoothstep(.26-fw,.26+fw,d),.26,smoothstep(.22,.55,fw));
     float flow=.55+.45*sin(kp.y*.20-uTime*1.5+kp.x*.06);
-    vec3 base=mMetal(kp,M_GOLD*.74,.9)*.82+tint*vec3(.36,.17,.045)*(.10+.30*L);
+    // Depth: how far this point is from the pond's own edge (share of the points around it, out to 40 units, that are water).
+    float inn=0.;
+    for(int k=0;k<8;k++){float a=float(k)*.7854+.39;vec2 dv=vec2(cos(a),sin(a));inn+=float(mIdent0(kp+dv*10.).x==id)+float(mIdent0(kp+dv*22.).x==id)+float(mIdent0(kp+dv*40.).x==id);}
+    float deep=smoothstep(.45,.96,inn/24.+(mVnoise(kp*.05)-.5)*.12);
+    // Broad swells: every few lines the water lightens and darkens, so it still reads as water when the lines are too fine to see.
+    float sw=.5+.5*sin(ph*.55+mVnoise(kp*.018)*5.);
+    // Powder lies thick and pale along the shore and thins toward the middle, where the lines carry the water (maki-bokashi).
+    vec3 shoal=mMetal(kp,mix(M_GOLD,M_PALE,.15)*.86,.9)*.95+tint*vec3(.36,.17,.045)*(.10+.30*L);
+    vec3 pool=mNashiji(kp,1.3,mix(M_GOLD,M_PALE,.15))*.9;
+    vec3 base=mix(shoal,pool,deep*.9)*mix(.8,1.16,sw)+mKeyC*mBand*.10;
     vec3 crest=mSheet(M_PALE)*.45+mix(M_PALE,M_GOLD,.3)*(.10+.62*L)*(.8+.2*flow)+M_PALE*mBand*.12;
     vec3 wtr=mix(base,crest,ln)+M_SILVER*line*(.08+.36*L)*(.5+.5*flow)+M_SILVER*max(ring,0.)*.5*(.2+L)+mCoat()*.6;
     // A silver shore just inside the water's edge (the Hatsune sandbars and banks are grey silver).
     float e=.25*(texture(uFine0,mPuv(kp+vec2(7.,0.))).g+texture(uFine0,mPuv(kp-vec2(7.,0.))).g+texture(uFine0,mPuv(kp+vec2(0.,7.))).g+texture(uFine0,mPuv(kp-vec2(0.,7.))).g);
     float shore=1.-smoothstep(.5,.95,e/max(fine.g,.01));
-    wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.85+M_SILVER*line*(.1+.3*L),shore*.7);
+    wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.85+M_SILVER*line*(.1+.3*L),shore*.35);
     c=mix(c,wtr,m);
   }
   if(uAge>0.&&mat>=2&&mat<=4){
@@ -1206,7 +1215,7 @@ void main(){
 #endif
   // Suyari-gasumi in the Hatsune lids is dense, bright gold (濃梨子地 into flat gold), clearly richer than the ground.
   // Thin at its edge it is single flakes on the lacquer; toward its middle the powder closes into pale gold.
-  vec3 c=mix(mNashiji(vKyotoUv,mix(1.9,2.9,core),mix(M_GOLD,M_PALE,.25)),mMetal(vKyotoUv,mix(M_GOLD,M_PALE,.5),1.),.1+.12*core)*vec3(1.12,1.04,.9);
+  vec3 c=mix(mNashiji(vKyotoUv,mix(1.9,2.9,core),mix(M_GOLD,M_PALE,.25)),mMetal(vKyotoUv,mix(M_GOLD,M_PALE,.45),1.)*1.12,.18+.5*core)*vec3(1.12,1.04,.9);
   // A few long thin strips of pale silver lie in the gold (the Hatsune mist bands carry the two metals): a thread, never the band's colour.
   float sv=smoothstep(.74,.84,mVnoise(vec2(vKyotoUv.x*.012,vKyotoUv.y*.55)+vPartId*3.7))*core;
   c=mix(c,mMetal(vKyotoUv,mAgedSilver(M_SILVER,vKyotoUv,.45),1.)*.95+.15*mSheet(mAgedSilver(M_SILVER,vKyotoUv,.5)),sv*.6);

@@ -14,7 +14,7 @@ const shore = blob(...POND, .055, 80);
 /** A reed clump on the shore at index i, rooted a little inland, leaning out over the water. */
 function reed(i, h, n) {
   const [x, z] = shore[i];
-  return [x, z - 1.2, h, n, .16];
+  return [x, z - 1.2, h, n, .08];
 }
 
 // Kinugasa, far to near. Why: it is the green hill behind the Golden Pavilion; low, so it answers the pavilion instead of competing.
@@ -57,8 +57,9 @@ export function kita() {
     ...mountain('kinugasa', KINUGASA),
     ...tongues('suhama', SHORE, {toward: [[-150, 68], [-5, 68], [140, 68]]}),
     ...pond('kyoko', -5, 68, 244, 82, 3, {reflection: {x: -85, z: 9, width: 78, height: 90}}),
-    // Reeds of silver line work on the north-west bank, from the pavilion's west foot toward the shore stone.
-    ...grassTufts('kyoko-reeds', [reed(45, 21, 5), reed(47, 25, 5), reed(49, 21, 5), reed(51, 18, 4)], {on: 'kyoko', mat: MAT.silver, seed: 5, w: 2.4, spread: .12}),
+    // Reeds in bright silver sheet on the north-west bank, from the pavilion's west foot toward the shore stone. Why sheet: silver powder
+    // blades tarnish to the colour of the ground and were lost; the reeds are what say the pavilion stands at a water's edge.
+    ...grassTufts('kyoko-reeds', [reed(45, 30, 6), reed(47, 40, 7), reed(49, 46, 7), reed(51, 32, 6)], {on: 'kyoko', mat: MAT.hyomonSilver, seed: 5, w: 1.3, spread: .13}),
     ...suyari('mist-west', -350, -196, -98, 10, 2),
     ...suyari('mist-east', 232, 352, -84, 10, 7),
     ...rock('shore-stone', -246, 18, 29, 20, 5),

@@ -63,7 +63,7 @@ export function higashiyama() {
     // Fallen leaves of cut gold and silver drift from the maples down the valley toward the water.
     ...fallenLeaves('momiji', -60, 192, 240, 34, 30, 7),
     // Slot 1: mist and stones. The mist across the lattice is the void under the stage; the others cut the feet of the two ranges.
-    ...suyari('mist-under', -150, 290, 52, 11, 5),
+    ...suyari('mist-under', -150, 290, 50, 17, 5),
     ...suyari('mist-west', -352, -176, -88, 11, 11),
     ...suyari('mist-hall', 210, 352, -70, 12, 8),
     ...rock('rock-a', -10, 150, 30, 20, 5),
