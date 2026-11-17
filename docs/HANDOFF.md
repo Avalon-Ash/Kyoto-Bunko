@@ -6,8 +6,8 @@
 
 | 項目 | 狀態 |
 |---|---|
-| 主線 | `main` 與 `origin/main` 在 `bdde162`（2026-11-17 下午，使用者同意合併與 push；GitHub Pages 部署成功，`gh run list` 確認；含建部件網格的效能與開案書 §13 的修整）：開案書 R0–R10、銀的補強、作舊與珊瑚、穿插修正、技法堆疊、屋頂金粉、疊坡（遠山、岸、洲浜）、地與調子、包漿、九區重做、盤面修整 P1–P5 都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/finish-1117`：P1–P5（`470293f`）與「建部件網格的效能」（`creature-mesh.js`、`architecture-mesh.js`、`rock-mesh.js`，報告 [`agent-runs/2026-11-17-mesh-perf.md`](agent-runs/2026-11-17-mesh-perf.md)）都已併入 `main`（`5c988da`）並上線。2026-11-17 下午主席自己做的修整（水面、夜間照明、金山與青金、霞、北的蘆葦、銀杏落葉、銀洲浜、盒內梨子地、卷軸；開案書 §13）也已併入 `main`（`bdde162`）。分支上之後多的是最後一批（盒內的紙、左京的白砂與「大」、岩的表面與形；開案書 §14），**尚未合併 `main`**；合併與 push 要使用者同意。本機還留著已併入 `main` 的 `claude/doha-1116`、`claude/roof-1116`、`claude/handoff-1116` 與 `agent/*`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
+| 主線 | `main` 與 `origin/main` 在 `f3ffe45`（2026-11-17 下午，使用者同意合併與 push；GitHub Pages 部署成功，`gh run list` 確認；含建部件網格的效能與開案書 §13、§14 的修整）：開案書 R0–R10、銀的補強、作舊與珊瑚、穿插修正、技法堆疊、屋頂金粉、疊坡（遠山、岸、洲浜）、地與調子、包漿、九區重做、盤面修整 P1–P5 都已上線。實際 HEAD 以 `git log -1 main` 為準 |
+| 工作分支 | `claude/finish-1117`：P1–P5（`470293f`）與「建部件網格的效能」（`creature-mesh.js`、`architecture-mesh.js`、`rock-mesh.js`，報告 [`agent-runs/2026-11-17-mesh-perf.md`](agent-runs/2026-11-17-mesh-perf.md)）都已併入 `main`（`5c988da`）並上線。2026-11-17 下午主席自己做的修整（水面、夜間照明、金山與青金、霞、北的蘆葦、銀杏落葉、銀洲浜、盒內梨子地、卷軸；開案書 §13）也已併入 `main`（`bdde162`）。最後一批（盒內的紙、左京的白砂與「大」、岩的表面與形；開案書 §14）也已併入 `main`（`f3ffe45`）並上線。分支上之後只多了更新這份交接的文件 commit；新的工作合併與 push 要使用者同意。本機還留著已併入 `main` 的 `claude/doha-1116`、`claude/roof-1116`、`claude/handoff-1116` 與 `agent/*`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
 | 子代理工作樹 | 現有一個：`C:\Git\_wt_kyoto_doha`（分支 `agent/perf-1117`，`73ef7d7`，盤的程式與 `470293f` 相同，乾淨），可以直接重用：`git checkout -B agent/<主題> claude/finish-1117`。規矩：放在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`），由主代理建立與刪除；`node_modules` 用 junction 連到主資料夾（`cmd /c mklink /J`），**刪工作樹前先 `cmd /c rmdir` 拿掉 junction**，否則會刪到主資料夾的 `node_modules` |
@@ -48,8 +48,8 @@ npm run dev -- --host 127.0.0.1 --strictPort
 | `npm run build` | exit 0 |
 | 穿插 | `node scripts/plate-clip.mjs <out.json>`：十一區 0 |
 | 盤面調子 | `PLATE_TONE=1 node scripts/plate-shot.mjs <outDir> <job…>`；數字在 [`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md) §8–§11 |
-| 部署 | `main` 在 `bdde162`（含開案書 §13），GitHub Pages 部署成功；線上頁面與實機沒有人看過。最後一批（開案書 §14）還沒合併，所以還沒部署 |
-| 下午的修整（§13 已上線、§14 未合併） | lint exit 0、validate --strict ERROR 0／WARN 0、test 146／146 與 17／17、build exit 0（主席重跑）；降級圖 22 張重拍；手機 375×812 拍過兩區；主站開盒流程用瀏覽器面板走過一次。十一區日夜總覽在 `.shots/polish/FINAL-day.png`、`FINAL-night.png` |
+| 部署 | `main` 在 `f3ffe45`（含開案書 §13、§14），GitHub Pages 部署成功；線上頁面與實機沒有人看過 |
+| 下午的修整（§13、§14 都已上線） | lint exit 0、validate --strict ERROR 0／WARN 0、test 146／146 與 17／17、build exit 0（主席重跑）；降級圖 22 張重拍；手機 375×812 拍過兩區；主站開盒流程用瀏覽器面板走過一次。十一區日夜總覽在 `.shots/polish/FINAL-day.png`、`FINAL-night.png` |
 | 網格效能（已上線） | 十一區 `PLATES[ward]()` 的輸出在修改前後逐位元相同（主代理用自己的腳本算 sha256，11／11）；lint exit 0、validate --strict ERROR 0／WARN 0、test 146／146 與 17／17、build exit 0（主代理重跑）。建盤時間降 14–101 ms、換區最長幀降 39–64% 是另一個工作階段量的，主代理沒有重量 |
 
 前四項是主席在主資料夾重跑的。截圖都是無頭 Chrome（桌機 GPU）拍的，放在 `.shots/`（不提交）；修整後的十一區日夜總覽是 `.shots/finish/FINAL-day.png`、`FINAL-night.png`。**11/16–17 的畫面使用者都還沒在實機（手機）上看過。**
@@ -72,7 +72,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 ### 4.2 下一個工作階段照這樣開始
 
 1. 讀 `AGENTS.md`、本檔、[`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md)；專案記憶會自動載入（設計規則都在裡面，§4.4 是摘要）。
-2. `git fetch --prune; git status -sb`，確認在 `claude/finish-1117`、`main` 是 `bdde162` 或更新。
+2. `git fetch --prune; git status -sb`，確認在 `claude/finish-1117`、`main` 是 `f3ffe45` 或更新。
 3. 看參考圖與現況圖（都在本機 `.shots/`，不在 repo；雲端工作階段看不到）：`.shots/ref/user-hatsune-suzuribako-lid.png`、`shioyama-2.jpg`、`user-toyama-cup-a.png`、`hirasan-3.jpg`、`user-hatsune-three-grounds.png`；`.shots/nine/overview-day.png`、`overview-night.png`。
 4. 確認這個工作階段的模型與推理強度：定調（開案書 P1–P3）由主代理自己做，預設 Opus 5.5 medium（§4.1）。
 5. P1–P5 都已做完（開案書 §8–§12）。先問使用者看過之後的意見；主席自己列的不滿意處在開案書 §11 末尾。
