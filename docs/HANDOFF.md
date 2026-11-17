@@ -91,7 +91,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ### 4.4 使用者定的設計規則
 
-規則只在一處維護：skill `~/.claude/skills/makie-painting/`（`SKILL.md` 的 R1–R18；做法與原話在同資料夾的參考檔）。原話的證據在專案記憶。外部代理讀不到 skill，派工時把用得到的段落貼進派工單。以下只記這個 repo 的狀態：
+規則只在一處維護：skill `~/.claude/skills/makie-painting/`（`SKILL.md` 的 R1–R18；做法與原話在同資料夾的參考檔）。原話的證據在專案記憶。repo 裡有一份備份 [`skills/makie-painting/`](skills/makie-painting/BACKUP.md)（2026-11-18 複製；以 skill 為準，skill 改了要重新複製，做法寫在該資料夾的 `BACKUP.md`）。外部代理讀不到 skill，派工時把用得到的段落貼進派工單。以下只記這個 repo 的狀態：
 
 - **岩**：使用者 2026-11-17 下午解除「先不動」（「你全權負責……最後動你翻車過的岩」）。主席改了表面（切金成群、露出岩身）與形（扇區成平面、稜線相接），見開案書 §14。還沒做的是逐顆寫輪廓與峰（立面的岩）；使用者還沒看過這一版。
 - 屋面顏色、貼金範圍、金片粒徑：等使用者意見，不主動改。
