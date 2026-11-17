@@ -99,42 +99,4 @@ export const SPOT_POSITIONS: Record<string, { lat: number, lng: number }> = {
   'NS-014': { lat: 34.9922, lng: 135.6841 }, // 西芳寺
   'NS-016': { lat: 34.9926, lng: 135.6881 }, // 鈴虫寺
 };
-
-/**
- * 取得節點在真實地圖上的經緯度座標
- */
-export function getLatLng(id: string, parentMode?: string, parentId?: string): { lat: number, lng: number } {
-  // 若模式為行政區 (Ward)，則 id 為區域 (Area)
-  if (parentMode === 'ward' && AREA_CENTERS[id]) {
-    return AREA_CENTERS[id];
-  } 
-  
-  // 若模式為區域 (Area)，則 id 為單獨景點 (Spot)
-  if (parentMode === 'area') {
-    if (SPOT_POSITIONS[id]) return SPOT_POSITIONS[id];
-    
-    // 如果單一景點沒有真實座標，退而求其次：
-    // 使用其所屬 Area 的中心點加一點微調擴散 (Scatter fallback)，這樣不會全部擠在同一個點上
-    if (parentId && AREA_CENTERS[parentId]) {
-      const baseLat = AREA_CENTERS[parentId].lat;
-      const baseLng = AREA_CENTERS[parentId].lng;
-      
-      // 使用 id 產生確定性的隨機微調值
-      let hash = 0;
-      for (let i = 0; i < id.length; i++) {
-        hash = id.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      
-      const jitterLat = (Math.sin(hash) * 0.005);
-      const jitterLng = (Math.cos(hash) * 0.005);
-      
-      return {
-        lat: baseLat + jitterLat,
-        lng: baseLng + jitterLng
-      };
-    }
-  }
-
-  // 預設京都車站周邊
-  return { lat: 34.985, lng: 135.758 };
-}
+// 沒有登錄座標的景點不在地圖上畫點：叢集放在 AREA_CENTERS，不在區中心周圍撒假位置（AGENTS.md §2「未知資料不得當作精確值」）。

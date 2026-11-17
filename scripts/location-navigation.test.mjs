@@ -39,7 +39,7 @@ test('external municipality takes precedence even for a standalone query name', 
 });
 test('Otsu trip is a selectable exact-position cluster, not an A16 area-center member', async () => {
   const spots = (await loader.loadSpotsByWard('W_SAKYO', 'zh')).filter(s => s.areaId === 'A16');
-  const clusters = buildClusters(spots, 'A16', id => id);
+  const clusters = buildClusters(spots, id => id);
   const trip = clusters.find(c => c.key === 'spot:SK-038');
   assert.deepEqual(trip.pos, [positions['SK-038'].lat, positions['SK-038'].lng]);
   assert.notDeepEqual(trip.pos, [centers.A16.lat, centers.A16.lng]);
@@ -48,5 +48,8 @@ test('Otsu trip is a selectable exact-position cluster, not an A16 area-center m
   assert.equal(clusters.flatMap(c => c.spots).length, spots.length);
 });
 test('nearby trip cannot silently fall back to a made-up coordinate', () => {
-  assert.throws(() => buildClusters([{ id: 'TEST-999', wardId: 'W_SAKYO', areaId: 'A16', municipalityId: 'M_OTSU', name: 'Test' }], 'A16', id => id), /verified coordinates/);
+  assert.throws(() => buildClusters([{ id: 'TEST-999', wardId: 'W_SAKYO', areaId: 'A16', municipalityId: 'M_OTSU', name: 'Test' }], id => id), /verified coordinates/);
+});
+test('an area cluster with no registered centre fails instead of landing on a default point', () => {
+  assert.throws(() => buildClusters([{ id: 'TEST-998', wardId: 'W_SAKYO', areaId: 'A99', name: 'Test' }], id => id), /Unknown area centre: A99/);
 });

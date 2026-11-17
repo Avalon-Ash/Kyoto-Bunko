@@ -169,7 +169,7 @@ export const ClusterMap: React.FC<ClusterMapProps> = ({ engine, night, paused })
     return bounds.isValid() ? bounds : null;
   }, [geoJsonData]);
 
-  const clusters = useMemo(() => buildMapClusters(filteredSpots, activeId ?? '', id => t(id, AREA_NAMES)), [activeId, filteredSpots, t]);
+  const clusters = useMemo(() => buildMapClusters(filteredSpots, id => t(id, AREA_NAMES)), [filteredSpots, t]);
   const nearbyClusters = useMemo(() => clusters.filter(cluster => cluster.nearby), [clusters]);
   // Keep the Kyoto boundary, but do not dim legitimate nearby-city destinations.
   const outsideMask = useMemo(() => nearbyClusters.length ? null : createOutsideMask(geoJsonData), [geoJsonData, nearbyClusters.length]);
