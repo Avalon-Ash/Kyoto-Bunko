@@ -1561,3 +1561,13 @@ test('doha: a custom rock keeps its outline and still has foil on its lit faces'
   assert.equal(r.fills[0].d.length, out.length);
   assert.ok(r.mesh.length >= 2, 'foil on the lit faces');
 });
+
+test('age in years: a new lid is 0, the curve only rises, and the Hatsune set (1639) sits near the top', async () => {
+  const {ageFromYears, HATSUNE_YEARS} = await import('../src/studies/toji/plate/three-pack.js');
+  assert.equal(ageFromYears(0), 0);
+  assert.equal(ageFromYears(-5), 0);
+  assert.equal(ageFromYears('x'), 0);
+  let last = 0;
+  for (const y of [10, 50, 100, 200, HATSUNE_YEARS, 1000]) { const a = ageFromYears(y); assert.ok(a > last && a < 1, `${y} years`); last = a; }
+  assert.ok(ageFromYears(HATSUNE_YEARS) > .9 && ageFromYears(HATSUNE_YEARS) < .95, 'the Hatsune set is the fixed point');
+});

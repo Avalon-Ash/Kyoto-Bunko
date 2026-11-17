@@ -24,7 +24,7 @@ import {
   mistGeometryData, PART_MOTION_GLSL, PART_LIGHT_GLSL, PART_POWDER_GLSL, PART_KIRIKANE_GLSL, BOX_MOTION_GLSL, BOX_GROUND_GLSL, BOX_GROUND_DEPTH_GLSL,
   TREE_LIMB_MOTION_GLSL, TREE_STAMP_MOTION_GLSL, DENSITY, COAT, COAT_GLSL,
   MAKIE_GROUND_PARS_GLSL, MAKIE_GROUND_FRAG_GLSL, MAKIE_MIST_VERT_GLSL, MAKIE_MIST_FRAG_GLSL,
-  BOX_SIDE_VERT_GLSL, BOX_SIDE_PARS_GLSL, BOX_SIDE_FRAG_GLSL, BOX_INNER_FRAG_GLSL, BOX_PAPER_FRAG_GLSL,
+  BOX_SIDE_VERT_GLSL, BOX_SIDE_PARS_GLSL, BOX_SIDE_FRAG_GLSL, BOX_INNER_FRAG_GLSL, BOX_PAPER_FRAG_GLSL, ageFromYears,
 } from './three-pack.js';
 
 const EYE = [430, 720, 920], TARGET = [0, 40, 0];
@@ -128,6 +128,10 @@ export function createThreeRenderer(gl, canvas) {
   const densMode = import.meta.env.DEV ? new URLSearchParams(location.search).get('dens') : null;
   // ?age=0..1 sets how old the box looks (0 is as new); every ageing effect is scaled by it.
   const ageParam = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('age') : null;
+  // ?years=N sets the lid's age in years (0: fresh from the workshop; 387: the Hatsune trousseau's age); ?age=0..1 sets uAge itself.
+  const yearsParam = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('years') : null;
+  const ageValue = yearsParam !== null && !Number.isNaN(Number(yearsParam)) ? ageFromYears(Number(yearsParam))
+    : ageParam === null || Number.isNaN(Number(ageParam)) ? AGE_DEFAULT : Math.min(1, Math.max(0, Number(ageParam)));
   const neutralDens = own(new THREE.DataTexture(new Uint8Array([128]), 1, 1, THREE.RedFormat, THREE.UnsignedByteType)); neutralDens.unpackAlignment = 1; neutralDens.needsUpdate = true;
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const stampTex = own(bakeStampTexture(doc, maxAniso));
@@ -138,7 +142,7 @@ export function createThreeRenderer(gl, canvas) {
     uMistFine: {value: dummyRgba}, uMistIdent: {value: dummyRg}, uStamps: {value: stampTex},
     uView: {value: new THREE.Vector3(...VIEW)}, uKey: {value: new THREE.Vector3(...KEY)}, uLamp: {value: new THREE.Vector3(0, 70, 0)},
     uTime: {value: 0}, uNight: {value: 1}, uPresence: {value: 0}, uPx: {value: 1}, uTrails: {value: trails},
-    uAge: {value: ageParam === null || Number.isNaN(Number(ageParam)) ? AGE_DEFAULT : Math.min(1, Math.max(0, Number(ageParam)))},
+    uAge: {value: ageValue},
     uCoatK: {value: 0}, uCoatUp: {value: new THREE.Vector3(0, 1, 0)}, uCoatV: {value: new THREE.Vector3(...VIEW)}, uCoatL: {value: new THREE.Vector3(...KEY)},
   };
   shared.uCoatK.value = COAT_ON * shared.uAge.value;

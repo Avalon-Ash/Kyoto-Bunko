@@ -106,6 +106,14 @@ export const BOX_PAPER_FRAG_GLSL = `
     outgoingLight=mix(outgoingLight,vec3(.80,.50,.13)*(.5+.7*lit),max(sq,dust*.8));
   }
 }`;
+/**
+ * The lid's age (uAge, 0..1) from its age in years. Lacquer clears fastest in its first decades and ever more slowly after: an
+ * exponential approach with a time constant of AGE_TAU_YEARS. The fixed point is the Hatsune trousseau, made in 1639: at its age
+ * (HATSUNE_YEARS in 2026) the curve gives about .92, the look the shader's age 1 constants were set against. 0 years is a lid fresh
+ * from the workshop: a deep brown film over the gold.
+ */
+export const AGE_TAU_YEARS = 150, HATSUNE_YEARS = 2026 - 1639;
+export const ageFromYears = years => 1 - Math.exp(-Math.max(0, Number(years) || 0) / AGE_TAU_YEARS);
 export const BOX_MATERIALS = {
   // Hatsune: the whole body is nashiji (amber lacquer over gold powder), not black lacquer (user decision, handoff §3).
   20: {name: 'side', color: '#a8722e', metalness: .72, roughness: .45, clearcoat: 1, clearcoatRoughness: .06, flake: 0, nashijiSide: true},
@@ -787,10 +795,11 @@ const vec2 M_PN[5]=vec2[5](vec2(1.,0.),vec2(.309,.951),vec2(-.809,.588),vec2(-.8
 // Suki-urushi clears with age: new, it is a deep brown film over the powder; over the years it grows more transparent and lighter, so the
 // gold under it shows brighter and yellower (the Edo-period Hatsune set is bright partly for its quantity of gold, partly because its
 // lacquer has cleared; user, 2026-11-17). So age does not brown the chips: it lets a little more of them through.
-const vec3 M_FLAKE_AGED=vec3(1.03,.97,.86);
+// New (age 0, fresh from the workshop) the film is at its darkest and brownest (M_FLAKE_NEW); at age 1 it has cleared (M_FLAKE_AGED).
+const vec3 M_FLAKE_NEW=vec3(.86,.76,.60), M_FLAKE_AGED=vec3(1.06,1.,.90);
 // The chips that lie deep are the ones the lacquer hides: as it clears they show more, and less reddened (the deepest tier by
 // M_AGE_CLEAR_A at age 1, the middle one by M_AGE_CLEAR_B; the shallow tier was never hidden).
-const float M_AGE_CLEAR_A=1.9, M_AGE_CLEAR_B=1.4;
+const float M_NEW_CLEAR_A=.6, M_NEW_CLEAR_B=.78, M_AGE_CLEAR_A=2.2, M_AGE_CLEAR_B=1.5;
 // One layer of chips: one in each cell, a convex piece of five random sides, longer than wide, at its own angle, inside
 // its cell. hl, hw are its half-length and half-width as a share of the cell. Returns its coverage of the pixel; col is
 // the chip's colour (lit), glint the light it mirrors.
@@ -821,9 +830,9 @@ vec3 mNashiji(vec2 p,float dens,vec3 tint){
   vec3 broad=(M_KEY*pow(max(dot(mN,mHk),0.),12.)*mKeyC+M_POOL*mAtt*pow(max(dot(mN,mHp),0.),12.)*mPoolC)*mSh;
   // The chips' lay is warped a little so the cells they sit in never read as a lattice.
   vec2 w=p+(vec2(mVnoise(p*.37+3.1),mVnoise(p*.37+11.7))-.5)*2.2;
-  vec3 age=mix(vec3(1.),M_FLAKE_AGED,uAge)*mix(1.,mix(M_FLAKE_NIGHT,M_FLAKE_NIGHT*.8,dn),uNight);
-  float a=mChips(M_R1*w,2.8,.30,.41,mix(.3,1.,clamp(dens*1.0,0.,1.)),mix(M_DEPTH_A,M_DEPTH_A*5.4,dn)*mix(1.,M_AGE_CLEAR_A,uAge),hueMul*age*mix(vec3(1.,.85,.72),vec3(1.,.92,.82),uAge),L,broad,c1,g1);
-  float b=mChips(M_R2*w+13.7,2.5,.30,.41,mix(.3,1.,clamp(dens*.85,0.,1.)),mix(M_DEPTH_B,M_DEPTH_B*3.0,dn)*mix(1.,M_AGE_CLEAR_B,uAge),hueMul*age,L,broad,c2,g2);
+  vec3 age=mix(M_FLAKE_NEW,M_FLAKE_AGED,uAge)*mix(1.,mix(M_FLAKE_NIGHT,M_FLAKE_NIGHT*.8,dn),uNight);
+  float a=mChips(M_R1*w,2.8,.30,.41,mix(.3,1.,clamp(dens*1.0,0.,1.)),mix(M_DEPTH_A,M_DEPTH_A*5.4,dn)*mix(M_NEW_CLEAR_A,M_AGE_CLEAR_A,uAge),hueMul*age*mix(vec3(1.,.80,.64),vec3(1.,.92,.82),uAge),L,broad,c1,g1);
+  float b=mChips(M_R2*w+13.7,2.5,.30,.41,mix(.3,1.,clamp(dens*.85,0.,1.)),mix(M_DEPTH_B,M_DEPTH_B*3.0,dn)*mix(M_NEW_CLEAR_B,M_AGE_CLEAR_B,uAge),hueMul*age,L,broad,c2,g2);
   float c=mChips(M_R3*w+41.3,3.3,.30,.41,mix(.2,1.,clamp(dens*.55,0.,1.)),mix(M_DEPTH_C,M_DEPTH_C*1.5,dn),hueMul*age*vec3(1.,1.10,1.22),L,broad,c3,g3);
   // The lacquer between the chips: nearly black amber; where the powder lies close, the gold under it shows through.
   vec3 lacq=mix(vec3(.30,.10,.045)*(.02+.05*L)*mix(1.8,1.,uAge),vec3(.62,.28,.07)*hueMul*age*M_FILL*(.06+.90*L),dn*.85);
