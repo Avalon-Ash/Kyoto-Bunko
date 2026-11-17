@@ -83,9 +83,14 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1,
   const r = rand(seed), custom = Boolean(outline);
   let d = [];
   if (custom) d = outline.map(([x, z]) => [cx + x, cz + z]);
-  else for (let i = 0; i < 8; i++) {
-    const t = i / 8 * 6.283 - Math.PI * .9, k = .72 + r() * .38, lower = Math.sin(t) > 0 ? .55 : 1;
-    d.push([cx + Math.cos(t) * w * k, cz + Math.sin(t) * h * k * lower]);
+  else {
+    for (let i = 0; i < 8; i++) {
+      const t = i / 8 * 6.283 - Math.PI * .9, k = .72 + r() * .38, lower = Math.sin(t) > 0 ? .55 : 1;
+      d.push([cx + Math.cos(t) * w * k, cz + Math.sin(t) * h * k * lower]);
+    }
+    // The crown stands off-centre, to one side or the other by the seed: one flank falls steeply, the other runs out long, so that no
+    // two rocks have the same lean (with the crown in the middle every rock was the same small tent). The outline stays where it was.
+    cx += (seed % 2 ? 1 : -1) * (.16 + .1 * ((seed * 37) % 10) / 10) * w;
   }
   const n = d.length;
 
