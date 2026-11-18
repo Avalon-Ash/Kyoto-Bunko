@@ -1,3 +1,4 @@
+# ALREADY APPLIED in commit d99774d (2026-11-18). Kept as the record of how the change was made; do not run it again.
 # Step 2 of docs/plans/2026-11-18-material-table.md: the per-material code of the ground shader becomes recipe functions with one
 # dispatch. Run from the repo root, after step1-patch.py:  python docs/plans/material-table/step2-patch.py
 # The recipe bodies are cut out of the existing shader text by this script, not retyped: inside the functions the struct's fields are

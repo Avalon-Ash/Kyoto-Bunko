@@ -6,8 +6,8 @@
 
 | 項目 | 狀態 |
 |---|---|
-| 主線 | `main` 與 `origin/main` 在 `ee7c89d`（2026-11-17 下午，使用者同意合併與 push；GitHub Pages 部署成功，`gh run list` 確認；含建部件網格的效能與開案書 §13、§14 的修整）：開案書 R0–R10、銀的補強、作舊與珊瑚、穿插修正、技法堆疊、屋頂金粉、疊坡（遠山、岸、洲浜）、地與調子、包漿、九區重做、盤面修整 P1–P5 都已上線。實際 HEAD 以 `git log -1 main` 為準 |
-| 工作分支 | `claude/finish-1117`：P1–P5（`470293f`）與「建部件網格的效能」（`creature-mesh.js`、`architecture-mesh.js`、`rock-mesh.js`，報告 [`agent-runs/2026-11-17-mesh-perf.md`](agent-runs/2026-11-17-mesh-perf.md)）都已併入 `main`（`5c988da`）並上線。2026-11-17 下午主席自己做的修整（水面、夜間照明、金山與青金、霞、北的蘆葦、銀杏落葉、銀洲浜、盒內梨子地、卷軸；開案書 §13）也已併入 `main`（`bdde162`）。最後一批（盒內的紙、左京的白砂與「大」、岩的表面與形；開案書 §14）也已併入 `main`（`f3ffe45`）並上線。「岩頂依種子偏向一側」也已併入 `main`（`a919d81`）並上線。「漆經年變透」、年代參數 `?years=N` 與演示時會走的漆齡（開案書 §15–§15.2）也已併入 `main`（`d409aff`）並上線。分支上之後只多了更新這份交接的文件 commit；新的工作合併與 push 要使用者同意。本機還留著已併入 `main` 的 `claude/doha-1116`、`claude/roof-1116`、`claude/handoff-1116` 與 `agent/*`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
+| 主線 | `main` 與 `origin/main`：2026-11-18 晚合併 `claude/mat-table`（快轉）並 push，使用者同意（「你自己作完這些問題後推上去」）。內容：材質表解耦第 0–2 步（`49978c8`、`ec1a9df`、`d99774d`）、makie-painting skill 的交接與備份、解耦提案。之前的 `56fc135` 是資料線的全庫事實查核（792 → 734 筆）。實際位置以 `git log -1 main` 為準；部署結果見 §3 |
+| 工作分支 | `claude/mat-table`（自 `claude/data-1117`）：材質表解耦，已併入 `main`。第 3、4 步若要做，從 `main` 開新分支。`claude/finish-1117`、`claude/data-1117` 都已併入 `main`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
 | 資料分支 | `claude/data-1117`（自 `claude/finish-1117`，2026-11-17 晚）：拿掉 `getLatLng` 的假座標、YS-045 改商店類、食處描述只留有來源的說法（報告 [`agent-runs/2026-11-17-data-cleanup.md`](agent-runs/2026-11-17-data-cleanup.md)）。四項驗收過、地圖用瀏覽器面板開過中京區；連同 B-0 量測與「地圖維持現狀」已併入 `main`（`c548ae0`）並 push，GitHub Pages 部署成功（2026-11-17 晚，使用者分別同意合併與 push）。之後同一分支上做了全庫事實查核（商店、ACG、寺社、自然、近代設施、交通；734 筆），**未合併 `main`、未 push** |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |

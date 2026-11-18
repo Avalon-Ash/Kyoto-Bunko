@@ -1,3 +1,4 @@
+# ALREADY APPLIED in commit ec1a9df (2026-11-18). Kept as the record of how the change was made; do not run it again.
 import io, sys
 BT = chr(96)
 def patch(p, pairs, append=None):
