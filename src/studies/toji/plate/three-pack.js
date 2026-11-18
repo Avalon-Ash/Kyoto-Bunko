@@ -1,6 +1,7 @@
 // Pure data for the three.js plate renderer (three-renderer.js): material table, box and mesh packing, motion state
 // packing and the GLSL that moves a part. Nothing here imports three, so node:test can check it.
 import {MAT, KIND} from './vocab.js';
+import {MAT_LOOK, COAT_KIND, TONE, TIER} from './mat.js';
 import {MAX_PARTS} from './parts.js';
 import {packMeshes} from './mesh-geometry.js';
 import {limbMesh, stampInstances} from './limbs.js';
@@ -893,6 +894,32 @@ vec4 mFinish(vec3 c,float a){
   return vec4(pow(c,vec3(.4545)),a);
 }`;
 
+/**
+ * MAT_LOOK (mat.js) as GLSL constant arrays, one per column, indexed by the material id; and the names of each column's kinds.
+ * The ground shader reads these and never compares a material id with a number. A float is written out in full (String, not
+ * toFixed), so the shader holds exactly the table's value.
+ */
+const LOOK_N = Math.max(...Object.keys(MAT_LOOK).map(Number)) + 1;
+const lookColumn = (type, value) => `const ${type} T_${value.name}[${LOOK_N}]=${type}[${LOOK_N}](${Array.from({length: LOOK_N}, (_, id) => value.of(MAT_LOOK[id] ?? MAT_LOOK[0])).join(',')});`;
+const glslFloat = v => { const text = String(v); return /[.e]/.test(text) ? text : `${text}.`; };
+const glslName = key => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
+const glslKinds = (prefix, kinds) => `const int ${Object.entries(kinds).map(([key, id]) => `${prefix}_${glslName(key)}=${id}`).join(',')};`;
+export const MAT_LOOK_GLSL = [
+  `const int LOOK_N=${LOOK_N};`,
+  glslKinds('COAT', COAT_KIND), glslKinds('TONE', TONE), glslKinds('TIER', TIER),
+  lookColumn('float', {name: 'CH', of: row => glslFloat(row.ch)}),
+  lookColumn('bool', {name: 'CH_RIDGE', of: row => String(row.chRidge)}),
+  lookColumn('float', {name: 'LH', of: row => glslFloat(row.lh)}),
+  lookColumn('int', {name: 'COAT', of: row => COAT_KIND[row.coat]}),
+  lookColumn('bool', {name: 'DENSITY', of: row => String(row.density)}),
+  lookColumn('float', {name: 'FLAKE_D', of: row => glslFloat(row.flakeD)}),
+  lookColumn('float', {name: 'FLAKE_CELL', of: row => glslFloat(row.flakeCell)}),
+  lookColumn('bool', {name: 'FOIL', of: row => String(row.foil)}),
+  lookColumn('int', {name: 'TONE', of: row => TONE[row.tone]}),
+  lookColumn('bool', {name: 'HILL', of: row => String(row.hill)}),
+  lookColumn('int', {name: 'TIER', of: row => TIER[row.tier]}),
+].join('\n');
+
 /** Fragment declarations injected into groundMaterial (MeshPhysicalMaterial). */
 export const MAKIE_GROUND_PARS_GLSL = `
 varying float vGlow; uniform float uGlowBase, uGlowGain;
@@ -901,8 +928,7 @@ uniform float uDensView, uDensMean;
 // Where things stand they shut out the room: the lid gets less of the sky's light there (M_OCC_AMB) and a little
 // less of everything else (M_OCC_ALL). It is light withheld, never a colour laid on, and it fades out with no edge.
 const float M_OCC_AMB=.85, M_OCC_ALL=.16;
-// Banks (doha.js): how steeply the wedge's height (the G channel, 0..1) tilts the surface's normal, in the same units as cH below.
-const float M_BANK_CH=15.;
+${MAT_LOOK_GLSL}
 const float M_DENS_MORE=${DENSITY.more.toFixed(3)}, M_DENS_LESS=${DENSITY.less.toFixed(3)};
 varying vec2 vKyotoPlate;
 varying vec3 vKyotoWorld, vKyotoNormal, vKyotoTanX, vKyotoTanZ;
@@ -926,10 +952,10 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   outgoingLight=mFinish(bc,1.).rgb;
   diffuseColor.a=1.;
 }else{
-  ivec2 im=mIdent0(kp);int id=im.x,mat=im.y;
+  ivec2 im=mIdent0(kp);int id=im.x,mat=im.y,mi=clamp(mat,0,LOOK_N-1); // mi: the material's row in MAT_LOOK (the T_ arrays)
   float rise=texelFetch(uState,ivec2(id,0),0).z,glow=texelFetch(uState,ivec2(id,0),0).w;
   vec4 fine=texture(uFine0,mPuv(kp));float hs=texture(uSoft0,mPuv(kp)).r;
-  float eS=3.,sH=M_SWELL*mix(.3,1.,rise),cH=(mat==19||mat==20)?M_BANK_CH:(mat==23||mat==24)?5.*smoothstep(.56,.72,fine.g):(mat==21||mat==22||mat==12)?0.:2.4,lH=mat==21?.15:.7,eC=max(uPx*.9,.55);
+  float eS=3.,sH=M_SWELL*mix(.3,1.,rise),cH=T_CH_RIDGE[mi]?T_CH[mi]*smoothstep(.56,.72,fine.g):T_CH[mi],lH=T_LH[mi],eC=max(uPx*.9,.55);
   vec4 st=vec4(texture(uSoft0,mPuv(kp+vec2(eS,0.))).r,texture(uSoft0,mPuv(kp-vec2(eS,0.))).r,
                texture(uSoft0,mPuv(kp+vec2(0.,eS))).r,texture(uSoft0,mPuv(kp-vec2(0.,eS))).r);
   vec2 gs=vec2(st.x-st.y,st.z-st.w)/(2.*eS)*sH;
@@ -963,15 +989,15 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     // or a thin film. Hills, banks and sandbars are raised toward their crest and fade out at the foot: no ring, the crest keeps its own light.
     mKS=0.;mKT=1.;mKE=0.;float mFlat=0.;
     float er=(${COAT.edgeWidth[0].toFixed(2)}+${COAT.edgeWidth[1].toFixed(2)}*uAge)*(.75+.5*mVnoise(kp*.9+3.))*(.8+.4*mThick);
-    if(mat==1){mKS=1.;mKT=0.;}
-    else if(mat==6){mKS=.45;mKT=.55;}
-    else if(mat==2||mat==3||mat==4){mKS=1.-smoothstep(.01,.14,hs);mKT=1.-mKS;}
-    else if(mat==19||mat==20||mat==23||mat==24){mKS=1.-smoothstep(.0,.3,fine.g);mKT=1.-mKS;}
-    else if(mat==21){mKS=1.-smoothstep(.0,.35,fine.g);mKT=1.-mKS;}
-    else if(mat==22){mKS=1.-smoothstep(.0,.35,fine.g);mKT=1.-mKS;}
-    else if(mat==12){mFlat=1.;mKE=.3*smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.02,.06));mKT=1.-mKE;}
-    else if(mat==5||mat==7||mat==8||mat==10||mat==11){mFlat=1.;float ke=smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.42,.58));mKE=ke*smoothstep(0.,.25,inlay);mKS=(1.-inlay)*(1.-mKE);mKT=inlay*(1.-ke);}
-    else if(mat==9||mat==17){mKT=0.;mKS=0.;mKE=0.;}
+    int ck=T_COAT[mi];
+    if(ck==COAT_SUNK){mKS=1.;mKT=0.;}
+    else if(ck==COAT_HALF){mKS=.45;mKT=.55;}
+    else if(ck==COAT_FOOT){mKS=1.-smoothstep(.01,.14,hs);mKT=1.-mKS;}
+    else if(ck==COAT_POWDER30){mKS=1.-smoothstep(.0,.3,fine.g);mKT=1.-mKS;}
+    else if(ck==COAT_POWDER35){mKS=1.-smoothstep(.0,.35,fine.g);mKT=1.-mKS;}
+    else if(ck==COAT_WATER_EDGE){mFlat=1.;mKE=.3*smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.02,.06));mKT=1.-mKE;}
+    else if(ck==COAT_INLAY_EDGE){mFlat=1.;float ke=smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.42,.58));mKE=ke*smoothstep(0.,.25,inlay);mKS=(1.-inlay)*(1.-mKE);mKT=inlay*(1.-ke);}
+    else if(ck==COAT_NONE){mKT=0.;mKS=0.;mKE=0.;}
     // Flush inlay has no step: the relief that bevels its outline is left out (the drawn line stays, dimmed inside the ring).
     if(mFlat>0.){
       vec2 gfg=vec2(fx1.g-fx0.g,fz1.g-fz0.g)*cH/(2.*eC)*mix(.55,1.,rise),gfb=vec2(fx1.b-fx0.b,fz1.b-fz0.b)*lH/(2.*eC)*mix(.55,1.,rise);
@@ -989,7 +1015,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   // further (M_AGE_BOKASHI times as strong at age 1): it is what joins a form to the ground it stands on.
   // (Under a bank, a gold suhama or a far mountain the ground is the plain ground itself: their powder is laid over it and thins into it,
   // so nothing marks where their outline runs.)
-  if(mat==1||mat==12||(mat>=19&&mat<=22)||mat==23||mat==24){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
+  if(T_DENSITY[mi]){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
   else if(mat==2||mat==3){
     float cloud=mat==3?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
     // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
@@ -1014,10 +1040,10 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   else c=mix(vec3(.10,.06,.025)*(.4+.5*L),vec3(1.,.62,.22)*1.15,glow)+M_LACQ;
   c+=wN*mNashiji(kp,dens,tint)+wM*mMetal(kp,f0,rise)+wS*mSheet(f0);
   // Gold suhama and far mountains carry a scatter of larger flakes that catch the light (the powder of the Hatsune set is coarse and of several golds).
-  if(mat==21||mat==23){bigD=.3;bigCell=5.2;}
+  if(T_FLAKE_D[mi]>0.){bigD=T_FLAKE_D[mi];bigCell=T_FLAKE_CELL[mi];}
   vec3 bigG;float bigX=mFlake(M_R2*kp,bigCell,mix(.47,.30,bigSq),bigD,bigSq,.26,bigG);
-  if(mat==7||mat==8){
-    vec3 foil=mat==7?M_PALE:mAgedSilver(M_SILVER,kp,.6);bigX*=inlay;bigG*=inlay;
+  if(T_FOIL[mi]){
+    vec3 foil=T_TONE[mi]==TONE_GOLD?M_PALE:mAgedSilver(M_SILVER,kp,.6);bigX*=inlay;bigG*=inlay;
     c=mix(c,mSheet(foil)+foil*(.10+.25*L)+foil*glow*(.45+.45*sin(kp.x*.31+kp.y*.17-uTime*9.)),bigX)+foil*bigG*.6;
   }else c=mix(c,tint*vec3(1.,.80,.44)*(.07+.74*L),bigX*.92)+tint*M_AMBER*bigG;
   if(mat>=19&&mat<=22){
@@ -1165,18 +1191,18 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.85+M_SILVER*line*(.1+.3*L),shore*.35);
     c=mix(c,wtr,m);
   }
-  if(uAge>0.&&mat>=2&&mat<=4){
+  if(uAge>0.&&T_HILL[mi]){
     float wr=smoothstep(.62,.95,hs)*smoothstep(.50,.72,mVnoise(M_R1*kp*.07+5.)*.62+mVnoise(M_R2*kp*.19)*.38)*M_AGE_WEAR*uAge;
     c=mix(c,M_UNDER*(.3+L),wr);
   }
-  if(uDensView>4.5)c=mat==1?vec3(1.,0.,1.):(mat==2||mat==3||mat==4||mat==12||(mat>=19&&mat<=24))?vec3(0.,1.,1.):vec3(0.,1.,0.); // dev layers: plain ground magenta, dense-nashiji faces cyan, the rest green
+  if(uDensView>4.5)c=T_TIER[mi]==TIER_GROUND?vec3(1.,0.,1.):T_TIER[mi]==TIER_DENSE?vec3(0.,1.,1.):vec3(0.,1.,0.); // dev layers: plain ground magenta, dense-nashiji faces cyan, the rest green
   else if(uDensView>2.5)c=vec3(texture(uContact,mPuv(kp)).r*.8);
-  else if(uDensView>1.5)c=mat==1?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
+  else if(uDensView>1.5)c=T_TIER[mi]==TIER_GROUND?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
   else if(uDensView>.5)c=vec3(dField*.8);
   if(uDensView>.5&&uDensView<5.5){mKS=0.;mKE=0.;mKT=0.;} // dev views are data, not a picture: no coat on them (the coat view itself needs the three amounts)
   outgoingLight=mFinish(c,1.).rgb;
   if(uDensView>5.5)outgoingLight=vec3(mKS,mKE,mKT); // dev ?dens=coat: sunk red, wrapped edge green, thin film blue
-  if(uDensView>3.5&&uDensView<4.5)outgoingLight=vec3(kiriV,0.,(mat>=2&&mat<=4)?1.-kiriV:kiriB*(1.-kiriV)); // dev: red = kirikane, blue = other hill ground (?dens=kiri)
+  if(uDensView>3.5&&uDensView<4.5)outgoingLight=vec3(kiriV,0.,T_HILL[mi]?1.-kiriV:kiriB*(1.-kiriV)); // dev: red = kirikane, blue = other hill ground (?dens=kiri)
   diffuseColor.a=1.;
 }`;
 

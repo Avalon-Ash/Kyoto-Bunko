@@ -1571,3 +1571,50 @@ test('age in years: a new lid is 0, the curve only rises, and the Hatsune set (1
   for (const y of [10, 50, 100, 200, HATSUNE_YEARS, 1000]) { const a = ageFromYears(y); assert.ok(a > last && a < 1, `${y} years`); last = a; }
   assert.ok(ageFromYears(HATSUNE_YEARS) > .9 && ageFromYears(HATSUNE_YEARS) < .95, 'the Hatsune set is the fixed point');
 });
+
+// Scope fence (docs/plans/2026-11-18-material-table.md, step 1): the ground shader's shared properties were moved from mat==N
+// branches into MAT_LOOK. The predicates below are the ones the shader used at 56fc135, copied as JS; later steps update them.
+test('material table: every predicate the ground shader used gives the same answer from MAT_LOOK, for every material id', async () => {
+  const {MAT, MAT_LOOK} = await import('../src/studies/toji/plate/mat.js');
+  const was = {
+    ch: m => (m === 19 || m === 20) ? 15 : (m === 23 || m === 24) ? 5 : (m === 21 || m === 22 || m === 12) ? 0 : 2.4,
+    chRidge: m => m === 23 || m === 24,
+    lh: m => m === 21 ? .15 : .7,
+    coat: m => m === 1 ? 'sunk' : m === 6 ? 'half' : (m === 2 || m === 3 || m === 4) ? 'foot' : (m === 19 || m === 20 || m === 23 || m === 24) ? 'powder30'
+      : (m === 21 || m === 22) ? 'powder35' : m === 12 ? 'waterEdge' : (m === 5 || m === 7 || m === 8 || m === 10 || m === 11) ? 'inlayEdge' : (m === 9 || m === 17) ? 'none' : 'top',
+    density: m => m === 1 || m === 12 || (m >= 19 && m <= 22) || m === 23 || m === 24,
+    flake: m => (m === 21 || m === 23) ? [.3, 5.2] : null,
+    foil: m => m === 7 || m === 8,
+    foilIsGold: m => m === 7,
+    hill: m => m >= 2 && m <= 4,
+    tier: m => m === 1 ? 'ground' : (m === 2 || m === 3 || m === 4 || m === 12 || (m >= 19 && m <= 24)) ? 'dense' : 'pattern',
+  };
+  const last = Math.max(...Object.values(MAT));
+  assert.equal(last, 28, 'the highest material id (the table and this test cover 0..28)');
+  for (const id of Object.values(MAT)) assert.ok(MAT_LOOK[id], `MAT_LOOK has a row for material ${id}`);
+  for (let m = 0; m <= last; m++) {
+    const row = MAT_LOOK[m] ?? MAT_LOOK[0];
+    for (const key of ['ch', 'chRidge', 'lh', 'coat', 'density', 'foil', 'hill', 'tier']) assert.equal(row[key], was[key](m), `material ${m}: ${key}`);
+    assert.deepEqual(row.flakeD > 0 ? [row.flakeD, row.flakeCell] : null, was.flake(m), `material ${m}: large flakes`);
+    if (row.foil) assert.equal(row.tone === 'gold', was.foilIsGold(m), `material ${m}: the foil's metal`);
+  }
+});
+
+test('material table: the GLSL arrays hold the table exactly, and kinds are compared by name, never by number', async () => {
+  const {MAT_LOOK_GLSL, MAKIE_GROUND_FRAG_GLSL, MATERIALS} = await import('../src/studies/toji/plate/three-pack.js');
+  const {MAT_LOOK, COAT_KIND} = await import('../src/studies/toji/plate/mat.js');
+  const column = name => { const m = MAT_LOOK_GLSL.match(new RegExp(`T_${name}\\[(\\d+)\\]=\\w+\\[\\d+\\]\\(([^)]*)\\);`)); assert.ok(m, `column ${name}`); return m[2].split(','); };
+  const rows = Array.from({length: 29}, (_, id) => MAT_LOOK[id] ?? MAT_LOOK[0]);
+  assert.deepEqual(column('CH').map(Number), rows.map(r => r.ch));
+  assert.deepEqual(column('LH').map(Number), rows.map(r => r.lh));
+  assert.deepEqual(column('FLAKE_D').map(Number), rows.map(r => r.flakeD));
+  assert.deepEqual(column('FLAKE_CELL').map(Number), rows.map(r => r.flakeCell));
+  assert.deepEqual(column('COAT').map(Number), rows.map(r => COAT_KIND[r.coat]));
+  assert.deepEqual(column('DENSITY'), rows.map(r => String(r.density)));
+  assert.ok(column('CH').every(text => /[.e]/.test(text)), 'floats are written as floats');
+  assert.equal((MAKIE_GROUND_FRAG_GLSL.match(/T_[A-Z_]+\[mi\]\s*(==|!=|<|>)=?\s*[0-9]/g) ?? []).filter(hit => !/>0\.$/.test(hit) && !/>\s*0$/.test(hit)).length, 0, 'a kind is compared with its named constant');
+  // Until the mesh materials move into MAT_LOOK (step 3) the two tables split the columns between them.
+  const meshColumns = new Set(Object.values(MATERIALS).flatMap(Object.keys)), lookColumns = Object.keys(MAT_LOOK[0]);
+  for (const id of Object.keys(MATERIALS)) assert.ok(MAT_LOOK[id], `MATERIALS[${id}] has a row in MAT_LOOK`);
+  for (const key of lookColumns) assert.ok(!meshColumns.has(key), `column ${key} lives in one table only`);
+});
