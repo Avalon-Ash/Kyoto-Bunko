@@ -1,5 +1,7 @@
-# Applied in commit d99774d (2026-11-18) and REVERTED in 5e0ae16: the shader it produces takes 49 s to compile the first time in a real
-# Chrome (docs/plans/2026-11-18-material-table.md 8.9). It runs against the code as it is after step 1; use it only as a starting point.
+# First applied in commit d99774d (2026-11-18) with a switch for the dispatch: that shader took 49 s to compile the first time in a real
+# Chrome and was reverted (5e0ae16). This version writes the dispatch as an if chain (docs/plans/2026-11-18-material-table.md 8.9); the
+# test that forbids a switch was added to scripts/plate.test.mjs by hand. It runs against the code as it stands after step 1; once it has
+# been applied and committed, do not run it again.
 # Step 2 of docs/plans/2026-11-18-material-table.md: the per-material code of the ground shader becomes recipe functions with one
 # dispatch. Run from the repo root, after step1-patch.py:  python docs/plans/material-table/step2-patch.py
 # The recipe bodies are cut out of the existing shader text by this script, not retyped: inside the functions the struct's fields are
@@ -206,26 +208,28 @@ void mRecipeToyama(inout MG S,int mi){{
   bool gold=T_TONE[mi]==TONE_GOLD;mLay(S,mi);
 {toyama}}}
 void mRecipeLamp(inout MG S,int mi){{{lamp_base}mLay(S,mi);}}
-/** The one dispatch: a material's recipe, by the table. */
+/**
+ * The one dispatch: a material's recipe, by the table. It is an if chain and must stay one: written as a switch, the D3D compiler behind
+ * Chrome on Windows took 49 seconds to compile this shader the first time a visitor loaded the page (docs/plans/2026-11-18-material-table.md 8.9).
+ */
 void mRecipe(inout MG S,int mi){{
-  switch(T_RECIPE[mi]){{
-    case RECIPE_GROUND:mRecipeGround(S,mi);break;
-    case RECIPE_HILL:mRecipeHill(S,mi);break;
-    case RECIPE_GYOBU:mRecipeGyobu(S,mi);break;
-    case RECIPE_GOLD:mRecipeGold(S,mi);break;
-    case RECIPE_HIRAME:mRecipeHirame(S,mi);break;
-    case RECIPE_FOIL:mRecipeFoil(S,mi);break;
-    case RECIPE_AOGAI:mRecipeAogai(S,mi);break;
-    case RECIPE_SHEET:mRecipeSheet(S,mi);break;
-    case RECIPE_RYUSUI:mRecipeRyusui(S,mi);break;
-    case RECIPE_KASUMI:mRecipeKasumi(S,mi);break;
-    case RECIPE_LACQUER:mRecipeLacquer(S,mi);break;
-    case RECIPE_CORAL:mRecipeCoral(S,mi);break;
-    case RECIPE_BANK:mRecipeBank(S,mi);break;
-    case RECIPE_SUHAMA:mRecipeSuhama(S,mi);break;
-    case RECIPE_TOYAMA:mRecipeToyama(S,mi);break;
-    default:mRecipeLamp(S,mi);
-  }}
+  int rc=T_RECIPE[mi];
+  if(rc==RECIPE_GROUND)mRecipeGround(S,mi);
+  else if(rc==RECIPE_HILL)mRecipeHill(S,mi);
+  else if(rc==RECIPE_GYOBU)mRecipeGyobu(S,mi);
+  else if(rc==RECIPE_GOLD)mRecipeGold(S,mi);
+  else if(rc==RECIPE_HIRAME)mRecipeHirame(S,mi);
+  else if(rc==RECIPE_FOIL)mRecipeFoil(S,mi);
+  else if(rc==RECIPE_AOGAI)mRecipeAogai(S,mi);
+  else if(rc==RECIPE_SHEET)mRecipeSheet(S,mi);
+  else if(rc==RECIPE_RYUSUI)mRecipeRyusui(S,mi);
+  else if(rc==RECIPE_KASUMI)mRecipeKasumi(S,mi);
+  else if(rc==RECIPE_LACQUER)mRecipeLacquer(S,mi);
+  else if(rc==RECIPE_CORAL)mRecipeCoral(S,mi);
+  else if(rc==RECIPE_BANK)mRecipeBank(S,mi);
+  else if(rc==RECIPE_SUHAMA)mRecipeSuhama(S,mi);
+  else if(rc==RECIPE_TOYAMA)mRecipeToyama(S,mi);
+  else mRecipeLamp(S,mi);
 }}
 {undefs}
 '''

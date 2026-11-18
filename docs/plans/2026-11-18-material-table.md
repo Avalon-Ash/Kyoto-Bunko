@@ -556,3 +556,11 @@ npm run build
   1. 驗收多一條：**真的瀏覽器裡，讓著色器快取失效後的第一次載入，最長的工作不比改前多 20%**（做法：`.claude/dispatch/probe.py` 那樣加一個不用的常數；讀 `PerformanceObserver` 的 `longtask`）。
   2. 先試最小的改法：分派改成一條 `if`／`else if`（不用 `switch`）、配方函式保留；還是慢的話，把含導數取樣的部分留在主體最外層，只把不取樣的部分搬進函式。每試一種就量第一次載入。
   3. 修改腳本 [`material-table/step2-patch.py`](material-table/step2-patch.py) 可以當起點（它對的是第 1 步之後的程式，也就是現在的 `main`）。
+
+### 8.10 第 2 步重做到一半（2026-11-18 23:10，額度用完，停在這裡）
+
+- `if` 鏈也不行：把分派從 `switch` 改成一條 `if`／`else if`、配方函式保留，乾淨地重測，第一次編譯仍卡 **32,086 ms**。（先前量到的 0.3 秒不算數：那次 dev server 回應延遲 11 秒，載到的是舊模組。）所以問題在「上色搬進函式」本身，推測是共用的鋪粉函式被編譯器在每個配方裡各展開一份。
+- **保守版**（[`material-table/step2b-patch.py`](material-table/step2b-patch.py)，已套用並提交在 `claude/mat-table`，**沒有合併、沒有 push**）：分支留在主體原位，只把條件從材質編號換成配方（`rc==RECIPE_…`）與金屬（`gold`）；表加 `recipe`、`cloud` 兩欄；刪掉兩行到不了的分支。地著色器的材質編號比較 34 → 0。
+  - 已驗：lint exit 0；test 151/151、17/17（含窮舉檢查與圍欄）；**使用者的 Chrome 裡快取失效後第一次載入，最長的工作 309 ms**（改前 333 ms），並確認載到的是這一版。
+  - **還沒驗：逐像素比對**（`bash scripts/plate-matrix.sh` 整組，對今天的基準 `.shots/mat-table/before`；跨重開機要重拍基準）。驗過才能合併。
+- 線上（`main` @ `e400adb`）是第 0、1 步，第一次載入 0.33 秒，正常。
