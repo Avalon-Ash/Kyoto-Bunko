@@ -1580,10 +1580,14 @@ test('material table: every predicate the ground shader used gives the same answ
     ch: m => (m === 19 || m === 20) ? 15 : (m === 23 || m === 24) ? 5 : (m === 21 || m === 22 || m === 12) ? 0 : 2.4,
     chRidge: m => m === 23 || m === 24,
     lh: m => m === 21 ? .15 : .7,
-    coat: m => m === 1 ? 'sunk' : m === 6 ? 'half' : (m === 2 || m === 3 || m === 4) ? 'foot' : (m === 19 || m === 20 || m === 23 || m === 24) ? 'powder30'
-      : (m === 21 || m === 22) ? 'powder35' : m === 12 ? 'waterEdge' : (m === 5 || m === 7 || m === 8 || m === 10 || m === 11) ? 'inlayEdge' : (m === 9 || m === 17) ? 'none' : 'top',
+    coat: m => m === 1 ? 'sunk' : m === 6 ? 'half' : (m === 2 || m === 3 || m === 4) ? 'foot' : (m === 19 || m === 20 || m === 23 || m === 24) ? 'powder.3'
+      : (m === 21 || m === 22) ? 'powder.35' : m === 12 ? 'waterEdge' : (m === 5 || m === 7 || m === 8 || m === 10 || m === 11) ? 'inlayEdge' : (m === 9 || m === 17) ? 'none' : 'top',
     density: m => m === 1 || m === 12 || (m >= 19 && m <= 22) || m === 23 || m === 24,
-    flake: m => (m === 21 || m === 23) ? [.3, 5.2] : null,
+    flake: m => (m === 21 || m === 23) ? [.3, 5.2, 0] : (m === 7 || m === 8) ? [.4, 7, 1] : null,
+    cloud: m => m === 3,
+    recipe: m => ({1: 'ground', 2: 'hill', 3: 'hill', 4: 'gyobu', 5: 'gold', 6: 'hirame', 7: 'foil', 8: 'foil', 9: 'aogai', 10: 'sheet', 11: 'sheet', 12: 'ryusui',
+      13: 'kasumi', 14: 'lacquer', 17: 'coral', 19: 'bank', 20: 'bank', 21: 'suhama', 22: 'suhama', 23: 'toyama', 24: 'toyama'})[m] ?? 'lamp',
+    recipeIsGold: m => m === 7 || m === 10 || m === 19 || m === 21 || m === 23,
     foil: m => m === 7 || m === 8,
     foilIsGold: m => m === 7,
     hill: m => m >= 2 && m <= 4,
@@ -1594,14 +1598,20 @@ test('material table: every predicate the ground shader used gives the same answ
   for (const id of Object.values(MAT)) assert.ok(MAT_LOOK[id], `MAT_LOOK has a row for material ${id}`);
   for (let m = 0; m <= last; m++) {
     const row = MAT_LOOK[m] ?? MAT_LOOK[0];
-    for (const key of ['ch', 'chRidge', 'lh', 'coat', 'density', 'foil', 'hill', 'tier']) assert.equal(row[key], was[key](m), `material ${m}: ${key}`);
-    assert.deepEqual(row.flakeD > 0 ? [row.flakeD, row.flakeCell] : null, was.flake(m), `material ${m}: large flakes`);
+    for (const key of ['ch', 'chRidge', 'lh', 'density', 'foil', 'hill', 'tier', 'cloud', 'recipe']) assert.equal(row[key], was[key](m), `material ${m}: ${key}`);
+    assert.equal(row.coat === 'powder' ? `powder${String(row.coatHi).replace(/^0/, '')}` : row.coat, was.coat(m), `material ${m}: coat`);
+    assert.deepEqual(row.flakeD > 0 ? [row.flakeD, row.flakeCell, row.flakeSq] : null, was.flake(m), `material ${m}: large flakes`);
+    if (['foil', 'sheet', 'bank', 'suhama', 'toyama'].includes(row.recipe)) assert.equal(row.tone === 'gold', was.recipeIsGold(m), `material ${m}: the recipe's metal`);
     if (row.foil) assert.equal(row.tone === 'gold', was.foilIsGold(m), `material ${m}: the foil's metal`);
   }
 });
 
 test('material table: the GLSL arrays hold the table exactly, and kinds are compared by name, never by number', async () => {
-  const {MAT_LOOK_GLSL, MAKIE_GROUND_FRAG_GLSL, MATERIALS} = await import('../src/studies/toji/plate/three-pack.js');
+  const {MAT_LOOK_GLSL, MAKIE_GROUND_FRAG_GLSL, MAKIE_GROUND_PARS_GLSL, MATERIALS} = await import('../src/studies/toji/plate/three-pack.js');
+  // The ground shader never compares a material id with a number, and chooses a recipe in one place.
+  const ground = MAKIE_GROUND_PARS_GLSL + MAKIE_GROUND_FRAG_GLSL;
+  assert.deepEqual(ground.match(/\bmat\s*(==|!=|>=|<=|<|>)\s*[0-9]+/g) ?? [], [], 'no material id is compared with a number');
+  assert.equal((ground.match(/T_RECIPE\[mi\]/g) ?? []).length, 1, 'one dispatch on the recipe');
   const {MAT_LOOK, COAT_KIND} = await import('../src/studies/toji/plate/mat.js');
   const column = name => { const m = MAT_LOOK_GLSL.match(new RegExp(`T_${name}\\[(\\d+)\\]=\\w+\\[\\d+\\]\\(([^)]*)\\);`)); assert.ok(m, `column ${name}`); return m[2].split(','); };
   const rows = Array.from({length: 29}, (_, id) => MAT_LOOK[id] ?? MAT_LOOK[0]);

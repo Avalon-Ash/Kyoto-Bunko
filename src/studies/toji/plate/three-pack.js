@@ -1,7 +1,7 @@
 // Pure data for the three.js plate renderer (three-renderer.js): material table, box and mesh packing, motion state
 // packing and the GLSL that moves a part. Nothing here imports three, so node:test can check it.
 import {MAT, KIND} from './vocab.js';
-import {MAT_LOOK, COAT_KIND, TONE, TIER} from './mat.js';
+import {MAT_LOOK, COAT_KIND, TONE, TIER, RECIPE} from './mat.js';
 import {MAX_PARTS} from './parts.js';
 import {packMeshes} from './mesh-geometry.js';
 import {limbMesh, stampInstances} from './limbs.js';
@@ -906,7 +906,7 @@ const glslName = key => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase()
 const glslKinds = (prefix, kinds) => `const int ${Object.entries(kinds).map(([key, id]) => `${prefix}_${glslName(key)}=${id}`).join(',')};`;
 export const MAT_LOOK_GLSL = [
   `const int LOOK_N=${LOOK_N};`,
-  glslKinds('COAT', COAT_KIND), glslKinds('TONE', TONE), glslKinds('TIER', TIER),
+  glslKinds('COAT', COAT_KIND), glslKinds('TONE', TONE), glslKinds('TIER', TIER), glslKinds('RECIPE', RECIPE),
   lookColumn('float', {name: 'CH', of: row => glslFloat(row.ch)}),
   lookColumn('bool', {name: 'CH_RIDGE', of: row => String(row.chRidge)}),
   lookColumn('float', {name: 'LH', of: row => glslFloat(row.lh)}),
@@ -918,7 +918,295 @@ export const MAT_LOOK_GLSL = [
   lookColumn('int', {name: 'TONE', of: row => TONE[row.tone]}),
   lookColumn('bool', {name: 'HILL', of: row => String(row.hill)}),
   lookColumn('int', {name: 'TIER', of: row => TIER[row.tier]}),
+  lookColumn('float', {name: 'COAT_HI', of: row => glslFloat(row.coatHi)}),
+  lookColumn('float', {name: 'FLAKE_SQ', of: row => glslFloat(row.flakeSq)}),
+  lookColumn('bool', {name: 'CLOUD', of: row => String(row.cloud)}),
+  lookColumn('int', {name: 'RECIPE', of: row => RECIPE[row.recipe]}),
 ].join('\n');
+
+const MAKIE_GROUND_RECIPES_GLSL = `
+// ---- The recipes: how each material is painted on the lid. MAT_LOOK (mat.js) names a material's recipe; mRecipe is the one place that
+// chooses among them. A recipe never asks which material it is drawing: what differs between two materials of one recipe is a column of
+// the table (its tone, its flakes). MG is one lid pixel's working state; inside the recipes its fields go by their plain names.
+struct MG{vec2 kp,gs;vec4 fine;int id;float hs,rise,glow,inlay,line,w,ring;vec3 L,c,tint,f0,bigG;float dens,kAmt,wN,wM,wS,bigD,bigCell,bigSq,bigX,kiriV,kiriB;};
+#define kp S.kp
+#define gs S.gs
+#define fine S.fine
+#define id S.id
+#define hs S.hs
+#define rise S.rise
+#define glow S.glow
+#define inlay S.inlay
+#define line S.line
+#define w S.w
+#define ring S.ring
+#define L S.L
+#define c S.c
+#define tint S.tint
+#define f0 S.f0
+#define bigG S.bigG
+#define dens S.dens
+#define kAmt S.kAmt
+#define wN S.wN
+#define wM S.wM
+#define wS S.wS
+#define bigD S.bigD
+#define bigCell S.bigCell
+#define bigSq S.bigSq
+#define bigX S.bigX
+#define kiriV S.kiriV
+#define kiriB S.kiriB
+/** What every recipe lays down once its own base is set: the nashiji, metal and sheet in the shares it asked for, then the larger flakes. */
+void mLay(inout MG S,int mi){
+  c+=wN*mNashiji(kp,dens,tint)+wM*mMetal(kp,f0,rise)+wS*mSheet(f0);
+  // Gold suhama and far mountains carry a scatter of larger flakes that catch the light (the powder of the Hatsune set is coarse and of several golds).
+  if(T_FLAKE_D[mi]>0.){bigD=T_FLAKE_D[mi];bigCell=T_FLAKE_CELL[mi];bigSq=T_FLAKE_SQ[mi];}
+  bigX=mFlake(M_R2*kp,bigCell,mix(.47,.30,bigSq),bigD,bigSq,.26,bigG);
+  if(T_FOIL[mi]){
+    vec3 foil=T_TONE[mi]==TONE_GOLD?M_PALE:mAgedSilver(M_SILVER,kp,.6);bigX*=inlay;bigG*=inlay;
+    c=mix(c,mSheet(foil)+foil*(.10+.25*L)+foil*glow*(.45+.45*sin(kp.x*.31+kp.y*.17-uTime*9.)),bigX)+foil*bigG*.6;
+  }else c=mix(c,tint*vec3(1.,.80,.44)*(.07+.74*L),bigX*.92)+tint*M_AMBER*bigG;
+}
+/** A doha piece's string of cut gold squares (the B channel at full strength; a rim line is half that). */
+void mDohaKiri(inout MG S){
+    // Doha. kiri: the string of cut gold squares (B channel at full strength; a rim line is half that).
+    float kiri=smoothstep(.86,.98,fine.b);
+    c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.8))*mix(1.5,1.,uAge)+M_PALE*.12*kiri,kiri);
+    kiriV=kiri;
+}
+/** Hill ground after its powder: halftone kirikane toward the light, then the wear at the crown. */
+void mHillOver(inout MG S){
+  if(kAmt>0.){
+    // Halftone kirikane on banks: light-facing slopes and the rim of the bank get the big pieces.
+    // Which way the bank faces the light, from the soft relief's slope: the lit face gets big pieces, the far face
+    // is left darker with only specks, so the pieces carry the bank's depth.
+    float slope=smoothstep(.02,.25,length(gs)),face=-dot(gs/max(length(gs),1e-4),normalize(uKey.xz))*slope;
+    float rim=smoothstep(.0,.04,hs)*(1.-smoothstep(.1,.7,hs));
+    // Silver carries the shade: the Hatsune rocks and sandbars are gold where lit and grey silver on the far face.
+    c=mix(c*(1.-.14*kAmt),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.82,clamp(kAmt*max(-face,0.)*1.1,0.,.75));
+    // One gradient from the rim inward, carried by two techniques (Hatsune rocks and sandbars): kirikane at the bright
+    // end, thinning; dense nashiji under and between the pieces, carrying on past the last piece and thinning in turn
+    // into the plain ground.
+    float g=clamp(.08+.85*rim+.6*max(face,0.)-.25*max(-face,0.),0.,1.);
+    c=mix(c,mNashiji(kp,mix(1.,2.4,smoothstep(.1,.75,g)),mix(M_GOLD,M_PALE,.3)),kAmt*smoothstep(.02,.4,g)*.92);
+    {
+      // Gyobu nashiji: the face of the bank is large irregular flakes in the lacquer, denser toward the crown, thinning down the slope.
+      vec2 gid,gcen;float gbd=mVoro(M_R2*kp/M_GY_CELL,gid,gcen);
+      float hC=texture(uSoft0,mPuv(transpose(M_R2)*(gcen*M_GY_CELL))).r;
+      float dN=.8+.4*mVnoise(kp*.03);
+      float gcov=mGyobuCov(kp,gbd,gid,smoothstep(.01,.10,hs)*mix(.82,1.,smoothstep(.1,.45,hs))*dN,smoothstep(.01,.10,hC)*mix(.82,1.,smoothstep(.1,.45,hC)));
+      vec3 gg,gcol=mGyobuShade(gid,gg);
+      c=mix(c,gcol,gcov)+gg*gcov;
+    }
+    vec2 td=normalize(vec2(-gs.y,gs.x)+vec2(.012,0.));
+    vec3 kg;float kv=mKiriCluster(kp,td,smoothstep(.35,1.,g)*kAmt/.85,kg);
+    // Old foil has gone flat: it is still the lightest thing on the bank, but it no longer flashes.
+    c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.75))*mix(1.15,.74,uAge),kv)+M_PALE*kg*mix(1.,.4,uAge);
+    kiriV=kv;
+  }
+  if(uAge>0.){
+    float wr=smoothstep(.62,.95,hs)*smoothstep(.50,.72,mVnoise(M_R1*kp*.07+5.)*.62+mVnoise(M_R2*kp*.19)*.38)*M_AGE_WEAR*uAge;
+    c=mix(c,M_UNDER*(.3+L),wr);
+  }
+}
+void mRecipeGround(inout MG S,int mi){mLay(S,mi);}
+void mRecipeHill(inout MG S,int mi){
+    float cloud=T_CLOUD[mi]?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
+    // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
+    wM=smoothstep(.06,.62,hs)*(.30+.25*cloud)*.2;wN=1.-wM;dens=mix(dens,2.1,smoothstep(.02,.3,hs)*(1.-wM));
+    kAmt=smoothstep(.01,.09,hs)*.85;
+    f0=mix(M_GOLD,M_PALE,.55);tint=mix(M_GOLD,M_PALE,.35*w);rise=max(rise,.75);c=M_PALE*line*(.14+.6*L)*w;
+  mLay(S,mi);mHillOver(S);
+}
+void mRecipeGyobu(inout MG S,int mi){wN=1.;dens=mix(dens,2.,w);kAmt=smoothstep(.01,.09,hs)*.85;c=M_PALE*line*(.12+.5*L)*w;mLay(S,mi);mHillOver(S);}
+void mRecipeGold(inout MG S,int mi){wM=1.;c=M_PALE*line*(.12+.6*L)*mix(.5,1.,rise);mLay(S,mi);}
+void mRecipeHirame(inout MG S,int mi){
+  wN=1.;dens=.95;mLay(S,mi);
+    // Silver hirame ground: coarse silver flakes of two sizes lie close under the lacquer, each a little brighter or
+    // darker than its neighbours. Toward the garden's edge they thin and the gold nashiji shows between them, then alone.
+    float inn=1.;
+    for(int k=0;k<8;k++){float a=float(k)*.7854;vec2 dv=vec2(cos(a),sin(a));inn+=float(mIdent0(kp+dv*5.).x==id)+float(mIdent0(kp+dv*10.).x==id)+float(mIdent0(kp+dv*16.).x==id);}
+    float dS=smoothstep(.45,.9,inn/25.+(mVnoise(kp*.25)-.5)*.16);
+    c=mHirame(c,kp,dS,rise);
+    // It stands for white sand: where the flakes lie close it is lifted toward a pale, cool silver (it read as a dull taupe mat).
+    c=mix(c,c*vec3(1.3,1.33,1.36)+M_SILVER*(.05+.14*L),dS);
+}
+void mRecipeFoil(inout MG S,int mi){
+  if(T_TONE[mi]==TONE_GOLD){wM=inlay;wN=1.-inlay;f0=M_GOLD*.9;rise=max(rise,.6);c=M_PALE*line*(.22+.6*L)*inlay*(1.-mKE);}
+  else{wM=inlay;wN=1.-inlay;f0=mAgedSilver(mix(M_SILVER,M_GOLD,.25)*.9,kp,.35);rise=max(rise,.6);c=M_SILVER*line*(.22+.6*L)*inlay*(1.-mKE);}
+  mLay(S,mi);
+}
+void mRecipeAogai(inout MG S,int mi){
+  wN=1.;mLay(S,mi);
+    vec2 r=mHash2(floor(kp/2.3));
+    float t=dot(normalize(mN+vec3(r.x-.5,0.,r.y-.5)*.5),mHp)*2.4+r.x*1.7+mAtt*.6;
+    vec3 film=mix(vec3(.16,.50,.50),vec3(.26,.40,.70),.5+.5*sin(t*3.1));
+    film=mix(film,vec3(.80,.56,.64),smoothstep(.55,1.,.5+.5*sin(t*2.3+2.))*.45);
+    c=mix(c,film*(.16+.60*L)+vec3(.9,1.,1.)*mSpec(120.)*.9,clamp((fine.g-.2)/max(fwidth(fine.g)*1.5,.004)+.5,0.,1.));
+}
+void mRecipeSheet(inout MG S,int mi){
+  if(T_TONE[mi]==TONE_GOLD){wS=inlay;wN=1.-inlay;f0=M_PALE;c=(M_PALE*glow*.5+mix(M_GOLD,M_PALE,.4)*(.10+.46*L))*inlay;}
+  else{wS=inlay;wN=1.-inlay;f0=mAgedSilver(M_SILVER,kp,.3);}
+  mLay(S,mi);
+}
+void mRecipeRyusui(inout MG S,int mi){
+  mLay(S,mi);
+    // Ryusui: tight, swirling, roughly parallel gold lines over gold (the Hatsune trousseau's streams), not a grey band.
+    float m=clamp((fine.g-.035)/max(fwidth(fine.g)*1.5,.004)+.5,0.,1.);
+    vec2 q=kp+vec2(mVnoise(kp*.035),mVnoise(kp*.035+7.3))*14.;
+    float ph=(q.y+sin(q.x*.085+q.y*.02)*5.5+sin(q.x*.23+q.y*.05)*1.6)/3.4-uTime*.05;
+    float fw=fwidth(ph),d=abs(fract(ph)-.5)*2.;
+    float ln=mix(1.-smoothstep(.26-fw,.26+fw,d),.26,smoothstep(.22,.55,fw));
+    float flow=.55+.45*sin(kp.y*.20-uTime*1.5+kp.x*.06);
+    // Depth: how far this point is from the pond's own edge (share of the points around it, out to 40 units, that are water).
+    float inn=0.;
+    for(int k=0;k<8;k++){float a=float(k)*.7854+.39;vec2 dv=vec2(cos(a),sin(a));inn+=float(mIdent0(kp+dv*10.).x==id)+float(mIdent0(kp+dv*22.).x==id)+float(mIdent0(kp+dv*40.).x==id);}
+    float deep=smoothstep(.45,.96,inn/24.+(mVnoise(kp*.05)-.5)*.12);
+    // Broad swells: every few lines the water lightens and darkens, so it still reads as water when the lines are too fine to see.
+    float sw=.5+.5*sin(ph*.55+mVnoise(kp*.018)*5.);
+    // Powder lies thick and pale along the shore and thins toward the middle, where the lines carry the water (maki-bokashi).
+    vec3 shoal=mMetal(kp,mix(M_GOLD,M_PALE,.15)*.86,.9)*.95+tint*vec3(.36,.17,.045)*(.10+.30*L);
+    vec3 pool=mNashiji(kp,1.3,mix(M_GOLD,M_PALE,.15))*.9;
+    vec3 base=mix(shoal,pool,deep*.75)+mKeyC*mBand*.10;
+    vec3 crest=mSheet(M_PALE)*.45+mix(M_PALE,M_GOLD,.3)*(.10+.62*L)*(.8+.2*flow)+M_PALE*mBand*.12;
+    vec3 wtr=mix(base,crest,ln)+M_SILVER*line*(.08+.36*L)*(.5+.5*flow)+M_SILVER*max(ring,0.)*.5*(.2+L)+mCoat()*.6;
+    // The depth and the swells are laid over the whole of it (lines and gloss too): the lines and the lid's gloss are most of the water's
+    // brightness away from the light, so a depth carried by the powder alone is lost there, and on a phone, where no light follows a pointer.
+    wtr*=mix(vec3(1.),vec3(.85,.76,.62),deep)*mix(.9,1.1,sw);
+    // A silver shore just inside the water's edge (the Hatsune sandbars and banks are grey silver).
+    float e=.25*(texture(uFine0,mPuv(kp+vec2(7.,0.))).g+texture(uFine0,mPuv(kp-vec2(7.,0.))).g+texture(uFine0,mPuv(kp+vec2(0.,7.))).g+texture(uFine0,mPuv(kp-vec2(0.,7.))).g);
+    float shore=1.-smoothstep(.5,.95,e/max(fine.g,.01));
+    wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.85+M_SILVER*line*(.1+.3*L),shore*.35);
+    c=mix(c,wtr,m);
+}
+void mRecipeKasumi(inout MG S,int mi){wS=.82;wM=.18;f0=M_GOLD;tint=M_GOLD;mLay(S,mi);}
+void mRecipeLacquer(inout MG S,int mi){c=M_LACQ*(.8+1.4*L)+mCoat()*2.2+M_GOLD*line*(.16+.80*L)*mix(.5,1.,rise);mLay(S,mi);}
+void mRecipeCoral(inout MG S,int mi){wN=1.-inlay;c=(M_CORAL*(.12+.70*L)+mCoat()*.55)*inlay;mLay(S,mi);}
+void mRecipeBank(inout MG S,int mi){
+  bool gold=T_TONE[mi]==TONE_GOLD;mLay(S,mi);
+  {
+      // A bank. fine.g is its height: 1 at the ridge, falling to 0 where the wedge ends in the lacquer, so its colour fades out with it.
+      float Hh=fine.g,ha=smoothstep(.01,.2,Hh),crest=smoothstep(.58,.9,Hh);
+      const float eW=3.5;
+      vec2 gw=vec2(texture(uFine0,mPuv(kp+vec2(eW,0.))).g-texture(uFine0,mPuv(kp-vec2(eW,0.))).g,texture(uFine0,mPuv(kp+vec2(0.,eW))).g-texture(uFine0,mPuv(kp-vec2(0.,eW))).g);
+      float sl=smoothstep(.015,.25,length(gw)),face=-dot(gw/max(length(gw),1e-4),normalize(uKey.xz))*sl;
+      if(gold){
+        // Gold: dense powder at the crest, thinning down the wedge into the ground's own; large flakes of gyobu on it.
+        c=mix(c,mix(mNashiji(kp,mix(1.2,2.2,crest),mix(M_GOLD,M_PALE,.5)),mMetal(kp,mix(M_GOLD,M_PALE,.5+.3*crest),max(rise,.75)),.55)*(1.05+.2*crest),ha*.92);
+        vec2 gid,gcen;float gbd=mVoro(M_R2*kp/M_GY_CELL,gid,gcen);
+        float hC=texture(uFine0,mPuv(transpose(M_R2)*(gcen*M_GY_CELL))).g;
+        float gcov=mGyobuCov(kp,gbd,gid,smoothstep(.01,.3,Hh),smoothstep(.01,.3,hC));
+        vec3 gg,gcol=mGyobuShade(gid,gg);
+        c=mix(c,gcol,gcov*ha)+gg*gcov*ha;
+        c=mix(c,mMetal(kp,mix(M_GOLD,M_PALE,.7),max(rise,.7)),crest*.5*ha);
+      }else{
+        // Silver: a sheet of sulphided silver over the wedge; it fades into the ground the same way.
+        c=mix(mHirame(c,kp,ha*.96,max(rise,.7)),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,.28*ha);
+      }
+      // The side turned from the light carries the sulphide (silver is the shade of a bank).
+      c=mix(c,mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,clamp(max(-face,0.)*1.3,0.,.75)*ha*(gold?1.:.6));
+      // Below the crest, away from the light, the powder lies deeper under the lacquer: a darker, redder gold.
+      if(gold)c*=1.-.34*clamp(max(-face,0.)*1.2,0.,1.)*ha;
+      kiriB=ha;
+  }
+  mDohaKiri(S);
+}
+void mRecipeSuhama(inout MG S,int mi){
+  bool gold=T_TONE[mi]==TONE_GOLD;mLay(S,mi);
+  {
+      // A suhama tongue (togidashi): ground flush with the lid, no step and no shade at its edge.
+      if(gold){
+        // Gold suhama. fine.g is how thick the powder lies: 1 along the drawn edge, thinning away from it until it is the ground's own
+        // sprinkle (maki-bokashi). Thick, it is a polished, finely raked sand, brighter and yellower than the ground; thin, single flakes.
+        float dn=fine.g,body=smoothstep(.35,.9,dn),a=smoothstep(.0,.1,dn);
+        float rake=.93+.07*sin(kp.y*2.1+mVnoise(kp*.06)*7.)*(.6+.4*mVnoise(kp*.4));
+        vec3 pw=mix(mNashiji(kp,mix(dens,2.8,pow(dn,1.3)),mix(tint,mix(M_GOLD,M_PALE,.35),a)),mMetal(kp,M_GOLD,max(rise,.8)),.4*body)*mix(vec3(1.),vec3(1.3,1.18,.96)*rake,body);
+        c=mix(c,pw,a);
+        // Larger flakes lie in the powder and glint as the light moves: the face is not one flat tone.
+        c=mix(c,mix(M_GOLD,M_PALE,.55)*(.1+.85*L),bigX*.5*a)+M_AMBER*bigG*.55*a;
+        // The drawn edge: a fine line of pale gold laid on top (tsukegaki).
+        c=mix(c,mMetal(kp,mix(M_GOLD,M_PALE,.7),1.)*1.2,smoothstep(.1,.45,line)*.9);
+        kiriB=a;
+      }else{
+        // Silver suhama, made the way the gold is: fine.g is how thick the powder lies, 1 along the drawn edge, thinning away from it into
+        // the ground's own sprinkle. Thick, it is a matt grey-white body with flat flakes in it; thin, single silver flakes on the lacquer.
+        float dn=fine.g,body=smoothstep(.3,.85,dn),a=smoothstep(.0,.1,dn);
+        vec3 sil=mAgedSilver(mix(M_SILVER,M_OXID,.4),kp,.8);
+        vec3 pw=mix(mNashiji(kp,mix(dens,2.6,pow(dn,1.3)),mix(tint,sil,.35+.5*a)),mix(mHirame(mMetal(kp,sil,max(rise,.8))*.9,kp,.8,max(rise,.8)),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,.25),.2+.7*body);
+        c=mix(c,pw,a);
+        c=mix(c,mMetal(kp,mix(M_SILVER,M_PALE,.25),1.)*1.1,smoothstep(.1,.45,line)*.8);
+        kiriB=a;
+      }
+  }
+  mDohaKiri(S);
+}
+void mRecipeToyama(inout MG S,int mi){
+  bool gold=T_TONE[mi]==TONE_GOLD;mLay(S,mi);
+    // Toyama (a far mountain, niku-ai togidashi): the ridge is a raised, hard edge (a step where it lies over the head behind it, and the
+    // ground is ground down to the same level a little below); fine powder, densest and brightest on it, thinning evenly down the slope until
+    // it is the ground's own. No flake, no cut gold, no grain but the powder's. Powder is laid on or left off; no dark is mixed in.
+    float Ht=fine.g,a=smoothstep(.0,.85,Ht),ridgeV=smoothstep(.45,1.,Ht),edgeV=smoothstep(.6,1.,Ht);
+    // A silver head (24) is made the way a gold one is: opaque pale silver powder, a warm neutral, thinning from the ridge to the ground. Its ridge is a line of gold.
+    // A blue-gold head (24, aokin: gold with silver in it) is a pale, greenish gold, never white.
+    vec3 pw=gold?mix(M_GOLD,M_PALE,.5):vec3(.86,.90,.62);
+    vec3 pwd=mNashiji(kp,mix(1.4,2.5,Ht),pw)*mix(1.55,2.1,ridgeV);
+    // Silver is laid thick: opaque over most of the face (the ground's flakes do not show through), and only the last of the slope thins into the ground.
+    if(!gold){pwd=mix(mMetal(kp,pw*.9,.9)*1.1,pwd*1.05,.35);a=1.-pow(1.-smoothstep(.0,.4,Ht),2.4);}
+    // Gold: toward the ridge the powder closes into a matt body (the ground's flakes no longer show through); lower down it is a veil.
+    else{pwd=mix(pwd,mMetal(kp,pw,.9)*1.05,.3+.4*smoothstep(.1,.7,Ht));a=1.-pow(1.-smoothstep(.0,.45,Ht),2.);}
+    if(gold)pwd=mix(pwd,mix(M_GOLD,M_PALE,.6)*(.1+.85*L),bigX*.45)+M_AMBER*bigG*.5;
+    c=mix(c,pwd,a)+(!gold?mMetal(kp,M_GOLD*1.25,1.)*1.5*smoothstep(.55,.9,Ht):mMetal(kp,pw,.9)*.9*edgeV);
+}
+void mRecipeLamp(inout MG S,int mi){c=mix(vec3(.10,.06,.025)*(.4+.5*L),vec3(1.,.62,.22)*1.15,glow)+M_LACQ;mLay(S,mi);}
+/** The one dispatch: a material's recipe, by the table. */
+void mRecipe(inout MG S,int mi){
+  switch(T_RECIPE[mi]){
+    case RECIPE_GROUND:mRecipeGround(S,mi);break;
+    case RECIPE_HILL:mRecipeHill(S,mi);break;
+    case RECIPE_GYOBU:mRecipeGyobu(S,mi);break;
+    case RECIPE_GOLD:mRecipeGold(S,mi);break;
+    case RECIPE_HIRAME:mRecipeHirame(S,mi);break;
+    case RECIPE_FOIL:mRecipeFoil(S,mi);break;
+    case RECIPE_AOGAI:mRecipeAogai(S,mi);break;
+    case RECIPE_SHEET:mRecipeSheet(S,mi);break;
+    case RECIPE_RYUSUI:mRecipeRyusui(S,mi);break;
+    case RECIPE_KASUMI:mRecipeKasumi(S,mi);break;
+    case RECIPE_LACQUER:mRecipeLacquer(S,mi);break;
+    case RECIPE_CORAL:mRecipeCoral(S,mi);break;
+    case RECIPE_BANK:mRecipeBank(S,mi);break;
+    case RECIPE_SUHAMA:mRecipeSuhama(S,mi);break;
+    case RECIPE_TOYAMA:mRecipeToyama(S,mi);break;
+    default:mRecipeLamp(S,mi);
+  }
+}
+#undef kp
+#undef gs
+#undef fine
+#undef id
+#undef hs
+#undef rise
+#undef glow
+#undef inlay
+#undef line
+#undef w
+#undef ring
+#undef L
+#undef c
+#undef tint
+#undef f0
+#undef bigG
+#undef dens
+#undef kAmt
+#undef wN
+#undef wM
+#undef wS
+#undef bigD
+#undef bigCell
+#undef bigSq
+#undef bigX
+#undef kiriV
+#undef kiriB
+`;
 
 /** Fragment declarations injected into groundMaterial (MeshPhysicalMaterial). */
 export const MAKIE_GROUND_PARS_GLSL = `
@@ -932,7 +1220,8 @@ ${MAT_LOOK_GLSL}
 const float M_DENS_MORE=${DENSITY.more.toFixed(3)}, M_DENS_LESS=${DENSITY.less.toFixed(3)};
 varying vec2 vKyotoPlate;
 varying vec3 vKyotoWorld, vKyotoNormal, vKyotoTanX, vKyotoTanZ;
-${MAKIE_COMMON_GLSL}`;
+${MAKIE_COMMON_GLSL}
+${MAKIE_GROUND_RECIPES_GLSL}`;
 
 /** Fragment body replacing outgoingLight right before #include <opaque_fragment> on the lid top. */
 export const MAKIE_GROUND_FRAG_GLSL = `
@@ -993,8 +1282,7 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
     if(ck==COAT_SUNK){mKS=1.;mKT=0.;}
     else if(ck==COAT_HALF){mKS=.45;mKT=.55;}
     else if(ck==COAT_FOOT){mKS=1.-smoothstep(.01,.14,hs);mKT=1.-mKS;}
-    else if(ck==COAT_POWDER30){mKS=1.-smoothstep(.0,.3,fine.g);mKT=1.-mKS;}
-    else if(ck==COAT_POWDER35){mKS=1.-smoothstep(.0,.35,fine.g);mKT=1.-mKS;}
+    else if(ck==COAT_POWDER){mKS=1.-smoothstep(.0,T_COAT_HI[mi],fine.g);mKT=1.-mKS;}
     else if(ck==COAT_WATER_EDGE){mFlat=1.;mKE=.3*smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.02,.06));mKT=1.-mKE;}
     else if(ck==COAT_INLAY_EDGE){mFlat=1.;float ke=smoothstep(.0,.5,mEdgeOut(uFine0,0,kp,er,.42,.58));mKE=ke*smoothstep(0.,.25,inlay);mKS=(1.-inlay)*(1.-mKE);mKT=inlay*(1.-ke);}
     else if(ck==COAT_NONE){mKT=0.;mKS=0.;mKE=0.;}
@@ -1016,185 +1304,10 @@ if(abs(kp.x)>M_HALF.x||abs(kp.y)>M_HALF.y){
   // (Under a bank, a gold suhama or a far mountain the ground is the plain ground itself: their powder is laid over it and thins into it,
   // so nothing marks where their outline runs.)
   if(T_DENSITY[mi]){float bk=mix(1.,M_AGE_BOKASHI,uAge);wN=1.;dens*=dField>=uDensMean?1.+M_DENS_MORE*bk*(dField-uDensMean)/max(1.-uDensMean,.05):1.-min(M_DENS_LESS*bk,.6)*(uDensMean-dField)/max(uDensMean,.05);}
-  else if(mat==2||mat==3){
-    float cloud=mat==3?mVnoise(kp*.045)*.6+mVnoise(kp*.13)*.3:.55;
-    // Land in the Hatsune lids is pale smooth gold; powder gathers thick at the foot and thins toward the crown.
-    wM=smoothstep(.06,.62,hs)*(.30+.25*cloud)*.2;wN=1.-wM;dens=mix(dens,2.1,smoothstep(.02,.3,hs)*(1.-wM));
-    kAmt=smoothstep(.01,.09,hs)*.85;
-    f0=mix(M_GOLD,M_PALE,.55);tint=mix(M_GOLD,M_PALE,.35*w);rise=max(rise,.75);c=M_PALE*line*(.14+.6*L)*w;
-  }
-  else if(mat==4){wN=1.;dens=mix(dens,2.,w);kAmt=smoothstep(.01,.09,hs)*.85;c=M_PALE*line*(.12+.5*L)*w;}
-  else if(mat==5){wM=1.;c=M_PALE*line*(.12+.6*L)*mix(.5,1.,rise);}
-  // Flat silver stands for white things (sand, petals): it dulls but stays pale. Raised and shaded silver goes dark.
-  else if(mat==6){wN=1.;dens=.95;}
-  else if(mat==7){wM=inlay;wN=1.-inlay;f0=M_GOLD*.9;rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_PALE*line*(.22+.6*L)*inlay*(1.-mKE);}
-  else if(mat==8){wM=inlay;wN=1.-inlay;f0=mAgedSilver(mix(M_SILVER,M_GOLD,.25)*.9,kp,.35);rise=max(rise,.6);bigD=.4;bigCell=7.;bigSq=1.;c=M_SILVER*line*(.22+.6*L)*inlay*(1.-mKE);}
-  else if(mat==9){wN=1.;}
-  else if(mat==10){wS=inlay;wN=1.-inlay;f0=M_PALE;c=(M_PALE*glow*.5+mix(M_GOLD,M_PALE,.4)*(.10+.46*L))*inlay;} // gold sheet is polished: the brightest flat gold on the lid, brighter than any powder it lies on
-  else if(mat==11){wS=inlay;wN=1.-inlay;f0=mAgedSilver(M_SILVER,kp,.3);}
-  else if(mat==13){wS=.82;wM=.18;f0=M_GOLD;tint=M_GOLD;}
-  else if(mat>=19&&mat<=22){wN=1.;}
-  else if(mat==23||mat==24){wN=1.;}
-  else if(mat==17){wN=1.-inlay;c=(M_CORAL*(.12+.70*L)+mCoat()*.55)*inlay;}
-  else if(mat==14)c=M_LACQ*(.8+1.4*L)+mCoat()*2.2+M_GOLD*line*(.16+.80*L)*mix(.5,1.,rise);
-  else c=mix(vec3(.10,.06,.025)*(.4+.5*L),vec3(1.,.62,.22)*1.15,glow)+M_LACQ;
-  c+=wN*mNashiji(kp,dens,tint)+wM*mMetal(kp,f0,rise)+wS*mSheet(f0);
-  // Gold suhama and far mountains carry a scatter of larger flakes that catch the light (the powder of the Hatsune set is coarse and of several golds).
-  if(T_FLAKE_D[mi]>0.){bigD=T_FLAKE_D[mi];bigCell=T_FLAKE_CELL[mi];}
-  vec3 bigG;float bigX=mFlake(M_R2*kp,bigCell,mix(.47,.30,bigSq),bigD,bigSq,.26,bigG);
-  if(T_FOIL[mi]){
-    vec3 foil=T_TONE[mi]==TONE_GOLD?M_PALE:mAgedSilver(M_SILVER,kp,.6);bigX*=inlay;bigG*=inlay;
-    c=mix(c,mSheet(foil)+foil*(.10+.25*L)+foil*glow*(.45+.45*sin(kp.x*.31+kp.y*.17-uTime*9.)),bigX)+foil*bigG*.6;
-  }else c=mix(c,tint*vec3(1.,.80,.44)*(.07+.74*L),bigX*.92)+tint*M_AMBER*bigG;
-  if(mat>=19&&mat<=22){
-    // Doha. kiri: the string of cut gold squares (B channel at full strength; a rim line is half that).
-    float kiri=smoothstep(.86,.98,fine.b);
-    if(mat<=20){
-      // A bank. fine.g is its height: 1 at the ridge, falling to 0 where the wedge ends in the lacquer, so its colour fades out with it.
-      float Hh=fine.g,ha=smoothstep(.01,.2,Hh),crest=smoothstep(.58,.9,Hh);
-      const float eW=3.5;
-      vec2 gw=vec2(texture(uFine0,mPuv(kp+vec2(eW,0.))).g-texture(uFine0,mPuv(kp-vec2(eW,0.))).g,texture(uFine0,mPuv(kp+vec2(0.,eW))).g-texture(uFine0,mPuv(kp-vec2(0.,eW))).g);
-      float sl=smoothstep(.015,.25,length(gw)),face=-dot(gw/max(length(gw),1e-4),normalize(uKey.xz))*sl;
-      if(mat==19){
-        // Gold: dense powder at the crest, thinning down the wedge into the ground's own; large flakes of gyobu on it.
-        c=mix(c,mix(mNashiji(kp,mix(1.2,2.2,crest),mix(M_GOLD,M_PALE,.5)),mMetal(kp,mix(M_GOLD,M_PALE,.5+.3*crest),max(rise,.75)),.55)*(1.05+.2*crest),ha*.92);
-        vec2 gid,gcen;float gbd=mVoro(M_R2*kp/M_GY_CELL,gid,gcen);
-        float hC=texture(uFine0,mPuv(transpose(M_R2)*(gcen*M_GY_CELL))).g;
-        float gcov=mGyobuCov(kp,gbd,gid,smoothstep(.01,.3,Hh),smoothstep(.01,.3,hC));
-        vec3 gg,gcol=mGyobuShade(gid,gg);
-        c=mix(c,gcol,gcov*ha)+gg*gcov*ha;
-        c=mix(c,mMetal(kp,mix(M_GOLD,M_PALE,.7),max(rise,.7)),crest*.5*ha);
-      }else{
-        // Silver: a sheet of sulphided silver over the wedge; it fades into the ground the same way.
-        c=mix(mHirame(c,kp,ha*.96,max(rise,.7)),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,.28*ha);
-      }
-      // The side turned from the light carries the sulphide (silver is the shade of a bank).
-      c=mix(c,mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,clamp(max(-face,0.)*1.3,0.,.75)*ha*(mat==19?1.:.6));
-      // Below the crest, away from the light, the powder lies deeper under the lacquer: a darker, redder gold.
-      if(mat==19)c*=1.-.34*clamp(max(-face,0.)*1.2,0.,1.)*ha;
-      kiriB=ha;
-    }else{
-      // A suhama tongue (togidashi): ground flush with the lid, no step and no shade at its edge.
-      if(mat==21){
-        // Gold suhama. fine.g is how thick the powder lies: 1 along the drawn edge, thinning away from it until it is the ground's own
-        // sprinkle (maki-bokashi). Thick, it is a polished, finely raked sand, brighter and yellower than the ground; thin, single flakes.
-        float dn=fine.g,body=smoothstep(.35,.9,dn),a=smoothstep(.0,.1,dn);
-        float rake=.93+.07*sin(kp.y*2.1+mVnoise(kp*.06)*7.)*(.6+.4*mVnoise(kp*.4));
-        vec3 pw=mix(mNashiji(kp,mix(dens,2.8,pow(dn,1.3)),mix(tint,mix(M_GOLD,M_PALE,.35),a)),mMetal(kp,M_GOLD,max(rise,.8)),.4*body)*mix(vec3(1.),vec3(1.3,1.18,.96)*rake,body);
-        c=mix(c,pw,a);
-        // Larger flakes lie in the powder and glint as the light moves: the face is not one flat tone.
-        c=mix(c,mix(M_GOLD,M_PALE,.55)*(.1+.85*L),bigX*.5*a)+M_AMBER*bigG*.55*a;
-        // The drawn edge: a fine line of pale gold laid on top (tsukegaki).
-        c=mix(c,mMetal(kp,mix(M_GOLD,M_PALE,.7),1.)*1.2,smoothstep(.1,.45,line)*.9);
-        kiriB=a;
-      }else{
-        // Silver suhama, made the way the gold is: fine.g is how thick the powder lies, 1 along the drawn edge, thinning away from it into
-        // the ground's own sprinkle. Thick, it is a matt grey-white body with flat flakes in it; thin, single silver flakes on the lacquer.
-        float dn=fine.g,body=smoothstep(.3,.85,dn),a=smoothstep(.0,.1,dn);
-        vec3 sil=mAgedSilver(mix(M_SILVER,M_OXID,.4),kp,.8);
-        vec3 pw=mix(mNashiji(kp,mix(dens,2.6,pow(dn,1.3)),mix(tint,sil,.35+.5*a)),mix(mHirame(mMetal(kp,sil,max(rise,.8))*.9,kp,.8,max(rise,.8)),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.8,.25),.2+.7*body);
-        c=mix(c,pw,a);
-        c=mix(c,mMetal(kp,mix(M_SILVER,M_PALE,.25),1.)*1.1,smoothstep(.1,.45,line)*.8);
-        kiriB=a;
-      }
-    }
-    c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.8))*mix(1.5,1.,uAge)+M_PALE*.12*kiri,kiri);
-    kiriV=kiri;
-  }
-  if(mat==23||mat==24){
-    // Toyama (a far mountain, niku-ai togidashi): the ridge is a raised, hard edge (a step where it lies over the head behind it, and the
-    // ground is ground down to the same level a little below); fine powder, densest and brightest on it, thinning evenly down the slope until
-    // it is the ground's own. No flake, no cut gold, no grain but the powder's. Powder is laid on or left off; no dark is mixed in.
-    float Ht=fine.g,a=smoothstep(.0,.85,Ht),ridgeV=smoothstep(.45,1.,Ht),edgeV=smoothstep(.6,1.,Ht);
-    // A silver head (24) is made the way a gold one is: opaque pale silver powder, a warm neutral, thinning from the ridge to the ground. Its ridge is a line of gold.
-    // A blue-gold head (24, aokin: gold with silver in it) is a pale, greenish gold, never white.
-    vec3 pw=mat==23?mix(M_GOLD,M_PALE,.5):vec3(.86,.90,.62);
-    vec3 pwd=mNashiji(kp,mix(1.4,2.5,Ht),pw)*mix(1.55,2.1,ridgeV);
-    // Silver is laid thick: opaque over most of the face (the ground's flakes do not show through), and only the last of the slope thins into the ground.
-    if(mat==24){pwd=mix(mMetal(kp,pw*.9,.9)*1.1,pwd*1.05,.35);a=1.-pow(1.-smoothstep(.0,.4,Ht),2.4);}
-    // Gold: toward the ridge the powder closes into a matt body (the ground's flakes no longer show through); lower down it is a veil.
-    else{pwd=mix(pwd,mMetal(kp,pw,.9)*1.05,.3+.4*smoothstep(.1,.7,Ht));a=1.-pow(1.-smoothstep(.0,.45,Ht),2.);}
-    if(mat==23)pwd=mix(pwd,mix(M_GOLD,M_PALE,.6)*(.1+.85*L),bigX*.45)+M_AMBER*bigG*.5;
-    c=mix(c,pwd,a)+(mat==24?mMetal(kp,M_GOLD*1.25,1.)*1.5*smoothstep(.55,.9,Ht):mMetal(kp,pw,.9)*.9*edgeV);
-  }
-  if(kAmt>0.){
-    // Halftone kirikane on banks: light-facing slopes and the rim of the bank get the big pieces.
-    // Which way the bank faces the light, from the soft relief's slope: the lit face gets big pieces, the far face
-    // is left darker with only specks, so the pieces carry the bank's depth.
-    float slope=smoothstep(.02,.25,length(gs)),face=-dot(gs/max(length(gs),1e-4),normalize(uKey.xz))*slope;
-    float rim=smoothstep(.0,.04,hs)*(1.-smoothstep(.1,.7,hs));
-    // Silver carries the shade: the Hatsune rocks and sandbars are gold where lit and grey silver on the far face.
-    c=mix(c*(1.-.14*kAmt),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.82,clamp(kAmt*max(-face,0.)*1.1,0.,.75));
-    // One gradient from the rim inward, carried by two techniques (Hatsune rocks and sandbars): kirikane at the bright
-    // end, thinning; dense nashiji under and between the pieces, carrying on past the last piece and thinning in turn
-    // into the plain ground.
-    float g=clamp(.08+.85*rim+.6*max(face,0.)-.25*max(-face,0.),0.,1.);
-    c=mix(c,mNashiji(kp,mix(1.,2.4,smoothstep(.1,.75,g)),mix(M_GOLD,M_PALE,.3)),kAmt*smoothstep(.02,.4,g)*.92);
-    {
-      // Gyobu nashiji: the face of the bank is large irregular flakes in the lacquer, denser toward the crown, thinning down the slope.
-      vec2 gid,gcen;float gbd=mVoro(M_R2*kp/M_GY_CELL,gid,gcen);
-      float hC=texture(uSoft0,mPuv(transpose(M_R2)*(gcen*M_GY_CELL))).r;
-      float dN=.8+.4*mVnoise(kp*.03);
-      float gcov=mGyobuCov(kp,gbd,gid,smoothstep(.01,.10,hs)*mix(.82,1.,smoothstep(.1,.45,hs))*dN,smoothstep(.01,.10,hC)*mix(.82,1.,smoothstep(.1,.45,hC)));
-      vec3 gg,gcol=mGyobuShade(gid,gg);
-      c=mix(c,gcol,gcov)+gg*gcov;
-    }
-    vec2 td=normalize(vec2(-gs.y,gs.x)+vec2(.012,0.));
-    vec3 kg;float kv=mKiriCluster(kp,td,smoothstep(.35,1.,g)*kAmt/.85,kg);
-    // Old foil has gone flat: it is still the lightest thing on the bank, but it no longer flashes.
-    c=mix(c,mKiriColor(mix(M_GOLD,M_PALE,.75))*mix(1.15,.74,uAge),kv)+M_PALE*kg*mix(1.,.4,uAge);
-    kiriV=kv;
-  }
-  if(mat==6){
-    // Silver hirame ground: coarse silver flakes of two sizes lie close under the lacquer, each a little brighter or
-    // darker than its neighbours. Toward the garden's edge they thin and the gold nashiji shows between them, then alone.
-    float inn=1.;
-    for(int k=0;k<8;k++){float a=float(k)*.7854;vec2 dv=vec2(cos(a),sin(a));inn+=float(mIdent0(kp+dv*5.).x==id)+float(mIdent0(kp+dv*10.).x==id)+float(mIdent0(kp+dv*16.).x==id);}
-    float dS=smoothstep(.45,.9,inn/25.+(mVnoise(kp*.25)-.5)*.16);
-    c=mHirame(c,kp,dS,rise);
-    // It stands for white sand: where the flakes lie close it is lifted toward a pale, cool silver (it read as a dull taupe mat).
-    c=mix(c,c*vec3(1.3,1.33,1.36)+M_SILVER*(.05+.14*L),dS);
-  }
-  if(mat==9){
-    vec2 r=mHash2(floor(kp/2.3));
-    float t=dot(normalize(mN+vec3(r.x-.5,0.,r.y-.5)*.5),mHp)*2.4+r.x*1.7+mAtt*.6;
-    vec3 film=mix(vec3(.16,.50,.50),vec3(.26,.40,.70),.5+.5*sin(t*3.1));
-    film=mix(film,vec3(.80,.56,.64),smoothstep(.55,1.,.5+.5*sin(t*2.3+2.))*.45);
-    c=mix(c,film*(.16+.60*L)+vec3(.9,1.,1.)*mSpec(120.)*.9,clamp((fine.g-.2)/max(fwidth(fine.g)*1.5,.004)+.5,0.,1.));
-  }
-  if(mat==12){
-    // Ryusui: tight, swirling, roughly parallel gold lines over gold (the Hatsune trousseau's streams), not a grey band.
-    float m=clamp((fine.g-.035)/max(fwidth(fine.g)*1.5,.004)+.5,0.,1.);
-    vec2 q=kp+vec2(mVnoise(kp*.035),mVnoise(kp*.035+7.3))*14.;
-    float ph=(q.y+sin(q.x*.085+q.y*.02)*5.5+sin(q.x*.23+q.y*.05)*1.6)/3.4-uTime*.05;
-    float fw=fwidth(ph),d=abs(fract(ph)-.5)*2.;
-    float ln=mix(1.-smoothstep(.26-fw,.26+fw,d),.26,smoothstep(.22,.55,fw));
-    float flow=.55+.45*sin(kp.y*.20-uTime*1.5+kp.x*.06);
-    // Depth: how far this point is from the pond's own edge (share of the points around it, out to 40 units, that are water).
-    float inn=0.;
-    for(int k=0;k<8;k++){float a=float(k)*.7854+.39;vec2 dv=vec2(cos(a),sin(a));inn+=float(mIdent0(kp+dv*10.).x==id)+float(mIdent0(kp+dv*22.).x==id)+float(mIdent0(kp+dv*40.).x==id);}
-    float deep=smoothstep(.45,.96,inn/24.+(mVnoise(kp*.05)-.5)*.12);
-    // Broad swells: every few lines the water lightens and darkens, so it still reads as water when the lines are too fine to see.
-    float sw=.5+.5*sin(ph*.55+mVnoise(kp*.018)*5.);
-    // Powder lies thick and pale along the shore and thins toward the middle, where the lines carry the water (maki-bokashi).
-    vec3 shoal=mMetal(kp,mix(M_GOLD,M_PALE,.15)*.86,.9)*.95+tint*vec3(.36,.17,.045)*(.10+.30*L);
-    vec3 pool=mNashiji(kp,1.3,mix(M_GOLD,M_PALE,.15))*.9;
-    vec3 base=mix(shoal,pool,deep*.75)+mKeyC*mBand*.10;
-    vec3 crest=mSheet(M_PALE)*.45+mix(M_PALE,M_GOLD,.3)*(.10+.62*L)*(.8+.2*flow)+M_PALE*mBand*.12;
-    vec3 wtr=mix(base,crest,ln)+M_SILVER*line*(.08+.36*L)*(.5+.5*flow)+M_SILVER*max(ring,0.)*.5*(.2+L)+mCoat()*.6;
-    // The depth and the swells are laid over the whole of it (lines and gloss too): the lines and the lid's gloss are most of the water's
-    // brightness away from the light, so a depth carried by the powder alone is lost there, and on a phone, where no light follows a pointer.
-    wtr*=mix(vec3(1.),vec3(.85,.76,.62),deep)*mix(.9,1.1,sw);
-    // A silver shore just inside the water's edge (the Hatsune sandbars and banks are grey silver).
-    float e=.25*(texture(uFine0,mPuv(kp+vec2(7.,0.))).g+texture(uFine0,mPuv(kp-vec2(7.,0.))).g+texture(uFine0,mPuv(kp+vec2(0.,7.))).g+texture(uFine0,mPuv(kp-vec2(0.,7.))).g);
-    float shore=1.-smoothstep(.5,.95,e/max(fine.g,.01));
-    wtr=mix(wtr*vec3(1.,.93,.80),mMetal(kp,mAgedSilver(M_OXID,kp,1.),1.)*.85+M_SILVER*line*(.1+.3*L),shore*.35);
-    c=mix(c,wtr,m);
-  }
-  if(uAge>0.&&T_HILL[mi]){
-    float wr=smoothstep(.62,.95,hs)*smoothstep(.50,.72,mVnoise(M_R1*kp*.07+5.)*.62+mVnoise(M_R2*kp*.19)*.38)*M_AGE_WEAR*uAge;
-    c=mix(c,M_UNDER*(.3+L),wr);
-  }
+  // The rest is the material's recipe (mRecipe, declared with the ground's functions): its own base, the shared powder, its own finish.
+  MG S;S.kp=kp;S.gs=gs;S.fine=fine;S.id=id;S.hs=hs;S.rise=rise;S.glow=glow;S.inlay=inlay;S.line=line;S.w=w;S.ring=ring;S.L=L;S.c=c;S.tint=tint;S.f0=f0;S.dens=dens;S.kAmt=kAmt;S.wN=wN;S.wM=wM;S.wS=wS;S.bigD=bigD;S.bigCell=bigCell;S.bigSq=bigSq;S.kiriV=kiriV;S.kiriB=kiriB;S.bigG=vec3(0.);S.bigX=0.;
+  mRecipe(S,mi);
+  c=S.c;kiriV=S.kiriV;kiriB=S.kiriB;
   if(uDensView>4.5)c=T_TIER[mi]==TIER_GROUND?vec3(1.,0.,1.):T_TIER[mi]==TIER_DENSE?vec3(0.,1.,1.):vec3(0.,1.,0.); // dev layers: plain ground magenta, dense-nashiji faces cyan, the rest green
   else if(uDensView>2.5)c=vec3(texture(uContact,mPuv(kp)).r*.8);
   else if(uDensView>1.5)c=T_TIER[mi]==TIER_GROUND?vec3(1.,0.,1.):vec3(0.,1.,0.); // dev mask: which pixels are plain ground
