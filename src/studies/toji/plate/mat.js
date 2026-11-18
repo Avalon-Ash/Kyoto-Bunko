@@ -31,47 +31,39 @@ export const MAT = {ground: 1, nashijiLight: 2, mura: 3, gyobu: 4, gold: 5, silv
  *   tone       its metal (TONE).
  *   hill       hill ground: carries halftone kirikane and wears at the crown.
  *   tier       which tone layer it belongs to (TIER): the plain ground is the darkest, dense-nashiji faces the middle, the rest the pattern.
- *   coatHi     for coat 'powder': the powder thickness (fine.g) at which the lacquer over it has thinned to a film.
- *   flakeSq    the larger flakes are square (cut foil) rather than irregular: 1 or 0.
- *   cloud      hill ground whose metal lies in cloudy patches (mura nashiji).
- *   recipe     how it is painted (RECIPE): the one function of the ground shader that draws it. Gold and silver of one technique
- *              share a recipe and differ by `tone`.
  */
-export const COAT_KIND = {top: 0, sunk: 1, half: 2, foot: 3, powder: 4, waterEdge: 5, inlayEdge: 6, none: 7};
+export const COAT_KIND = {top: 0, sunk: 1, half: 2, foot: 3, powder30: 4, powder35: 5, waterEdge: 6, inlayEdge: 7, none: 8};
 export const TONE = {gold: 0, silver: 1, blue: 2};
 export const TIER = {pattern: 0, ground: 1, dense: 2};
-export const RECIPE = {lamp: 0, ground: 1, hill: 2, gyobu: 3, gold: 4, hirame: 5, foil: 6, aogai: 7, sheet: 8, ryusui: 9, kasumi: 10, lacquer: 11,
-  coral: 12, bank: 13, suhama: 14, toyama: 15};
-const LOOK_DEFAULT = {ch: 2.4, chRidge: false, lh: .7, coat: 'top', coatHi: 0, density: false, flakeD: 0, flakeCell: 0, flakeSq: 0, foil: false,
-  tone: 'gold', hill: false, cloud: false, tier: 'pattern', recipe: 'lamp'};
+const LOOK_DEFAULT = {ch: 2.4, chRidge: false, lh: .7, coat: 'top', density: false, flakeD: 0, flakeCell: 0, foil: false, tone: 'gold', hill: false, tier: 'pattern'};
 const look = (over = {}) => Object.freeze({...LOOK_DEFAULT, ...over});
-const HILL = {coat: 'foot', hill: true, tier: 'dense'}, FOIL = {coat: 'inlayEdge', foil: true, flakeD: .4, flakeCell: 7, flakeSq: 1, recipe: 'foil'};
+const HILL = look({coat: 'foot', hill: true, tier: 'dense'});
 export const MAT_LOOK = Object.freeze({
-  0: look(), // a material this table does not list: painted as the lamp's glow, as before
-  [MAT.ground]: look({coat: 'sunk', density: true, tier: 'ground', recipe: 'ground'}),
-  [MAT.nashijiLight]: look({...HILL, recipe: 'hill'}),
-  [MAT.mura]: look({...HILL, cloud: true, recipe: 'hill'}),
-  [MAT.gyobu]: look({...HILL, recipe: 'gyobu'}),
-  [MAT.gold]: look({coat: 'inlayEdge', recipe: 'gold'}),
-  [MAT.silver]: look({coat: 'half', tone: 'silver', recipe: 'hirame'}),
-  [MAT.kirikane]: look(FOIL),
-  [MAT.kirigin]: look({...FOIL, tone: 'silver'}),
-  [MAT.aogai]: look({coat: 'none', recipe: 'aogai'}),
-  [MAT.hyomonGold]: look({coat: 'inlayEdge', recipe: 'sheet'}),
-  [MAT.hyomonSilver]: look({coat: 'inlayEdge', tone: 'silver', recipe: 'sheet'}),
-  [MAT.water]: look({ch: 0, coat: 'waterEdge', density: true, tier: 'dense', recipe: 'ryusui'}),
-  [MAT.kasumi]: look({recipe: 'kasumi'}),
-  [MAT.lacquer]: look({recipe: 'lacquer'}),
+  0: look(), // a material this table does not list
+  [MAT.ground]: look({coat: 'sunk', density: true, tier: 'ground'}),
+  [MAT.nashijiLight]: HILL,
+  [MAT.mura]: HILL,
+  [MAT.gyobu]: HILL,
+  [MAT.gold]: look({coat: 'inlayEdge'}),
+  [MAT.silver]: look({coat: 'half', tone: 'silver'}),
+  [MAT.kirikane]: look({coat: 'inlayEdge', foil: true}),
+  [MAT.kirigin]: look({coat: 'inlayEdge', foil: true, tone: 'silver'}),
+  [MAT.aogai]: look({coat: 'none'}),
+  [MAT.hyomonGold]: look({coat: 'inlayEdge'}),
+  [MAT.hyomonSilver]: look({coat: 'inlayEdge', tone: 'silver'}),
+  [MAT.water]: look({ch: 0, coat: 'waterEdge', density: true, tier: 'dense'}),
+  [MAT.kasumi]: look(),
+  [MAT.lacquer]: look(),
   [MAT.lamp]: look(),
   [MAT.muraSilver]: look({tone: 'silver'}),
-  [MAT.coral]: look({coat: 'none', recipe: 'coral'}),
+  [MAT.coral]: look({coat: 'none'}),
   [MAT.roofPowder]: look(),
-  [MAT.bankGold]: look({ch: 15, coat: 'powder', coatHi: .3, density: true, tier: 'dense', recipe: 'bank'}),
-  [MAT.bankSilver]: look({ch: 15, coat: 'powder', coatHi: .3, density: true, tone: 'silver', tier: 'dense', recipe: 'bank'}),
-  [MAT.sandGold]: look({ch: 0, lh: .15, coat: 'powder', coatHi: .35, density: true, flakeD: .3, flakeCell: 5.2, tier: 'dense', recipe: 'suhama'}),
-  [MAT.sandSilver]: look({ch: 0, coat: 'powder', coatHi: .35, density: true, tone: 'silver', tier: 'dense', recipe: 'suhama'}),
-  [MAT.toyamaGold]: look({ch: 5, chRidge: true, coat: 'powder', coatHi: .3, density: true, flakeD: .3, flakeCell: 5.2, tier: 'dense', recipe: 'toyama'}),
-  [MAT.toyamaBlue]: look({ch: 5, chRidge: true, coat: 'powder', coatHi: .3, density: true, tone: 'blue', tier: 'dense', recipe: 'toyama'}),
+  [MAT.bankGold]: look({ch: 15, coat: 'powder30', density: true, tier: 'dense'}),
+  [MAT.bankSilver]: look({ch: 15, coat: 'powder30', density: true, tone: 'silver', tier: 'dense'}),
+  [MAT.sandGold]: look({ch: 0, lh: .15, coat: 'powder35', density: true, flakeD: .3, flakeCell: 5.2, tier: 'dense'}),
+  [MAT.sandSilver]: look({ch: 0, coat: 'powder35', density: true, tone: 'silver', tier: 'dense'}),
+  [MAT.toyamaGold]: look({ch: 5, chRidge: true, coat: 'powder30', density: true, flakeD: .3, flakeCell: 5.2, tier: 'dense'}),
+  [MAT.toyamaBlue]: look({ch: 5, chRidge: true, coat: 'powder30', density: true, tone: 'blue', tier: 'dense'}),
   [MAT.rockGold]: look(),
   [MAT.rockSilver]: look({tone: 'silver'}),
   [MAT.rockOlive]: look({tone: 'blue'}),
