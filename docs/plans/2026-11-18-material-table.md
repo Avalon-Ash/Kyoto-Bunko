@@ -640,11 +640,13 @@ bench(Date.now() % 100000);
 - 窮舉圍欄（`npm test`，提交）：把 `0b44c2c` renderer 用名字做的九個判斷照抄成 JS，對每個零件材質、盒的部位與蓋，和讀欄的結果比，必須全等；renderer 原始碼裡沒有 `spec.name ===`；十一區每個填色的旗標和材質的 `fine` 一致；`bake.js` 不讀 `.far`、`f.tongue`；`export-glb.js` 沒有自己的顏色表。
 - 部件：`node scripts/plate-parts-hash.mjs --check` identical 11/11（`doha.js` 沒動）。
 - 逐像素（改前 `.shots/mat-table/b20`、改後 `a20`，同一次開機、同一個 dev server；改後先用 curl 確認 dev server 送出的是新版模組）：十組 106 張：105 張 0 個像素不同；`swapA` 的南區日差 1 個像素、差 1 級。改後重拍一次仍是同一個像素；把舊程式（`0b44c2c` 的五個檔）暫時放回去重拍，結果和改後 0 個像素不同、和第一次的基準差同一個像素。所以是舊程式自己的閃動，不是這次的改動。
+- **逐像素沒有涵蓋的**：矩陣只拍蓋。盒的內面、托盤、紙、繩（`coat: 'sunk'`／`'none'`、`shine: false` 的對象）只在開盒時看得到，沒有拍。它們的證明是上面的窮舉圍欄，加上讀程式：`patchMaterial`、`patchLimbMaterial`、`physical` 產生的著色器字串與快取鍵，只由那九個判斷、`spec.glow` 與盒自己的旗標（`nashijiSide`、`nashijiInner`、`paperFleck`，沒有動）決定；renderer 裡 `physical(`／`patch*Material(` 的呼叫點只吃 `MATERIALS`、`BOX_MATERIALS`、`GROUND_LID`。
 - 檢查：lint exit 0（含 `adr:check`）；`validate_data.js --strict` ERROR 0／WARN 0；test 154/154、17/17；build exit 0。拍圖紀錄裡沒有 console 錯誤。`?export=glb`（dev 專用）沒有在瀏覽器裡跑過，只有上面的 `refColour` 對照。
 
 **現在的結構**：一個材質的所有性質都在 `mat.js` 的 `MAT_LOOK` 那一列：地著色器的欄、`fine`、`refColour`、`mesh`（網格的物理參數與著色器欄）。`DOHA_TONE`、`ROCK_LOOK` 是以別的鍵（土坡的 tone、岩的請求材質）查的表，也在 `mat.js`。`BOX_MATERIALS` 是盒的部位（另一套 id），留在 `three-pack.js`，但用同一組網格欄。加材質：在 `MAT` 加編號、在 `MAT_LOOK` 加一列（地的欄、`fine`、`mesh`）；不要在 renderer 或 bake 裡比名字或編號，測試會擋。
 
 **還沒做**
+- **要使用者決定**：ADR 0013 的「決定」寫的是過渡期的分工（兩表欄位不得重疊、第 3 步併表），「後果」寫第 3 步未完成；併表之後這兩句過時了。ADR 的規則是不改原文：要嘛把 0013 標成「已取代（由 0016）」並在 0016 加「取代：0013」（0016 要把 0013 的原則一併寫進來），要嘛維持現狀、由 0016 補述。這次沒有標，等使用者選。
 - `doha.js` 的兩個旗標（上面）。
 - 第一次編譯慢（§8.12，原本就有的問題）：另開一包，縮短地著色器的編譯時間，或編譯期間先顯示降級圖。
 - 降級圖沒有重拍：這一步證明了畫面逐像素不變，降級圖不必重拍。
