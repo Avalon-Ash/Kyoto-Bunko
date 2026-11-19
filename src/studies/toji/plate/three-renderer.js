@@ -154,6 +154,9 @@ export function createThreeRenderer(gl, canvas) {
   };
   shared.uCoatK.value = COAT_ON * shared.uAge.value;
   if (import.meta.env.DEV) window.__kyotoPlateUniforms = shared; // scripts/plate-shot.mjs flips uDensView to mask the lid
+  // Dev only: the three.js renderer, to read the programs' shader sources (timing a shader's compile outside the browser's caches:
+  // docs/plans/2026-11-18-material-table.md 8.12).
+  if (import.meta.env.DEV) window.__kyotoRenderer = renderer;
   // scripts/plate-clip.mjs reads the settled pose of the ward on screen and measures interpenetration (clip-probe.js).
   if (import.meta.env.DEV) window.__kyotoPlatePose = () => ({ward: plate.ward, parts: plate.parts, soft: plate.soft, ident: plate.ident, mw: plate.mw, mh: plate.mh, a: Float32Array.from(life.a), b: Float32Array.from(life.b)});
   if (import.meta.env.DEV) window.__kyotoPlateProbe = opts => import('./clip-probe.js').then(m => m.probeClip(window.__kyotoPlatePose(), opts));

@@ -2,7 +2,8 @@
 # Step 2, second form (docs/plans/2026-11-18-material-table.md 8.9): the per-material branches of the ground shader stay where they are,
 # in the main body, and only their conditions change: a material's recipe (a column of MAT_LOOK) instead of its id.
 # Why not functions: moved into recipe functions (step2-patch.py) the shader took 49 s (switch) and 32 s (if chain) to compile the first
-# time in a real Chrome on Windows, against 0.3 s for this structure.
+# time in a real Chrome on Windows, against 10-13 s for this structure and 12-15 s before it (plan 8.12: the ground shader is slow to
+# compile cold whatever is done; the functions made it three times slower).
 # Run from the repo root on the code as it stands after step 1:  python docs/plans/material-table/step2b-patch.py
 # Once it has been applied and committed, do not run it again.
 import io, sys

@@ -568,9 +568,44 @@ npm run build
 ### 8.11 第 2 步保守版的驗收（2026-11-19 20:30–21:10，commit `81b2b9a`）
 
 - **逐像素**（基準與改後都是今天同一次開機拍的；基準是線上的第 1 步 `e400adb`，資料夾 `.shots/mat-table/b19` 與 `a19`）：106 張裡 103 張 0 個像素不同；3 張各差 1–2 個像素、差 1 級，用改後的程式重拍兩次，都至少有一次和基準 0 個像素不同（是同一份程式自己的閃動，位置和 11/18 記錄的相同）。十組裡 `new`、分層視圖、包漿視圖、材質替換 A／B、光在盤外、手機都是 0。
-- **第一次編譯**（使用者的 Chrome、桌機 D3D11、讓快取失效）：最長的工作 309 ms（改前 333 ms）。量的時候確認過載到的是這一版。
+- **第一次編譯**：見 §8.12（先前寫的「309 ms、改前 333 ms」是快取命中，不算數）。排除快取後，這一版 10.0–12.9 秒，第 1 步 12.4–15.1 秒：沒有變慢。
 - **窮舉檢查與圍欄**（`npm test`）：材質 0–28 的每個欄位對照 `56fc135` 的判斷式；地著色器裡沒有材質編號和數字比較、配方只在一處讀出、配方只和具名常數比。
 - 檢查：lint exit 0；`validate_data.js --strict` ERROR 0／WARN 0；test 151/151、17/17；build exit 0。
 - **現在的結構**：`MAT_LOOK`（`mat.js`）每個材質一列，欄有 `ch`、`chRidge`、`lh`、`coat`、`density`、`flakeD`、`flakeCell`、`foil`、`tone`、`hill`、`cloud`、`tier`、`recipe`。地著色器的主體開頭讀一次 `rc`（配方）與 `gold`（金屬），之後的分支只問這兩個量與表的欄。加一種材質：在 `MAT` 加編號、在表裡加一列、選一個既有的配方；要新的畫法才需要在 `RECIPE` 加一個名字並在主體加分支。
 - **和提案不同的地方**：配方沒有收成函式，「底」與「上層」兩段各有一串以配方為條件的分支（提案寫的是函式加一處分派）。原因是編譯時間（§8.9、§8.10）；包漿的 `powder30`／`powder35` 也沒有合併成數值欄（留在第 1 步的樣子）。
 - 沒做：第 3、4 步；GPU 的幀成本前後對照；手機實機。
+
+### 8.12 更正：第一次編譯的時間要這樣量（2026-11-19 21:40）
+
+**§8.9 的表與 §8.11 的「309 ms」是錯的**：那些「改前 333 ms、第 1 步 315 ms、保守版 309 ms」都是瀏覽器的著色器快取命中時的數字（每次載入固定有兩個 0.2–0.3 秒的工作，是建盤與烘焙）。在著色器裡加一個**沒被用到**的常數，並不保證快取失效。
+
+**可靠的量法**：把地的那支程式的原始碼從渲染器拿出來，在同一頁另開一個 WebGL2 context，加一個**有被用到**的 uniform（每次名字不同），編譯、連結，計時到 `LINK_STATUS` 回來。dev 模式下 `window.__kyotoRenderer` 是 three.js 的渲染器（`three-renderer.js`）：
+
+```js
+const r = window.__kyotoRenderer, gl0 = r.getContext();
+const p0 = r.info.programs.find(p => gl0.getShaderSource(p.fragmentShader).includes('T_DENSITY[mi]'));
+const vs = gl0.getShaderSource(p0.vertexShader), fs = gl0.getShaderSource(p0.fragmentShader);
+const bench = n => { const tag = 'uProbe' + n, mark = 'outgoingLight=mFinish(c,1.).rgb;';
+  const f = fs.replace('void main() {', 'uniform float ' + tag + ';\nvoid main() {').replace(mark, 'outgoingLight=mFinish(c,1.).rgb+vec3(' + tag + '*0.);');
+  const gl = document.createElement('canvas').getContext('webgl2'), t0 = performance.now();
+  const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+  const p = gl.createProgram(); gl.attachShader(p, mk(gl.VERTEX_SHADER, vs)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, f)); gl.linkProgram(p);
+  const ok = gl.getProgramParameter(p, gl.LINK_STATUS); return {ms: Math.round(performance.now() - t0), ok}; };
+bench(Date.now() % 100000);
+```
+
+要比兩版，就各載入一次把 `vs`、`fs` 存進 `localStorage`，再在同一頁交替量。
+
+**量到的**（使用者的 Chrome、桌機 D3D11，交替量三次，都連結成功）
+
+| 地著色器 | 編譯加連結（ms） |
+|---|---|
+| 第 1 步（`e400adb`） | 15,129、13,156、12,429 |
+| 第 2 步保守版（`81b2b9a`，現在線上） | 12,295、12,941、10,038 |
+| 配方函式加 `switch`（`d99774d`，已退掉） | 48,594（頁面載入時的 long task，一次） |
+| 配方函式加 `if` 鏈（沒有提交） | 32,086（同上，一次） |
+
+**結論**
+- 保守版沒有比第 1 步慢。配方函式的兩種寫法是原本的兩到四倍，所以不用。
+- **原本就有的問題**：這支地著色器（片段著色器約 12.5 萬字元）在 D3D 上冷編譯本來就要十幾秒。平常被瀏覽器的著色器快取蓋住；第一次來的訪客，或每次改了地著色器重新部署之後，第一次載入會等這麼久（頁面會不會整個卡住，要看 three.js 當時是不是用非同步編譯；11/18 配方函式那一版是整頁卡住）。這不是這次改動造成的，但值得另開一包處理：縮短這支著色器的編譯時間，或編譯期間先顯示降級圖（`renderer.compileAsync`）。
+- 11/19 線上第一次載入看到的 1.8 秒長工作、本機加常數後看到的 8.9 秒，都落在「快取部分命中」的範圍，不能當數據用。
