@@ -609,3 +609,11 @@ bench(Date.now() % 100000);
 - 保守版沒有比第 1 步慢。配方函式的兩種寫法是原本的兩到四倍，所以不用。
 - **原本就有的問題**：這支地著色器（片段著色器約 12.5 萬字元）在 D3D 上冷編譯本來就要十幾秒。平常被瀏覽器的著色器快取蓋住；第一次來的訪客，或每次改了地著色器重新部署之後，第一次載入會等這麼久（頁面會不會整個卡住，要看 three.js 當時是不是用非同步編譯；11/18 配方函式那一版是整頁卡住）。這不是這次改動造成的，但值得另開一包處理：縮短這支著色器的編譯時間，或編譯期間先顯示降級圖（`renderer.compileAsync`）。
 - 11/19 線上第一次載入看到的 1.8 秒長工作、本機加常數後看到的 8.9 秒，都落在「快取部分命中」的範圍，不能當數據用。
+
+### 8.13 第 4 步的一部分（4a）：土坡的金銀與岩的材質讀表（2026-11-19 21:30，agy 實作、主代理審查）
+
+- 請求模型／強度：Gemini 4 Hydrogen high（agy，Gemini Models 池）；實際設定：未確認。派工單與允許清單在工作樹 `C:\Git\_wt_kyoto_doha\.claude\dispatch\`（不提交）。
+- 內容（commit `2997351`）：`mat.js` 新增 `DOHA_TONE`（洲浜、堤、遠山各個 tone 的材質與順序；洲浜另有 `under`、`soft`）與 `ROCK_LOOK`／`ROCK_DEFAULT`（岩是不是粉的、岩身與箔片的材質）；`doha.js` 不再拿 tone 和字面值比，`rock-mesh.js` 不再比材質編號；測試加圍欄。
+- 驗收（主代理在主資料夾重跑）：`node scripts/plate-parts-hash.mjs --check` identical 11/11 wards（十一區部件輸出逐位元相同）；lint exit 0；test 152/152、17/17；build exit 0。主代理讀過 diff：沒列到的 tone 與材質的預設值和原本的行為一致；測試檔只在檔尾新增。
+- 新工具：`scripts/plate-parts-hash.mjs`（`--write`／`--check`），不靠瀏覽器證明建構程式的改動沒有動到任何數值。
+- 第 4 步還剩：`bake.js` 的填色標記（`f.tongue`／`f.wedge`／`f.fade`）對回表的 `fine` 欄；`export-glb.js` 的顏色表（和 `MATERIALS.color` 的值不同，不是單純重複，要先確認用途再動）。第 3 步（`three-renderer.js` 的字串判斷、`MATERIALS` 併表）還沒做。
