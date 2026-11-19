@@ -74,3 +74,30 @@ export const MAT_LOOK = Object.freeze({
   [MAT.rockOlive]: look({tone: 'blue'}),
   [MAT.rockLine]: look(),
 });
+
+// Doha piece properties keyed by cluster kind and tone, so doha.js reads one table instead of branching on tone strings.
+export const DOHA_TONE = Object.freeze({
+  tongue: Object.freeze({
+    gold: Object.freeze({mat: MAT.sandGold, order: 0, under: 16, soft: .05}),
+    // Silver suhama is ground flush like gold and ends at the waterline unless asked to run under it.
+    silver: Object.freeze({mat: MAT.sandSilver, order: 1, under: 0, soft: .03}),
+  }),
+  bank: Object.freeze({
+    gold: Object.freeze({mat: MAT.bankGold, order: 0}),
+    silver: Object.freeze({mat: MAT.bankSilver, order: 1}),
+  }),
+  toyama: Object.freeze({
+    gold: Object.freeze({mat: MAT.toyamaGold, order: 0}),
+    blue: Object.freeze({mat: MAT.toyamaBlue, order: 1}),
+  }),
+});
+
+// High-makie rock body and foil-tile materials keyed by the requested MAT id; unlisted ids keep the gold kirikane mound default.
+export const ROCK_DEFAULT = Object.freeze({powder: false, body: MAT.mura, tile: MAT.kirikane});
+const rockLook = (over = {}) => Object.freeze({...ROCK_DEFAULT, ...over});
+export const ROCK_LOOK = Object.freeze({
+  [MAT.kirikane]: rockLook(),
+  [MAT.kirigin]: rockLook({body: MAT.muraSilver, tile: MAT.kirigin}),
+  [MAT.rockGold]: rockLook({powder: true, body: MAT.rockGold}),
+  [MAT.rockSilver]: rockLook({powder: true, body: MAT.rockSilver}),
+});

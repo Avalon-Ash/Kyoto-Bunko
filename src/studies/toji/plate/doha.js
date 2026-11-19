@@ -9,7 +9,7 @@
 // curve through them and lets a seed shake it by at most JITTER units, so that no run of an edge is ruled.
 // A cluster is one group with up to two parts: its gold pieces and its silver pieces (the part limit is 64).
 // Pure geometry. The painting of a bank's wedge and the string of cut gold is in bake.js (paintWedge, paintKiriString).
-import {MAT} from './mat.js';
+import {DOHA_TONE} from './mat.js';
 import {KIND, rand, PLATE} from './vocab.js';
 
 const TAU = Math.PI * 2;
@@ -116,10 +116,11 @@ export function tongues(id, pieces, all = {}) {
   const out = {}, geoms = pieces.map(tongueGeom), centre = centreOf(geoms);
   pieces.forEach((piece, i) => {
     const q = {...all, ...piece}, s = geoms[i], tone = q.tone ?? 'gold';
-    const p = out[tone] ??= part(`${id}-${tone}`, id, tone === 'silver' ? MAT.sandSilver : MAT.sandGold, centre, {reach: 1.6, order: tone === 'silver' ? 1 : 0});
+    const look = DOHA_TONE.tongue[tone] ?? DOHA_TONE.tongue.gold;
+    const p = out[tone] ??= part(`${id}-${tone}`, id, look.mat, centre, {reach: 1.6, order: look.order});
     // Silver is sprinkled and ground flush the way gold is (it used to be a cut sheet, and read as a grey slab lying on the lid). It does not
     // run in under the water unless asked: a silver shore is the waterline itself, thinning inland.
-    const underBy = q.under ?? (tone === 'silver' ? 0 : 16);
+    const underBy = q.under ?? look.under;
     let outline = s.outline, fade = tongueFade(outline, q);
     if (fade && q.toward && underBy > 0) {
       // A shore that lies along water runs in under it: its water side is carried `under` units toward the water, so that the
@@ -134,7 +135,7 @@ export function tongues(id, pieces, all = {}) {
       });
       fade = tongueFade(outline, q);
     }
-    const f = {d: outline, soft: tone === 'silver' ? .03 : .05, crisp: 1, tongue: true};
+    const f = {d: outline, soft: look.soft, crisp: 1, tongue: true};
     // The outline as it was written (what shows above the water), for the measuring scripts.
     if (outline !== s.outline) f.drawn = s.outline;
     if (q.kiri) { const [from, to] = q.kiri; f.kiri = [{path: pathOf(outline, from, to), pitch: 4, half: 1.1}]; }
@@ -215,8 +216,8 @@ export function banks(id, pieces) {
   if (!pieces.length) throw new Error(`banks(${id}): no pieces`);
   const out = {}, geoms = pieces.map(bankGeom), centre = centreOf(geoms);
   pieces.forEach((q, i) => {
-    const s = geoms[i], tone = q.tone ?? 'gold';
-    const p = out[tone] ??= part(`${id}-${tone}`, id, tone === 'silver' ? MAT.bankSilver : MAT.bankGold, centre, {order: tone === 'silver' ? 1 : 0});
+    const s = geoms[i], tone = q.tone ?? 'gold', look = DOHA_TONE.bank[tone] ?? DOHA_TONE.bank.gold;
+    const p = out[tone] ??= part(`${id}-${tone}`, id, look.mat, centre, {order: look.order});
     const f = {d: s.outline, soft: 0, crisp: 0, wedge: {ridge: s.ridge, depth: s.depth, rear: s.rear, amp: q.amp ?? BANK_SOFT}};
     if (q.kiri) { const [from, to] = q.kiri; f.kiri = [{path: pathOf(s.ridge, from, to), pitch: 4, half: 1.1}]; }
     p.fills.push(f);
@@ -240,8 +241,8 @@ export function mountain(id, heads) {
     return [...r.map(p => [p[0], p[1]]), [b[0], b[1] + drop], [a[0], a[1] + drop]];
   });
   heads.forEach((q, i) => {
-    const s = geoms[i], tone = q.tone ?? 'gold';
-    const p = out[tone] ??= part(`${id}-${tone}`, id, tone === 'blue' ? MAT.toyamaBlue : MAT.toyamaGold, centre, {order: tone === 'blue' ? 1 : 0});
+    const s = geoms[i], tone = q.tone ?? 'gold', look = DOHA_TONE.toyama[tone] ?? DOHA_TONE.toyama.gold;
+    const p = out[tone] ??= part(`${id}-${tone}`, id, look.mat, centre, {order: look.order});
     // A nearer head hides the one behind it; hiddenBy lists the nearer heads of the other metal (their part is painted apart from this one).
     const hiddenBy = domes.filter((_, j) => j > i && (heads[j].tone ?? 'gold') !== tone);
     p.fills.push({d: domes[i], soft: 0, crisp: 0, hiddenBy, wedge: {ridge: s.ridge, depth: s.depth, amp: q.amp ?? 0, far: true, profile: TOYAMA_PROFILE, cluster: id, seq: i, drop: s.depth * FAR_DROP}});

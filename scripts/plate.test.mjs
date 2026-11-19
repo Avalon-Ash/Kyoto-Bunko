@@ -1628,3 +1628,29 @@ test('material table: the GLSL arrays hold the table exactly, and kinds are comp
   for (const id of Object.keys(MATERIALS)) assert.ok(MAT_LOOK[id], `MATERIALS[${id}] has a row in MAT_LOOK`);
   for (const key of lookColumns) assert.ok(!meshColumns.has(key), `column ${key} lives in one table only`);
 });
+
+// Scope fence (docs/plans/2026-11-18-material-table.md, step 4a): doha.js and rock-mesh.js read DOHA_TONE / ROCK_LOOK from mat.js instead of branching on tone strings or MAT ids.
+test('material table: doha and rock-mesh read DOHA_TONE and ROCK_LOOK with valid MAT ids', async () => {
+  const {readFileSync} = await import('node:fs');
+  const {MAT, DOHA_TONE, ROCK_LOOK, ROCK_DEFAULT} = await import('../src/studies/toji/plate/mat.js');
+  const dohaSrc = readFileSync(new URL('../src/studies/toji/plate/doha.js', import.meta.url), 'utf8');
+  const rockSrc = readFileSync(new URL('../src/studies/toji/plate/rock-mesh.js', import.meta.url), 'utf8');
+
+  assert.equal(/\btone\s*(?:===?|!==?)\s*['"]/.test(dohaSrc), false, 'doha.js does not compare tone against a string literal');
+  assert.equal(/['"][^'"]*['"]\s*(?:===?|!==?)\s*tone\b/.test(dohaSrc), false, 'doha.js does not compare a string literal against tone');
+  assert.equal(/\bmat\s*(?:===?|!==?)\s*MAT\./.test(rockSrc), false, 'rock-mesh.js does not compare mat against MAT.*');
+  assert.equal(/MAT\.\w+\s*(?:===?|!==?)\s*mat\b/.test(rockSrc), false, 'rock-mesh.js does not compare MAT.* against mat');
+
+  const matIds = new Set(Object.values(MAT));
+  for (const [kind, tones] of Object.entries(DOHA_TONE)) {
+    for (const [tone, spec] of Object.entries(tones)) {
+      assert.ok(matIds.has(spec.mat), `DOHA_TONE.${kind}.${tone}.mat (${spec.mat}) is a registered MAT id`);
+    }
+  }
+  for (const [id, spec] of [...Object.entries(ROCK_LOOK), ['default', ROCK_DEFAULT]]) {
+    assert.equal(typeof spec.powder, 'boolean', `ROCK_LOOK[${id}].powder is boolean`);
+    assert.ok(matIds.has(spec.body), `ROCK_LOOK[${id}].body (${spec.body}) is a registered MAT id`);
+    assert.ok(matIds.has(spec.tile), `ROCK_LOOK[${id}].tile (${spec.tile}) is a registered MAT id`);
+    if (id !== 'default') assert.ok(matIds.has(Number(id)), `ROCK_LOOK key ${id} is a registered MAT id`);
+  }
+});

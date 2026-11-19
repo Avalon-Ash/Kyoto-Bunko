@@ -1,6 +1,6 @@
 // Explicit 3D builder for high-makie rocks (takamaki-e mound + kirikane/kirigin square tile mosaic).
 // Pure geometry returning a plate part with `mesh` + original `fills`/`lines` for picking and bounds, zero `thick`.
-import {MAT} from './mat.js';
+import {MAT, ROCK_LOOK, ROCK_DEFAULT} from './mat.js';
 import {KIND, rand} from './vocab.js';
 
 
@@ -237,8 +237,7 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1,
   }));
 
   // A powder rock (the pilot wards): the body is its own pale gold or silver and there are no foil tiles.
-  const powder = mat === MAT.rockGold || mat === MAT.rockSilver;
-  const bodyMat = powder ? mat : mat === MAT.kirigin ? MAT.muraSilver : MAT.mura;
+  const {powder, body: bodyMat, tile: tileMat} = ROCK_LOOK[mat] ?? ROCK_DEFAULT;
   const bodyVerts = [];
   for (const [[j0, i0], [j1, i1], [j2, i2]] of topTris) {
     pushTri(bodyVerts, pos[j0][i0], pos[j1][i1], pos[j2][i2], [0, 1, 0], norm[j0][i0], norm[j1][i1], norm[j2][i2], foilUv[j0][i0], foilUv[j1][i1], foilUv[j2][i2]);
@@ -385,7 +384,6 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1,
     }
   }
 
-  const tileMat = mat === MAT.kirigin ? MAT.kirigin : MAT.kirikane;
   p.mesh = tileVerts.length ? [{mat: bodyMat, vertices: bodyVerts}, {mat: tileMat, vertices: tileVerts}] : [{mat: bodyMat, vertices: bodyVerts}];
   return [p];
 }
