@@ -1,59 +1,14 @@
 // Pure data for the three.js plate renderer (three-renderer.js): material table, box and mesh packing, motion state
 // packing and the GLSL that moves a part. Nothing here imports three, so node:test can check it.
 import {MAT, KIND} from './vocab.js';
-import {MAT_LOOK, COAT_KIND, TONE, TIER, RECIPE} from './mat.js';
+import {MAT_LOOK, COAT_KIND, TONE, TIER, RECIPE, meshLook} from './mat.js';
 import {MAX_PARTS} from './parts.js';
 import {packMeshes} from './mesh-geometry.js';
 import {limbMesh, stampInstances} from './limbs.js';
 import {shiftChunks, feetCentre} from './creature-mesh.js';
 
-/**
- * MAT → MeshPhysicalMaterial parameters (docs/MAKIE_THREE_PLAN.md §3). First pass: T3 tunes the numbers against .shots/refs.
- * flake: strength of the procedural gold-powder normal map (0 = none). paint: the flat colour used by the ground texture
- * for parts that are not yet three meshes (T1/T2 replace that). glow: emissive follows the part's glow state.
- */
-export const MATERIALS = {
-  [MAT.ground]: {name: 'ground', color: '#a8742e', paint: '#9a6c2c', metalness: .75, roughness: .45, clearcoat: 1, clearcoatRoughness: .08, flake: .35},
-  [MAT.nashijiLight]: {name: 'nashijiLight', aged: {color: '#b7a276', roughness: .6}, color: '#b88a3c', paint: '#a8823a', metalness: .85, roughness: .5, clearcoat: .6, clearcoatRoughness: .1, flake: .5},
-  [MAT.mura]: {name: 'mura', rock: 'gold', color: '#9c7430', paint: '#6e5222', metalness: .8, roughness: .55, clearcoat: .6, clearcoatRoughness: .1, flake: .45},
-  [MAT.gyobu]: {name: 'gyobu', aged: {color: '#bfa468', roughness: .55}, color: '#c29a46', paint: '#8a6a2c', metalness: .85, roughness: .45, clearcoat: .5, clearcoatRoughness: .1, flake: .7},
-  [MAT.gold]: {name: 'gold', aged: {color: '#cdb98e', roughness: .55, clearcoat: .1}, color: '#cf9e48', paint: '#d6a640', metalness: 1, roughness: .38, clearcoat: .3, clearcoatRoughness: .1, flake: .22},
-  // T3: railings read dull grey under the grey room; a whiter, smoother silver with a thin coat keeps them silver.
-  // Age: silver and sheet silver stand for white things (sand, a fox, blossom, an eave's edge), so they dull a little but stay
-  // pale and keep their polish (a rougher silver only mirrors the dim room and goes dark);
-  // envMapIntensity makes up for the quieter day an aged box sits in, which would otherwise grey them. The dark, sulphided silver is the shade of rocks, trunks and banks, which the shaders lay themselves.
-  // Roof faces: gold powder under clear lacquer (takamakie). Broad, soft sheen rather than a mirror; the grain and the
-  // unevenness come from the shader (PART_POWDER_GLSL), not from a normal map.
-  [MAT.roofPowder]: {name: 'roofPowder', aged: {color: '#b99d5f', roughness: .68, clearcoat: 0, envMapIntensity: .5}, color: '#c4973f', paint: '#d6a640', metalness: .92, roughness: .6, clearcoat: .06, clearcoatRoughness: .5, envMapIntensity: .7, flake: 0},
-  // Doha: the ground pieces are painted into the lid by the ground shader (the mat id is read from the ident map), not meshed; these
-  // entries give each a plain stand-in colour for the glb export and the material table's checks.
-  [MAT.bankGold]: {name: 'bankGold', color: '#c29a46', paint: '#b8903a', metalness: .85, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5},
-  [MAT.bankSilver]: {name: 'bankSilver', color: '#9c9a92', paint: '#8e8c85', metalness: .85, roughness: .4, clearcoat: .3, clearcoatRoughness: .1, flake: .3},
-  [MAT.sandGold]: {name: 'sandGold', color: '#d6ad55', paint: '#cfa44a', metalness: .9, roughness: .4, clearcoat: .4, clearcoatRoughness: .1, flake: .3},
-  [MAT.toyamaGold]: {name: 'toyamaGold', color: '#d9b865', paint: '#cfa850', metalness: .85, roughness: .5, clearcoat: .3, clearcoatRoughness: .1, flake: .1},
-  [MAT.rockGold]: {name: 'rockPowderGold', color: '#e2c27c', paint: '#d2b068', metalness: .8, roughness: .5, clearcoat: .25, clearcoatRoughness: .15, flake: .15},
-  [MAT.rockSilver]: {name: 'rockPowderSilver', color: '#b9b8ae', paint: '#aeada4', metalness: .85, roughness: .52, clearcoat: .1, clearcoatRoughness: .15, flake: .15},
-  [MAT.rockOlive]: {name: 'rockPowderOlive', color: '#bdae78', paint: '#ae9f6a', metalness: .8, roughness: .5, clearcoat: .25, clearcoatRoughness: .15, flake: .15},
-  [MAT.rockLine]: {name: 'rockPowderLine', color: '#f0d98c', paint: '#e6cf80', metalness: .9, roughness: .4, clearcoat: .2, clearcoatRoughness: .15, flake: .1},
-  [MAT.toyamaBlue]: {name: 'toyamaBlue', color: '#cdbf86', paint: '#c0b374', metalness: .85, roughness: .5, clearcoat: .3, clearcoatRoughness: .1, flake: .1},
-  [MAT.sandSilver]: {name: 'sandSilver', color: '#a9a8a0', paint: '#9b9a93', metalness: .85, roughness: .35, clearcoat: .3, clearcoatRoughness: .1, flake: .3},
-  [MAT.silver]: {name: 'silver', aged: {color: '#d9d6cc', roughness: .27, metalness: .7, clearcoat: .2, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#e6e8e4', paint: '#d8dad6', metalness: 1, roughness: .2, clearcoat: .3, clearcoatRoughness: .08, flake: .3},
-  [MAT.kirikane]: {name: 'kirikane', aged: {color: '#dcc892', roughness: .52}, color: '#f2c65e', paint: '#e0b650', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12},
-  [MAT.kirigin]: {name: 'kirigin', aged: {color: '#d0ccc1', roughness: .45, metalness: .66, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#d8dbd6', paint: '#bfc0b8', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12},
-  // T3: mother-of-pearl is pale with colour that shifts, not a teal paint: lighter base, wider film range.
-  [MAT.aogai]: {name: 'aogai', color: '#8fbcb6', paint: '#9cc6c0', metalness: .2, roughness: .2, clearcoat: 1, clearcoatRoughness: .05, flake: 0, iridescence: 1, iridescenceIOR: 1.6, iridescenceThicknessRange: [250, 800]},
-  [MAT.hyomonGold]: {name: 'hyomonGold', aged: {color: '#d6c294', roughness: .36}, color: '#e6b94e', paint: '#e2b24c', metalness: 1, roughness: .18, clearcoat: 0, clearcoatRoughness: 0, flake: .15},
-  [MAT.hyomonSilver]: {name: 'hyomonSilver', aged: {color: '#d6d3c8', roughness: .21, metalness: .66, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#e0e2de', paint: '#d8d9d4', metalness: 1, roughness: .15, clearcoat: 0, clearcoatRoughness: 0, flake: .15},
-  [MAT.water]: {name: 'water', color: '#2c4256', paint: '#2a3d50', metalness: .6, roughness: .12, clearcoat: 1, clearcoatRoughness: .02, flake: 0},
-  // Body of a silver (kirigin) rock: the shader lays silver foil on it. Mist (kasumi) is baked, so it has no mesh material of its own.
-  [MAT.muraSilver]: {name: 'muraSilver', rock: 'silver', color: '#d9b25a', paint: '#caa24a', metalness: .9, roughness: .3, clearcoat: 0, clearcoatRoughness: 0, flake: .2},
-  [MAT.kasumi]: {name: 'kasumi', color: '#d9b25a', paint: '#caa24a', metalness: .9, roughness: .3, clearcoat: 0, clearcoatRoughness: 0, flake: .2},
-  // Red coral, cut and polished: a soft sheen, no metal. It does not age.
-  [MAT.coral]: {name: 'coral', color: '#a3341f', paint: '#b0402e', metalness: 0, roughness: .55, clearcoat: .25, clearcoatRoughness: .3, flake: 0},
-  [MAT.lacquer]: {name: 'lacquer', color: '#0b0807', paint: '#1a1310', metalness: 0, roughness: .12, clearcoat: 1, clearcoatRoughness: .03, flake: 0},
-  // T3: a paper window lit from inside is warm amber, not saturated orange.
-  [MAT.lamp]: {name: 'lamp', color: '#2a1a0a', paint: '#f0b46a', metalness: 0, roughness: .6, clearcoat: 0, clearcoatRoughness: 0, flake: 0, emissive: '#f0b46a', glow: true},
-};
+/** MAT → a raised part's MeshPhysicalMaterial parameters and shader columns: the `mesh` column of MAT_LOOK (mat.js). */
+export const MATERIALS = Object.freeze(Object.fromEntries(Object.entries(MAT_LOOK).filter(([, row]) => row.mesh).map(([id, row]) => [id, row.mesh])));
 
 /**
  * A material as it looks at `age` (0 as new, 1 as the Hatsune trousseau today): the numbers and the colour move toward
@@ -117,19 +72,19 @@ export const AGE_TAU_YEARS = 150, HATSUNE_YEARS = 2026 - 1639;
 export const ageFromYears = years => 1 - Math.exp(-Math.max(0, Number(years) || 0) / AGE_TAU_YEARS);
 export const BOX_MATERIALS = {
   // Hatsune: the whole body is nashiji (amber lacquer over gold powder), not black lacquer (user decision, handoff §3).
-  20: {name: 'side', color: '#a8722e', metalness: .72, roughness: .45, clearcoat: 1, clearcoatRoughness: .06, flake: 0, nashijiSide: true},
+  20: meshLook({name: 'side', color: '#a8722e', metalness: .72, roughness: .45, clearcoat: 1, clearcoatRoughness: .06, flake: 0, nashijiSide: true}),
   // The lid's lip: gold, as on the Hatsune boxes (museum photos show no silver rim).
-  21: {name: 'rim', aged: {color: '#ad9668', roughness: .46}, color: '#c39345', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .2},
-  22: {name: 'inner', color: '#8c6a2d', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5, nashijiInner: true},
-  23: {name: 'paper', color: '#cdbd98', metalness: 0, roughness: .9, clearcoat: 0, clearcoatRoughness: 0, flake: 0, paperFleck: true},
-  24: {name: 'gold', aged: {color: '#c2aa76', roughness: .46}, color: '#d7a64a', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3},
-  26: {name: 'edge', aged: {color: '#b39c6c', roughness: .46}, color: '#c99a42', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3},
-  27: {name: 'cord', color: '#85100a', metalness: 0, roughness: .6, clearcoat: 0, clearcoatRoughness: 0, flake: 0},
-  28: {name: 'tray', color: '#b4843a', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5, nashijiInner: true},
+  21: meshLook({name: 'rim', aged: {color: '#ad9668', roughness: .46}, color: '#c39345', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .2}),
+  22: meshLook({name: 'inner', coat: 'sunk', color: '#8c6a2d', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5, nashijiInner: true}),
+  23: meshLook({name: 'paper', coat: 'none', shine: false, color: '#cdbd98', metalness: 0, roughness: .9, clearcoat: 0, clearcoatRoughness: 0, flake: 0, paperFleck: true}),
+  24: meshLook({name: 'gold', aged: {color: '#c2aa76', roughness: .46}, color: '#d7a64a', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3}),
+  26: meshLook({name: 'edge', aged: {color: '#b39c6c', roughness: .46}, color: '#c99a42', metalness: 1, roughness: .3, clearcoat: .2, clearcoatRoughness: .1, flake: .3}),
+  27: meshLook({name: 'cord', shine: false, color: '#85100a', metalness: 0, roughness: .6, clearcoat: 0, clearcoatRoughness: 0, flake: 0}),
+  28: meshLook({name: 'tray', coat: 'sunk', color: '#b4843a', metalness: .8, roughness: .5, clearcoat: .5, clearcoatRoughness: .1, flake: .5, nashijiInner: true}),
 };
 
 /** The lid's own ground (box ids 0): the picture is painted on it. */
-export const GROUND_LID = {name: 'lid', color: '#ffffff', metalness: .3, roughness: .4, clearcoat: 1, clearcoatRoughness: .06, flake: 0};
+export const GROUND_LID = meshLook({name: 'lid', color: '#ffffff', metalness: .3, roughness: .4, clearcoat: 1, clearcoatRoughness: .06, flake: 0});
 
 /** Texels per row of the motion texture; row 0 holds `a` (sway, stand, rise, glow), row 1 holds `b` (dx, dz, lift, group). */
 export const STATE_WIDTH = MAX_PARTS, STATE_HEIGHT = 2;

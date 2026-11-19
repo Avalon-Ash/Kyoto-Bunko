@@ -2,6 +2,10 @@
 // Channels of a painted layer:  R soft swell (blurred later)  G crisp relief  B line work  A coverage.
 import {PLATE, KIND} from './vocab.js';
 import {WEDGE_PROFILE, fadeHeight} from './doha.js';
+import {MAT_LOOK, FINE} from './mat.js';
+
+/** What a part's fine.g holds, and so how its fills are painted: its material's `fine` column (mat.js MAT_LOOK). */
+const fineOf = p => (MAT_LOOK[p.mat] ?? MAT_LOOK[0]).fine;
 
 const trace = (ctx, d, close) => {
   ctx.beginPath();
@@ -25,7 +29,7 @@ function paintWedge(ctx, f) {
   ctx.save();
   trace(ctx, f.d, true); ctx.clip();
   ctx.globalCompositeOperation = 'lighten';
-  const SUB = f.wedge.far ? 2 : 3;
+  const SUB = 3; // strips per ridge segment (a far mountain's head is paintFar's, not this)
   for (let i = 0; i < ridge.length - 1; i++) {
     const [ax, az, ae, , , ad = 1] = ridge[i], [bx, bz, be, , , bd = 1] = ridge[i + 1];
     if (Math.max(ae, be) < .015) continue;
@@ -155,19 +159,20 @@ export function paintLayer(ctx, w, h, parts, layer) {
   toUnits(ctx, w, h);
   ctx.lineCap = ctx.lineJoin = 'round';
   // Far mountains are painted together, far to near, whichever part (gold or blue-gold) each head belongs to: a nearer head hides the one behind.
-  const fars = layer === 0 ? parts.filter(p => p.layer === 0 && !p.limbs && !p.mesh).flatMap(p => p.fills.filter(f => f.wedge?.far)) : [];
+  const fars = layer === 0 ? parts.filter(p => p.layer === 0 && !p.limbs && !p.mesh && fineOf(p) === FINE.ridge).flatMap(p => p.fills) : [];
   const clusters = [...new Set(fars.map(f => f.wedge.cluster))];
   fars.sort((a, b) => clusters.indexOf(a.wedge.cluster) - clusters.indexOf(b.wedge.cluster) || a.wedge.seq - b.wedge.seq);
   let farDone = false;
   for (const p of parts) {
     if (p.layer !== layer || p.limbs || p.mesh) continue;
     ctx.globalCompositeOperation = 'source-over';
+    const fine = layer === 0 ? fineOf(p) : FINE.mask; // the shaped powders are the ground's own (layer 0)
     // Fading tongues: clear what lies under the whole cluster first, then lay each one's powder; where two overlap the thicker shows.
-    if (layer === 0 && p.fills.some(f => f.fade)) { ctx.fillStyle = '#000'; for (const f of p.fills) if (f.fade) { trace(ctx, f.d, true); ctx.fill(); } }
+    if (fine === FINE.powder && p.fills.some(f => f.fade)) { ctx.fillStyle = '#000'; for (const f of p.fills) if (f.fade) { trace(ctx, f.d, true); ctx.fill(); } }
     for (const f of p.fills) {
-      if (f.wedge?.far && layer === 0) { if (!farDone) { for (const g of fars) paintFar(ctx, g); farDone = true; ctx.globalCompositeOperation = 'source-over'; } continue; }
-      if (f.wedge && layer === 0) { paintWedge(ctx, f); if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
-      if (f.fade && layer === 0) { paintTongue(ctx, f); ctx.globalCompositeOperation = 'source-over'; if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
+      if (fine === FINE.ridge) { if (!farDone) { for (const g of fars) paintFar(ctx, g); farDone = true; ctx.globalCompositeOperation = 'source-over'; } continue; }
+      if (fine === FINE.wedge) { paintWedge(ctx, f); if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
+      if (fine === FINE.powder && f.fade) { paintTongue(ctx, f); ctx.globalCompositeOperation = 'source-over'; if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
       // A standing part is a pillow: its whole silhouette feeds the blurred channel, which becomes its dome.
       ctx.fillStyle = `rgb(${layer > 0 ? 255 : Math.round(f.soft * 255)},${Math.round(f.crisp * 255)},0)`;
       trace(ctx, f.d, true); ctx.fill();
@@ -301,13 +306,14 @@ export function bakeDensityField(doc, parts, w, h, falloff) {
       ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, (z0 + z1) / 2, Math.max((x1 - x0) / 2, 1), Math.max((z1 - z0) / 2, 1), 0, 0, 6.2832); ctx.fill();
       continue;
     }
+    const fine = fineOf(p);
     for (const f of p.fills) {
-      if (f.wedge) {
+      if (fine === FINE.wedge || fine === FINE.ridge) {
         // A bank or a far mountain gathers the sprinkle under its powder (a band below the ridge), not over its whole outline.
         ctx.save(); trace(ctx, f.d, true); ctx.clip(); ctx.lineWidth = f.wedge.depth * .7;
         ctx.beginPath(); f.wedge.ridge.forEach(([x, z], i) => i ? ctx.lineTo(x, z + f.wedge.depth * .3) : ctx.moveTo(x, z + f.wedge.depth * .3)); ctx.stroke();
         ctx.restore();
-      } else if (f.fade) {
+      } else if (fine === FINE.powder && f.fade) {
         // A fading tongue gathers the ground's sprinkle where its own powder lies (along its drawn edge), not over its whole outline.
         ctx.save(); trace(ctx, f.d, true); ctx.clip(); ctx.lineWidth = f.fade.run * 1.1;
         for (const r of f.fade.runs) { trace(ctx, r, false); ctx.stroke(); }
@@ -347,16 +353,17 @@ export function bakeContactField(doc, parts, w, h, falloff) {
       // Doha pieces: where one lies over another it shades the one under it. A tongue's whole edge; a bank's ridge, laid a little
       // back up the slope behind it (so it is the head behind that darkens, not the crest). Half strength: a crease, not a hole.
       ctx.save(); ctx.strokeStyle = 'rgb(150,150,150)'; ctx.lineWidth = 3.4; ctx.globalCompositeOperation = 'lighten';
+      const fine = fineOf(p), far = fine === FINE.ridge;
       for (const f of p.fills) {
         // A mountain head's step: the head behind it lies in the step's shadow, so that near and far read without a drawn edge.
-        ctx.strokeStyle = f.wedge?.far ? 'rgb(235,235,235)' : 'rgb(150,150,150)'; ctx.lineWidth = f.wedge?.far ? 6.5 : 3.4;
+        ctx.strokeStyle = far ? 'rgb(235,235,235)' : 'rgb(150,150,150)'; ctx.lineWidth = far ? 6.5 : 3.4;
         // A suhama tongue is ground flush with the lid (togidashi): it has no step, so it shades nothing.
-        if (f.tongue) continue;
-        if (f.wedge) {
+        if (fine === FINE.powder) continue;
+        if (fine === FINE.wedge || far) {
           ctx.beginPath(); let pen = false;
           for (const [x, z, e] of f.wedge.ridge) {
             if (e < .3) { pen = false; continue; }
-            const X = x, Z = z - (f.wedge.far ? 3.6 : 2.6);
+            const X = x, Z = z - (far ? 3.6 : 2.6);
             if (pen) ctx.lineTo(X, Z); else ctx.moveTo(X, Z);
             pen = true;
           }

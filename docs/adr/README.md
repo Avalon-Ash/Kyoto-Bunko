@@ -85,3 +85,4 @@
 - [0013 禁止架構耦合與蒔繪盤材質表單一事實來源](0013-no-coupling-ssot-and-material-table.md)：採 ECS＋SSOT 原則，材質性質集中於無 import 的 `mat.js`（`MAT_LOOK`、`DOHA_TONE`、`ROCK_LOOK`），地著色器以常數陣列讀表並保留主體分支避免冷編譯逾時。
 - [0014 測試區分行為測試與範圍圍欄並採統一驗收管線](0014-behavior-tests-and-scope-fences.md)：區分不可改弱的行為測試與可階段更新的範圍圍欄，整合一律跑 lint、validate、test、build 四閘門。
 - [0015 主代理整合、Git 權限邊界與定調工作歸屬](0015-agent-authority-and-git-integration-boundary.md)：子代理不執行 Git 操作且限於派工單範圍，主代理負責整合與前後相依的定調視覺工作，架構決策記錄於 `docs/adr/`。
+- [0016 材質表併表：網格參數與烘焙畫法也是材質表的欄](0016-material-table-mesh-and-bake-columns.md)：`MATERIALS` 成為 `MAT_LOOK` 的 `mesh` 欄，renderer 讀網格欄不比名字（包漿與光澤下限分兩欄），bake 依 `fine` 欄選畫法，參考圖顏色是 `refColour` 欄。

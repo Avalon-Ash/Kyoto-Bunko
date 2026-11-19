@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import {GLTFExporter} from 'three/examples/jsm/exporters/GLTFExporter.js';
 import {MAT} from './vocab.js';
+import {MAT_LOOK} from './mat.js';
 import {MATERIALS, BOX_MATERIALS, meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox} from './three-pack.js';
 import {bakeStamps} from './stamps.js';
 
@@ -14,15 +15,6 @@ const HALF = [360, 230], SWELL = 17;
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const norm = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-
-/** Ground colours for the reference: the honey nashiji, pale gold land, gold water, oxidised silver. */
-const GROUND_COLOUR = {
-  [MAT.ground]: '#c48f42', [MAT.nashijiLight]: '#d4a656', [MAT.mura]: '#d0a252', [MAT.gyobu]: '#c99a48',
-  [MAT.gold]: '#e0b050', [MAT.silver]: '#a8a8a4', [MAT.kirikane]: '#f0c860', [MAT.kirigin]: '#c8c8c4',
-  [MAT.aogai]: '#6fa8b0', [MAT.hyomonGold]: '#e6b94e', [MAT.hyomonSilver]: '#d0d2ce', [MAT.water]: '#d6a64c',
-  [MAT.coral]: '#b9412d', [MAT.kasumi]: '#e6be66', [MAT.lacquer]: '#0b0807', [MAT.lamp]: '#ff9a3c',
-  [MAT.bankGold]: '#cfa24e', [MAT.bankSilver]: '#a8a8a2', [MAT.rockGold]: '#e2c27c', [MAT.rockSilver]: '#d6d9d2', [MAT.rockOlive]: '#c4b46e', [MAT.rockLine]: '#f0d98c', [MAT.toyamaGold]: '#d9b865', [MAT.toyamaBlue]: '#cdbf86', [MAT.sandGold]: '#dcb45a', [MAT.sandSilver]: '#b4b4ae',
-};
 
 /** The CPU mirror of the renderer's vertex motion for one pose (treeAtAnchor: the trees as they moved before 2026-11-16); the clip probe (clip-probe.js) measures with it too. */
 export function poseKit(pose) {
@@ -113,7 +105,7 @@ export function plateScene(doc, pose) {
   const pctx = paint.getContext('2d'), img = pctx.createImageData(mw, mh);
   const rgb = hex => [1, 3, 5].map(k => parseInt(hex.slice(k, k + 2), 16));
   for (let i = 0; i < mw * mh; i++) {
-    const [r, g, bl] = rgb(GROUND_COLOUR[ident[i * 2 + 1]] ?? GROUND_COLOUR[MAT.ground]);
+    const [r, g, bl] = rgb(MAT_LOOK[ident[i * 2 + 1]]?.refColour ?? MAT_LOOK[MAT.ground].refColour);
     img.data.set([r, g, bl, 255], i * 4);
   }
   pctx.putImageData(img, 0, 0);

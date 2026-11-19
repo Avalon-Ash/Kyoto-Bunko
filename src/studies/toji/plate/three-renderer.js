@@ -18,6 +18,7 @@ import {bakeStamps} from './stamps.js';
 import {createCord, cordTube} from './cord.js';
 import {stepSpring} from './spring.js';
 import {groundPoint, normalize, trailIntensity} from '../geometry.js';
+import {MESH_COAT} from './mat.js';
 import {
   MATERIALS, agedSpec, CONTACT, BOX_MATERIALS, GROUND_LID, STATE_WIDTH, STATE_HEIGHT, packLifeState,
   meshesByMaterial, limbsByMaterial, stampsByMaterial, sliceBox,
@@ -171,17 +172,14 @@ export function createThreeRenderer(gl, canvas) {
   /** Faces are lit by their own normals whichever way they wind. */
   const patchMaterial = (material, spec, glsl, call) => {
     const isPart = call === 'kyotoMotion';
-    // Only rock mounds (meshRock bodyMat) use MAT.mura among 3D part meshes; tiles use kirikane/kirigin.
+    // The columns are the material's own (mat.js meshLook): this function reads them and decides nothing per material.
+    // Only rock mounds (meshRock bodyMat) carry `rock` among 3D part meshes; tiles use kirikane/kirigin.
     const isRock = isPart && Boolean(spec.rock), isSilverRock = spec.rock === 'silver';
-    // Black lacquer on the pieces (walls, plinths) is shin-nuri: polished to a dark mirror.
-    const isLacq = isPart && spec.name === 'lacquer';
-    // The pilot wards' rocks: fine pale powder in one raised form (rock-mesh.js powder), no foil.
-    const isRockP = isPart && /^rockPowder/.test(spec.name);
-    // Roof faces are gold powder; the rest of MAT.gold on the pieces is leaf laid on wood (three-pack PART_POWDER_GLSL).
-    const isCoat = COAT_ON > 0 && spec.name !== 'paper'; // the paper is not lacquered
-    // 0 sunk (the box's inside and tray), 2 inlaid shell and coral, 1 everything else, which lies on the lacquer (three-pack COAT).
-    const coatClass = spec.name === 'inner' || spec.name === 'tray' ? 0 : spec.name === 'aogai' || spec.name === 'coral' ? 2 : 1;
-    const isPowder = isPart && spec.name === 'roofPowder', isLeaf = isPart && spec.name === 'gold', isGrain = isPowder || isLeaf;
+    const isLacq = isPart && spec.shinnuri;
+    const isRockP = isPart && spec.rockPowder;
+    const isCoat = COAT_ON > 0 && spec.coat !== 'none';
+    const coatClass = MESH_COAT[spec.coat];
+    const isPowder = isPart && spec.grain === 'powder', isLeaf = isPart && spec.grain === 'leaf', isGrain = isPowder || isLeaf;
     material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v5${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}${isRockP ? '-rockp-v1' : ''}${isPowder ? '-powder-v1' : ''}${isLeaf ? '-leaf-v1' : ''}${isCoat ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
@@ -291,13 +289,13 @@ diffuseColor.rgb *= 1. + (kyotoVnoise(vKyotoRest.xz * .23 + vKyotoRest.y * .1) -
   reflectedLight.directSpecular*=kyotoEaveLit; reflectedLight.indirectSpecular*=kyotoEaveLit;` : ''}${isCoat ? coatApply('vLift', coatClass) : ''}
 }`);
       }
-      if (!isPart && isCoat) shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>${coatApply(coatClass === 0 ? '8.' : '16.', coatClass)}`);
+      if (!isPart && isCoat) shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>${coatApply(coatClass === MESH_COAT.sunk ? '8.' : '16.', coatClass)}`);
     };
     return material;
   };
   const patchLimbMaterial = (material, spec) => {
     // Wood is silver where the foliage is gold (Hatsune); a tree that flowers in silver keeps gold wood.
-    const silver = spec.name === 'silver', foil = silver ? 'kyotoAgedSilver(K_ROCK_FOIL_SILVER, .35)' : 'kyotoKiriGold()';
+    const silver = spec.wood === 'silver', foil = silver ? 'kyotoAgedSilver(K_ROCK_FOIL_SILVER, .35)' : 'kyotoKiriGold()';
     material.customProgramCacheKey = () => `kyoto-limb-${spec.glow ? 1 : 0}-${silver ? 's' : 'g'}-kiri-v3${COAT_ON > 0 ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
@@ -400,7 +398,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       side: THREE.DoubleSide, shadowSide: THREE.DoubleSide, ...extra,
     });
     // The coat is one lacquer on everything: no surface sits below COAT.shine of clearcoat, and a glossy-but-not-mirror one takes the shared roughness.
-    if (COAT_ON > 0 && spec.name !== 'paper' && spec.name !== 'cord' && !spec.glow) {
+    if (COAT_ON > 0 && spec.shine && !spec.glow) {
       m.clearcoat = Math.max(m.clearcoat, COAT.shine * COAT_ON);
       if (spec.clearcoat <= .6) m.clearcoatRoughness = THREE.MathUtils.lerp(spec.clearcoatRoughness, COAT.shineRough, COAT_ON);
     }

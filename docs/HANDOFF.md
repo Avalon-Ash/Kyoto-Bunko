@@ -7,7 +7,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main`：2026-11-18 晚合併 `claude/mat-table`（快轉）並 push，使用者同意（「你自己作完這些問題後推上去」）。內容：材質表解耦第 0–2 步（`49978c8`、`ec1a9df`、`81b2b9a`；第 2 步的第一版 `d99774d` 上線後以 `5e0ae16` 退掉）、makie-painting skill 的交接與備份、解耦提案。之前的 `56fc135` 是資料線的全庫事實查核（792 → 734 筆）。實際位置以 `git log -1 main` 為準；部署結果見 §3 |
-| 工作分支 | `claude/mat-table`（自 `claude/data-1117`）：材質表解耦，已併入 `main`。第 3、4 步若要做，從 `main` 開新分支。`claude/finish-1117`、`claude/data-1117` 都已併入 `main`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
+| 工作分支 | `claude/mat-table-34`（自 `main` @ `0b44c2c`，含 ADR 0001–0015）：材質表第 3 步與第 4b 步（`MATERIALS` 併進 `MAT_LOOK`、renderer 讀網格欄、bake 依 `fine` 欄選畫法、ADR 0016），逐像素驗過，**未合併 `main`、未 push**（材質表提案 §8.14）。`claude/mat-table` 已併入 `main`，可以刪。`claude/finish-1117`、`claude/data-1117` 都已併入 `main`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
 | 資料分支 | `claude/data-1117`（自 `claude/finish-1117`，2026-11-17 晚）：拿掉 `getLatLng` 的假座標、YS-045 改商店類、食處描述只留有來源的說法（報告 [`agent-runs/2026-11-17-data-cleanup.md`](agent-runs/2026-11-17-data-cleanup.md)）。四項驗收過、地圖用瀏覽器面板開過中京區；連同 B-0 量測與「地圖維持現狀」已併入 `main`（`c548ae0`）並 push，GitHub Pages 部署成功（2026-11-17 晚，使用者分別同意合併與 push）。之後同一分支上做了全庫事實查核（商店、ACG、寺社、自然、近代設施、交通；734 筆），**未合併 `main`、未 push** |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
@@ -99,7 +99,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 ### 4.4a 使用者 2026-11-17 傍晚定的下一步（等額度恢復）
 
 1. **把畫法整理成跨專案的 skill**（放 `~/.claude/skills/`）：技法怎麼拆成畫面、使用者的設計規則、審圖方法、踩過的坑、漆經年變透。與引擎無關。來源是記憶、開案書 `plans/2026-11-16-*`、`2026-11-17-finish.md`、`MAKIE_THREE_PLAN.md`。**已寫（2026-11-18）**：`~/.claude/skills/makie-painting/`（本機、不在 repo）：`SKILL.md`（三個開工問題、R1–R18 一行版、流程）加五份參考檔：`techniques.md`（漆上／研出／漆下、堆疊表、三層調子、各物件畫法、年代、構圖、岩〔未定案〕、three.js 對照）、`rules.md`（原話與做法）、`review.md`（審圖）、`pitfalls.md`（A1–A31 畫法、B1–B9 工具與流程）、`sources.md`。每條註明來源檔、日期與可信度（原話／文獻／量測／解讀），被推翻的舊說法列在「取代了」。已出現在 skill 清單；使用者還沒看過。§4.4 已縮成指向它；之後規則有變，只改那份 skill。
-2. **著色器解耦**（**第 0–2 步做完並上線（2026-11-19）**：材質的性質與配方在 `mat.js` 的 `MAT_LOOK`，地著色器讀表，不再比材質編號（84 → 0）。第 2 步用的是保守寫法（分支留在主體），因為收成函式會讓著色器第一次編譯卡 32–49 秒；經過在 [`plans/2026-11-18-material-table.md`](plans/2026-11-18-material-table.md) §8.9–§8.11。第 3、4 步還沒做）：使用者指出他一再禁止架構耦合，而 `three-pack.js` 的地著色器靠 `mat==N` 分支，同一材質的行為散在五六處（11/17 主席又加了幾處）。方向是把材質性質集中成一張表、著色器讀表。這是架構改動：先提案（改哪裡、怎麼證明畫面不變、怎麼回退），使用者同意再動手；在那之前不要再加新的 `mat==N` 分支。**提案已寫好（2026-11-18）**：[`plans/2026-11-18-material-table.md`](plans/2026-11-18-material-table.md)。內容：
+2. **著色器解耦**（**第 0–2 步做完並上線（2026-11-19）**：材質的性質與配方在 `mat.js` 的 `MAT_LOOK`，地著色器讀表，不再比材質編號（84 → 0）。第 2 步用的是保守寫法（分支留在主體），因為收成函式會讓著色器第一次編譯卡 32–49 秒；經過在 [`plans/2026-11-18-material-table.md`](plans/2026-11-18-material-table.md) §8.9–§8.11。第 4a 步已上線（§8.13）；第 3、4b 步在 `claude/mat-table-34`，等使用者同意合併（§8.14，ADR 0016）；還剩 `doha.js` 的兩個填色旗標）：使用者指出他一再禁止架構耦合，而 `three-pack.js` 的地著色器靠 `mat==N` 分支，同一材質的行為散在五六處（11/17 主席又加了幾處）。方向是把材質性質集中成一張表、著色器讀表。這是架構改動：先提案（改哪裡、怎麼證明畫面不變、怎麼回退），使用者同意再動手；在那之前不要再加新的 `mat==N` 分支。**提案已寫好（2026-11-18）**：[`plans/2026-11-18-material-table.md`](plans/2026-11-18-material-table.md)。內容：
    - 現況盤點（性質 × 出現位置）：地著色器 47 行、84 個比較，加上 renderer 的字串、bake 的填色標記、doha 的 tone。
    - 目標架構：`mat.js` 一張表 `MAT_LOOK`，欄就是元件；地著色器讀產生的 GLSL 常數陣列，配方函式只分派一次。
    - 畫面不變的證明：同一份程式拍兩次，夜間就有 9% 像素不同；降級圖是有損 webp。所以先做固定時鐘與比對工具，再拍十一區日夜七組比對。
@@ -112,7 +112,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 - 拍圖：`node scripts/plate-shot.mjs <outDir> <job…>`，job＝`name:steps:theme:WxH:zoom:fx,fy`。步數：南 0、右京 1、西京 2、山科 3、伏見 4、北 5、上京 6、下京 -1、東山 -2、中京 -3、左京 -4。環境變數：`PLATE_TONE=1`（分層調子）、`PLATE_KIRI=1`（切金佔比）、`PLATE_CPU=4`、`PLATE_LIGHT=fx,fy`（把游標光移開）、`PLATE_SHOT_QUERY='?coat=0'`。dev server 在 127.0.0.1:3000、無頭 Chrome 用 9377。
 - 量測：`node scripts/plate-doha-measure.mjs <區…>`（佔比、留白、直線）、`plate-doha-similar.mjs`（形的相似度）、`plate-clip.mjs <out.json>`（穿插）。降級圖：`node scripts/plate-fallback-shots.mjs`（22 張；只改了幾區就把其餘 `git checkout` 還原）。
 - **要證明一個修改沒有動到畫面**：`bash scripts/plate-matrix.sh <資料夾>` 拍改前與改後（固定時鐘、只拍盤），`node scripts/plate-diff.mjs <改前>/<組> <改後>/<組>` 逐像素比。改前與改後要在同一次開機、同一個 dev server 裡拍（跨一次重開機會差 1–2 級）；有差異的那一張要重拍，重現才算。拍圖進行中不改 `src/`。細節在材質表提案 §8.2、§8.7、§8.8。
-- **加材質**：在 `mat.js` 的 `MAT_LOOK` 加一列並選一個配方（`recipe`）；地著色器不比材質編號（測試會擋）。不要把上色搬進 GLSL 函式：冷編譯從十幾秒變成 32–49 秒（推測是共用的鋪粉被編譯器在每個配方裡各展開一份）。
+- **加材質**：在 `mat.js` 的 `MAT_LOOK` 加一列：地的欄與配方（`recipe`）、烘焙畫法（`fine`）、網格（`mesh`，`meshLook` 的欄）；地著色器不比材質編號、renderer 不比名字（測試會擋）。不要把上色搬進 GLSL 函式：冷編譯從十幾秒變成 32–49 秒（推測是共用的鋪粉被編譯器在每個配方裡各展開一份）。
 - **著色器的編譯時間要在真的瀏覽器裡、排除快取後量**：做法在材質表提案 §8.12（把程式的原始碼拿出來、加一個有用到的 uniform、另開 context 編譯計時；dev 模式的 `window.__kyotoRenderer`）。在著色器裡加一個沒用到的常數不保證快取失效；無頭 Chrome 也量不到。地著色器在 D3D 上冷編譯本來就要 12–15 秒（原本就有的問題，還沒處理）；把上色搬進 GLSL 函式會變成 32–49 秒。
 - 改著色器不要用 `sed -i`：dev server 偵測不到，會量到舊畫面。用編輯工具或整檔寫回。
 - **外觀要在沒有光的時候也成立**：手機沒有滑鼠，光要等閒置自動移光才出現；桌機截圖的光剛好照在盤心，會把只靠金粉反光的差別（例如池心的深淺）拍得比實際明顯。檢查時加一張 `PLATE_LIGHT=.02,.95`（光移到盤外）和一張 375×812。（11/17：池的深淺第一版只在光下看得見。）

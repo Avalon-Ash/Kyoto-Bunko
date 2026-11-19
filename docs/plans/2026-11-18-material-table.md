@@ -1,6 +1,6 @@
 # 材質性質集中成一張表：地著色器與它的讀者解耦（提案）
 
-日期：2026-11-18。狀態：**第 0–2 步做完（§8.11）：地著色器不再比材質編號。第 2 步用的是保守的寫法（分支留在主體、條件換成配方），因為配方函式的寫法會讓著色器第一次編譯卡 32–49 秒（§8.9、§8.10）。第 3、4 步還沒做**。使用者 2026-11-18 同意由終審者（Fable 5.2）執行並在驗收後合併 `main`、push（原話：「你自己作完這些問題後推上去」）。設計定案與執行紀錄在 §8；終審意見在 §7。base：`claude/data-1117` @ `56fc135`。
+日期：2026-11-18。狀態：**第 0–3 步與第 4 步的 4a、4b 做完（§8.11、§8.13、§8.14；第 3、4b 步在 `claude/mat-table-34`，沒有合併）。第 0–2 步（§8.11）：地著色器不再比材質編號。第 2 步用的是保守的寫法（分支留在主體、條件換成配方），因為配方函式的寫法會讓著色器第一次編譯卡 32–49 秒（§8.9、§8.10）。還剩 `doha.js` 的兩個填色旗標（§8.14）**。使用者 2026-11-18 同意由終審者（Fable 5.2）執行並在驗收後合併 `main`、push（原話：「你自己作完這些問題後推上去」）。設計定案與執行紀錄在 §8；終審意見在 §7。base：`claude/data-1117` @ `56fc135`。
 - 開案：Claude Opus 5.5（從主工作階段分出的工作階段）。
 - 補充脈絡：做了 11/16–17 整輪盤面的工作階段「專案待辦事項討論」。它也負責終審本提案。
 - 依據：
@@ -617,3 +617,34 @@ bench(Date.now() % 100000);
 - 驗收（主代理在主資料夾重跑）：`node scripts/plate-parts-hash.mjs --check` identical 11/11 wards（十一區部件輸出逐位元相同）；lint exit 0；test 152/152、17/17；build exit 0。主代理讀過 diff：沒列到的 tone 與材質的預設值和原本的行為一致；測試檔只在檔尾新增。
 - 新工具：`scripts/plate-parts-hash.mjs`（`--write`／`--check`），不靠瀏覽器證明建構程式的改動沒有動到任何數值。
 - 第 4 步還剩：`bake.js` 的填色標記（`f.tongue`／`f.wedge`／`f.fade`）對回表的 `fine` 欄；`export-glb.js` 的顏色表（和 `MATERIALS.color` 的值不同，不是單純重複，要先確認用途再動）。第 3 步（`three-renderer.js` 的字串判斷、`MATERIALS` 併表）還沒做。
+
+### 8.14 第 3 步與第 4b 步（2026-11-20，Opus 5.5，分支 `claude/mat-table-34`，base `main` @ `0b44c2c`）
+
+使用者 11/20 凌晨：「從 §8.11–§8.13 接……總之妳處理我要睡了」。`claude/mat-table` 已全在 `main` 裡（`git log main..claude/mat-table` 為 0），所以從 `main` 開新分支，ADR（0001–0015）一起帶進來。**沒有合併、沒有 push。**
+
+**第 3 步：`MATERIALS` 併進 `MAT_LOOK`，renderer 不再看材質的名字**
+- `mat.js`：`MAT_LOOK` 每列多一欄 `mesh`，就是原本 `three-pack.js` 的 `MATERIALS` 那一列（逐字搬過去，連註解）；`three-pack.js` 的 `MATERIALS` 改成由這一欄導出的常數。終點是 §8.1 定的「一張表」。
+- 網格的欄（`meshLook`，盒的部位 `BOX_MATERIALS` 與蓋 `GROUND_LID` 也用同一組欄）：`coat`（`sunk`／`top`／`faint`／`none`）、`shine`（清漆提到共用的光澤下限）、`shinnuri`、`rock`、`rockPowder`、`grain`（`powder`／`leaf`）、`wood`（樹枝是銀還是金）。`three-renderer.js` 的 `patchMaterial`、`patchLimbMaterial`、`physical` 只讀這些欄，`spec.name ===` 為 0。
+- 照實寫下的兩個不同：
+  - 貝與珊瑚的包漿：地上 `coat: 'none'`、網格上 `mesh.coat: 'faint'`（§6 第 3 項，沒有統一）。
+  - **盒的繩（盒 id 27）**：包漿的著色器有上（舊判斷是「不是紙就上」），清漆的光澤下限沒有提（舊判斷是「不是紙也不是繩」）。所以「包漿」和「光澤下限」是兩欄，繩是 `coat: 'top', shine: false`。`three-renderer.js` 的註解說固定網格裡沒有 27，但 `buildBox()` 實際有 720 個頂點是 27（`box.js:86` 的圓柱）。這可能是原本就有的小錯，解耦不改它，記在這裡。
+  - 粉岩：`rockPowder` 是 25–28（舊的 `/^rockPowder/`），和 `ROCK_LOOK.powder`（只有 25、26 是粉的岩身）是不同的性質，沒有合併。
+- `export-glb.js` 的 `GROUND_COLOUR`（參考圖裡蓋上每種材質的一個顏色）逐字搬成 `MAT_LOOK` 的 `refColour` 欄。它和 `mesh.color` 是不同的值（例如水：參考圖是金色、網格是藍黑），沒有統一。
+
+**第 4b 步（同一個 commit）：bake 依材質選畫法**
+- `MAT_LOOK` 多一欄 `fine`（`FINE`）：`mask`（預設）、`wedge`（岸，19、20）、`ridge`（遠山，23、24）、`powder`（洲浜，21、22）。`bake.js` 的上色、疏密場、接觸場都依零件材質的 `fine` 選畫法，幾何仍從填色的 `f.wedge`／`f.fade` 讀。`paintWedge` 裡永遠到不了的 `f.wedge.far ? 2 : 3` 改成 3（遠山只走 `paintFar`）。
+- 沒做：`doha.js` 的 `tongue: true` 與 `wedge.far` 兩個旗標還在。bake 不再讀它們，但 `scripts/plate-doha-measure.mjs`、`plate-doha-similar.mjs` 與 doha 的測試還讀 `wedge.far`。要拿掉就三處一起改讀 `fine` 欄；拿掉後部件雜湊會變，證明用「去掉這兩個鍵再算雜湊」（做法見下）。在那之前，圍欄測試檢查十一區每個填色的旗標都和材質的 `fine` 一致。
+
+**證明**
+- 數值逐一相同（一次性的檢查腳本，沒有提交）：28 個 `MATERIALS`、8 個盒的部位、蓋，去掉新加的欄後和 `0b44c2c` 的逐鍵全等；`refColour` 對材質 0–40 和舊的 `GROUND_COLOUR`（含「沒列到就用地的顏色」）全等；`MAT_LOOK_GLSL` 與地著色器的字串一字不差。
+- 窮舉圍欄（`npm test`，提交）：把 `0b44c2c` renderer 用名字做的九個判斷照抄成 JS，對每個零件材質、盒的部位與蓋，和讀欄的結果比，必須全等；renderer 原始碼裡沒有 `spec.name ===`；十一區每個填色的旗標和材質的 `fine` 一致；`bake.js` 不讀 `.far`、`f.tongue`；`export-glb.js` 沒有自己的顏色表。
+- 部件：`node scripts/plate-parts-hash.mjs --check` identical 11/11（`doha.js` 沒動）。
+- 逐像素（改前 `.shots/mat-table/b20`、改後 `a20`，同一次開機、同一個 dev server；改後先用 curl 確認 dev server 送出的是新版模組）：十組 106 張：105 張 0 個像素不同；`swapA` 的南區日差 1 個像素、差 1 級。改後重拍一次仍是同一個像素；把舊程式（`0b44c2c` 的五個檔）暫時放回去重拍，結果和改後 0 個像素不同、和第一次的基準差同一個像素。所以是舊程式自己的閃動，不是這次的改動。
+- 檢查：lint exit 0（含 `adr:check`）；`validate_data.js --strict` ERROR 0／WARN 0；test 154/154、17/17；build exit 0。拍圖紀錄裡沒有 console 錯誤。`?export=glb`（dev 專用）沒有在瀏覽器裡跑過，只有上面的 `refColour` 對照。
+
+**現在的結構**：一個材質的所有性質都在 `mat.js` 的 `MAT_LOOK` 那一列：地著色器的欄、`fine`、`refColour`、`mesh`（網格的物理參數與著色器欄）。`DOHA_TONE`、`ROCK_LOOK` 是以別的鍵（土坡的 tone、岩的請求材質）查的表，也在 `mat.js`。`BOX_MATERIALS` 是盒的部位（另一套 id），留在 `three-pack.js`，但用同一組網格欄。加材質：在 `MAT` 加編號、在 `MAT_LOOK` 加一列（地的欄、`fine`、`mesh`）；不要在 renderer 或 bake 裡比名字或編號，測試會擋。
+
+**還沒做**
+- `doha.js` 的兩個旗標（上面）。
+- 第一次編譯慢（§8.12，原本就有的問題）：另開一包，縮短地著色器的編譯時間，或編譯期間先顯示降級圖。
+- 降級圖沒有重拍：這一步證明了畫面逐像素不變，降級圖不必重拍。

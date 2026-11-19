@@ -1623,10 +1623,10 @@ test('material table: the GLSL arrays hold the table exactly, and kinds are comp
   assert.deepEqual(column('DENSITY'), rows.map(r => String(r.density)));
   assert.ok(column('CH').every(text => /[.e]/.test(text)), 'floats are written as floats');
   assert.equal((MAKIE_GROUND_FRAG_GLSL.match(/T_[A-Z_]+\[mi\]\s*(==|!=|<|>)=?\s*[0-9]/g) ?? []).filter(hit => !/>0\.$/.test(hit) && !/>\s*0$/.test(hit)).length, 0, 'a kind is compared with its named constant');
-  // Until the mesh materials move into MAT_LOOK (step 3) the two tables split the columns between them.
-  const meshColumns = new Set(Object.values(MATERIALS).flatMap(Object.keys)), lookColumns = Object.keys(MAT_LOOK[0]);
-  for (const id of Object.keys(MATERIALS)) assert.ok(MAT_LOOK[id], `MATERIALS[${id}] has a row in MAT_LOOK`);
-  for (const key of lookColumns) assert.ok(!meshColumns.has(key), `column ${key} lives in one table only`);
+  // Step 3: the mesh materials are MAT_LOOK's `mesh` column; MATERIALS is that column, not a second table.
+  assert.deepEqual(Object.keys(MATERIALS).map(Number).sort((a, b) => a - b), Object.values(MAT).sort((a, b) => a - b), 'MATERIALS has every MAT and only those');
+  for (const [id, spec] of Object.entries(MATERIALS)) assert.equal(spec, MAT_LOOK[id].mesh, `MATERIALS[${id}] is MAT_LOOK[${id}].mesh`);
+  assert.equal(MAT_LOOK[0].mesh, null, 'the unlisted row has no mesh');
 });
 
 // Scope fence (docs/plans/2026-11-18-material-table.md, step 4a): doha.js and rock-mesh.js read DOHA_TONE / ROCK_LOOK from mat.js instead of branching on tone strings or MAT ids.
@@ -1653,4 +1653,60 @@ test('material table: doha and rock-mesh read DOHA_TONE and ROCK_LOOK with valid
     assert.ok(matIds.has(spec.tile), `ROCK_LOOK[${id}].tile (${spec.tile}) is a registered MAT id`);
     if (id !== 'default') assert.ok(matIds.has(Number(id)), `ROCK_LOOK key ${id} is a registered MAT id`);
   }
+});
+
+// Scope fence (docs/plans/2026-11-18-material-table.md, step 3): three-renderer.js read a raised surface's look from its name
+// (spec.name === '…'); now it reads the columns of mat.js meshLook. The predicates below are the ones it used at 0b44c2c, copied
+// as JS: every part material, every piece of the box and the lid must give the same answer from the columns.
+test('material table: the renderer shader choices read the mesh columns and give the answers the names gave', async () => {
+  const {readFileSync} = await import('node:fs');
+  const {MATERIALS, BOX_MATERIALS, GROUND_LID} = await import('../src/studies/toji/plate/three-pack.js');
+  const {MESH_COAT} = await import('../src/studies/toji/plate/mat.js');
+  const was = {
+    lacq: n => n === 'lacquer', rockP: n => /^rockPowder/.test(n), coat: n => n !== 'paper', shine: n => n !== 'paper' && n !== 'cord',
+    cls: n => n === 'inner' || n === 'tray' ? 0 : n === 'aogai' || n === 'coral' ? 2 : 1,
+    powder: n => n === 'roofPowder', leaf: n => n === 'gold', woodSilver: n => n === 'silver',
+  };
+  const all = [...Object.values(MATERIALS).map(s => [s, true]), ...Object.values(BOX_MATERIALS).map(s => [s, false]), [GROUND_LID, false]];
+  for (const [s, isPart] of all) {
+    const n = s.name;
+    assert.equal(s.coat !== 'none', was.coat(n), `${n}: coated`);
+    if (s.coat !== 'none') assert.equal(MESH_COAT[s.coat], was.cls(n), `${n}: coat class`);
+    assert.equal(s.shine, was.shine(n), `${n}: takes the coat's shine`);
+    if (!isPart) continue; // the rest only apply to a part's mesh (isPart in patchMaterial) or a tree's limbs
+    assert.equal(s.shinnuri, was.lacq(n), `${n}: shin-nuri`);
+    assert.equal(s.rockPowder, was.rockP(n), `${n}: powder rock`);
+    assert.equal(s.grain === 'powder', was.powder(n), `${n}: roof powder`);
+    assert.equal(s.grain === 'leaf', was.leaf(n), `${n}: gold leaf`);
+    assert.equal(s.wood === 'silver', was.woodSilver(n), `${n}: silver wood`);
+  }
+  for (const [s] of all) for (const [k, kinds] of [['coat', [...Object.keys(MESH_COAT), 'none']], ['grain', [null, 'powder', 'leaf']], ['wood', ['gold', 'silver']], ['rock', [null, 'gold', 'silver']]])
+    assert.ok(kinds.includes(s[k]), `${s.name}.${k} is one of ${kinds}`);
+  const src = readFileSync(new URL('../src/studies/toji/plate/three-renderer.js', import.meta.url), 'utf8');
+  assert.deepEqual(src.match(/spec\.name\s*(===?|!==?)|\.test\(spec\.name\)/g) ?? [], [], 'the renderer does not branch on a material name');
+});
+
+// Scope fence (docs/plans/2026-11-18-material-table.md, step 4b): bake.js chose how to paint a fill from flags on the fill
+// (f.wedge.far, f.tongue, f.fade); now from the part's material (MAT_LOOK fine). Every ward's fills agree with the column.
+test('material table: every fill is painted as its part material says (fine), in every ward', async () => {
+  const {readFileSync} = await import('node:fs');
+  const {MAT_LOOK, FINE} = await import('../src/studies/toji/plate/mat.js');
+  const shaped = new Set([FINE.wedge, FINE.ridge, FINE.powder]);
+  for (const ward of Object.keys(PLATES)) {
+    for (const p of preparePlate(PLATES[ward]()).parts) {
+      const fine = (MAT_LOOK[p.mat] ?? MAT_LOOK[0]).fine;
+      assert.ok(Object.values(FINE).includes(fine), `${ward} ${p.id}: fine is a FINE kind`);
+      if (shaped.has(fine)) assert.ok(p.layer === 0 && !p.limbs && !p.mesh, `${ward} ${p.id}: a shaped powder is ground (layer 0, no mesh)`);
+      for (const f of p.fills) {
+        assert.equal(Boolean(f.wedge?.far), fine === FINE.ridge, `${ward} ${p.id}: a far mountain's head is a ridge material`);
+        assert.equal(Boolean(f.wedge && !f.wedge.far), fine === FINE.wedge, `${ward} ${p.id}: a bank's wedge is a wedge material`);
+        assert.equal(Boolean(f.tongue), fine === FINE.powder, `${ward} ${p.id}: a suhama tongue is a powder material`);
+        if (f.fade) assert.equal(fine, FINE.powder, `${ward} ${p.id}: only a powder material fades from its edge`);
+      }
+    }
+  }
+  const bake = readFileSync(new URL('../src/studies/toji/plate/bake.js', import.meta.url), 'utf8');
+  assert.deepEqual(bake.match(/\.far|f\.tongue/g) ?? [], [], 'bake.js does not read the fill flags');
+  const glb = readFileSync(new URL('../src/studies/toji/plate/export-glb.js', import.meta.url), 'utf8');
+  assert.ok(!/\[MAT\.\w+\]:\s*'#/.test(glb), 'export-glb.js has no colour table of its own (MAT_LOOK refColour)');
 });
