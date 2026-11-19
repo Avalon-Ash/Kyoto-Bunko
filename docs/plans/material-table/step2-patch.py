@@ -1,3 +1,4 @@
+# NOT IN USE: the recipe-function form. Kept as the record of what was tried (plan 8.9, 8.10). Do not run it.
 # First applied in commit d99774d (2026-11-18) with a switch for the dispatch: that shader took 49 s to compile the first time in a real
 # Chrome and was reverted (5e0ae16). This version writes the dispatch as an if chain (docs/plans/2026-11-18-material-table.md 8.9); the
 # test that forbids a switch was added to scripts/plate.test.mjs by hand. It runs against the code as it stands after step 1; once it has
