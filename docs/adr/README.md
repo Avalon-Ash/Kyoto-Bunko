@@ -82,7 +82,8 @@
 - [0010 蒔繪盤改用 three.js 單一管線與靜態圖降級](0010-makie-plate-threejs-and-static-fallback.md)：僅 `plate/` 例外改用 three.js 單一管線（刪除舊 WebGL2 管線）並以預渲染 webp 降級，其餘頁面仍不加大型繪圖依賴。
 - [0011 蒔繪盤技法分層、透漆包漿與三層亮度結構](0011-makie-technique-stack-and-coat-layers.md)：透漆包漿於材質內依沉漆／研出／漆上三類計算，大面積採刑部地／平目地並嚴守三層亮度順序與禁混暗色規則。
 - [0012 蒔繪盤地形採手寫疊坡組件、依附小景與逐點貼地](0012-makie-doha-terrain-and-attached-scenes.md)：拆除 `hill()`／`gardenGround()` 改由 `doha.js` 手寫控制點構成，小景須帶 `on` 依附主體，部件躺平時逐點貼地零穿插。
-- [0013 禁止架構耦合與蒔繪盤材質表單一事實來源](0013-no-coupling-ssot-and-material-table.md)：採 ECS＋SSOT 原則，材質性質集中於無 import 的 `mat.js`（`MAT_LOOK`、`DOHA_TONE`、`ROCK_LOOK`），地著色器以常數陣列讀表並保留主體分支避免冷編譯逾時。
+- [0013 禁止架構耦合與蒔繪盤材質表單一事實來源](0013-no-coupling-ssot-and-material-table.md)：採 ECS＋SSOT 原則，材質性質集中於無 import 的 `mat.js`（`MAT_LOOK`、`DOHA_TONE`、`ROCK_LOOK`），地著色器以常數陣列讀表並保留主體分支避免冷編譯逾時（已由 0017 取代）。
 - [0014 測試區分行為測試與範圍圍欄並採統一驗收管線](0014-behavior-tests-and-scope-fences.md)：區分不可改弱的行為測試與可階段更新的範圍圍欄，整合一律跑 lint、validate、test、build 四閘門。
 - [0015 主代理整合、Git 權限邊界與定調工作歸屬](0015-agent-authority-and-git-integration-boundary.md)：子代理不執行 Git 操作且限於派工單範圍，主代理負責整合與前後相依的定調視覺工作，架構決策記錄於 `docs/adr/`。
 - [0016 材質表併表：網格參數與烘焙畫法也是材質表的欄](0016-material-table-mesh-and-bake-columns.md)：`MATERIALS` 成為 `MAT_LOOK` 的 `mesh` 欄，renderer 讀網格欄不比名字（包漿與光澤下限分兩欄），bake 依 `fine` 欄選畫法，參考圖顏色是 `refColour` 欄。
+- [0017 禁止架構耦合與蒔繪盤的一張材質表](0017-no-coupling-one-material-table.md)：沿用 0013 的不做耦合原則與著色器做法，材質性質全在 `mat.js` 的一張 `MAT_LOOK`（`lookOf` 讀列），不以名字、編號或填色旗標判斷材質（取代 0013）。
