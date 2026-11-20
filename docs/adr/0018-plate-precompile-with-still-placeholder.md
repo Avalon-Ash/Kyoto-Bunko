@@ -9,7 +9,7 @@
 
 ## 決定
 
-- **先編譯，再畫**：`three-renderer.js` 啟用第一塊盤時對整個場景呼叫 `renderer.compileAsync(scene, camera)`（地與盒在 `boxGroup`，不在區的 group 裡，所以不能只編區的 group）。編譯完之前 `draw` 不畫，`loading()` 為真；編譯完呼叫 `onReady`。編譯中換區，會對新的場景再編一次。
+- **先編譯，再畫**：`three-renderer.js` 啟用第一塊盤時對整個場景呼叫 `renderer.compileAsync(scene, camera)`（地與盒在 `boxGroup`，不在區的 group 裡，所以不能只編區的 group）。`renderer.js` 的 `mode()` 也讀同一個判斷。編譯完之前 `draw` 不畫，`loading()` 為真；編譯完呼叫 `onReady`。編譯中換區，會對新的場景再編一次。
 - **期間顯示降級圖**：`renderer.js` 的 `pending()` 是「three.js 還不能畫」的唯一判斷（模組載入中，或第一塊盤編譯中）。這段期間 canvas 清空，`static-plate.js` 的 `paint` 把該區的降級圖鋪成 canvas 的 CSS 背景；three.js 畫第一幀時拿掉。`study.js` 的「正在鋪設」提示照 `loading()` 顯示。
 - **`data-renderer` 的意義不變**：編譯中仍是 `'webgl'`，第一幀實景畫出時才變 `'three'`；`'static'` 只代表真的降級（0010）。拍圖腳本等 `'three'` 再拍。
 - **量測工具**：dev 專用的 `?cold` 讓地著色器多一個每次載入都換名字、而且有被用到的 uniform，強迫快取失效；沒有 `?cold` 時著色器字串不變，正式建置沒有這段。
@@ -22,7 +22,7 @@
 
 ## 後果
 
-- 冷快取下最長長任務 0.42–0.99 秒，降級圖約 0.25 秒出現，實景約 0.7 秒接手（無頭 Chrome，§8.16）。沒有 `KHR_parallel_shader_compile` 的瀏覽器，`compileAsync` 會在第一幀前同步編譯，和改前一樣卡。
+- 冷快取下到實景的時間沒變（改前 11.9–18.3 秒、改後 11.6–14.3 秒：編譯本身仍要十幾秒，只是不在主執行緒上）。改變的是這段期間頁面不卡（最長長任務 11.2–16.5 秒 → 0.40–1.04 秒），降級圖約 0.25 秒出現（無頭 Chrome，§8.16）。期間盤不跟光、不能點部件；換函照常（測過：降級圖跟著換，實景是新的那一區）。沒有 `KHR_parallel_shader_compile` 的瀏覽器，`compileAsync` 會在第一幀前同步編譯，和改前一樣卡。
 - 降級圖多了一個用途：盤面改動後沒有重拍，第一次載入會先看到舊的靜止畫面（0010 本來就要求重拍）。
 - 著色器編譯失敗仍不會自動退回降級圖（0010 的後果，沒變）。
 

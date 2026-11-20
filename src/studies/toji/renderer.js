@@ -80,8 +80,8 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     setMesh,
     /** True while three.js cannot draw yet (module loading, shaders compiling), or the still picture has not arrived. */
     loading: pending,
-    /** 'webgl' (three.js still loading), 'three' or 'static'. */
-    mode: () => plate?.kind ?? (loading ? 'webgl' : 'three'),
+    /** 'webgl' (three.js cannot draw yet: loading or compiling), 'three' or 'static'. */
+    mode: () => plate?.kind ?? (pending() ? 'webgl' : 'three'),
     /** A tap on a part of a plate in close-up; '' when there is no plate or nothing was met. */
     poke: (x, z, time) => plate?.poke(x, z, time) ?? '',
     /** The still picture of `id` on a neighbour's canvas. False when this renderer is not the still picture (the caller draws it itself). */

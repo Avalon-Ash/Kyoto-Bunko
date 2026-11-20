@@ -688,16 +688,20 @@ bench(Date.now() % 100000);
 - `three-renderer.js`：啟用第一塊盤時 `renderer.compileAsync(scene, camera)`；編好前 `draw` 不畫、`loading()` 為真，編好呼叫新的第三個參數 `onReady`。編譯中換區就再編一次。`data-renderer = 'three'` 從 `activate` 移到第一幀實景。dev 專用 `?cold`（見下）。
 - `renderer.js`：`pending()` 是「three.js 還不能畫」的唯一判斷；期間清空 canvas，用 `static-plate.js` 的 `paint` 把降級圖鋪成 CSS 背景，第一幀實景時拿掉。
 - `study.js`：`onReady` 依 `renderer.loading()` 決定提示要不要留著（原本一律收起）。
-- `scripts/plate-shot.mjs`：多等 `data-renderer` 變成 `three` 再拍。
+- `scripts/plate-shot.mjs`、`plate-fallback-shots.mjs`：多等 `data-renderer` 變成 `three` 再拍（後者在改了地著色器重拍降級圖時正好是冷快取）。
+- `renderer.js` 的 `mode()` 也改讀 `pending()`。
 
-**量法**（一次性腳本在 scratchpad，沒提交）：自己開無頭 Chrome（`--use-angle=d3d11`，新的設定檔；只結束自己開的 PID），`?cold` 讓地著色器多一個每次換名字、有被用到的 uniform（快取一定落空，沒有 `?cold` 時快取命中的長任務只有 0.38–0.40 秒）。用 `PerformanceObserver('longtask')` 記最長長任務，用 `requestAnimationFrame` 記降級圖出現與畫完三幀的時間。GPU：ANGLE D3D11、RTX 4070，有 `KHR_parallel_shader_compile`。內建瀏覽器的面板當時是隱藏的，所以沒用它量。
+**量法**（一次性腳本在 scratchpad，沒提交）：自己開無頭 Chrome（`--use-angle=d3d11`，新的設定檔；只結束自己開的 PID），`?cold` 讓地著色器多一個每次換名字、有被用到的 uniform（快取一定落空，沒有 `?cold` 時快取命中的長任務只有 0.38–0.40 秒）。用 `PerformanceObserver('longtask')` 記最長長任務（讀到實景之後 3 秒），用 `requestAnimationFrame` 記降級圖出現、`__kyotoRenderer` 出現、它之後第一次 `render`（實景）的時間。GPU：ANGLE D3D11、RTX 4070，有 `KHR_parallel_shader_compile`。內建瀏覽器的面板當時是隱藏的，所以沒用它量。
 
-| 冷快取，交替各三次 | 最長長任務（ms） | 降級圖出現（ms） | 實景（ms） |
+| 冷快取，各三次 | 最長長任務（ms） | 降級圖出現（ms） | 實景（ms） |
 |---|---|---|---|
-| 改前（只有探針） | 17,004、11,975、11,069 | 沒有 | 長任務之後 |
-| 改後 | 992、418、431 | —、263、237 | 2,063、715、732 |
+| 改前（`09ecd79` 加探針） | 16,485、11,170、11,804 | 沒有（空白） | 18,320、11,857、12,501 |
+| 改後 | 1,001、414、399 | 1,888、275、225 | 14,329、11,721、11,582 |
 
-（改後第一次是新設定檔，模組還沒進快取，降級圖解碼完之前實景就來了。）
+- **到實景的時間沒變**：編譯本身仍要十幾秒，只是移到主執行緒之外。改的是這段期間頁面不卡、先看到降級圖與「正在鋪設」的提示；盤不跟光、不能點部件。地著色器的程式始終只有一支（`T_DENSITY[mi]` 計數 1），gate 沒有漏編。
+- 第一次（新設定檔）模組還沒進快取，降級圖到 1.9 秒才出現。
+- **更正**：這一節第一版的表以「畫完三幀」當實景，把建環境貼圖時的 `render` 算了進去，寫成實景 0.7 秒，是錯的；長任務也只看到實景後 1.5 秒。上表是改過量法後重量的。
+- **編譯中換區**（冷快取，降級圖出現後按「下一函」）：降級圖換成右京，提示仍在；實景出來時是右京、提示收起、canvas 背景清掉。
 
 **畫面不變**：`bash scripts/plate-matrix.sh .shots/cold/{b,a} base mobile`，同一次開機、同一個 dev server，`plate-diff` 25 張：24 張 0 差異；伏見日間差 1 個像素、1 級，用改後的程式重拍兩次都和改前 0 差異，是那一次拍的閃動。
 **降級圖真的出現**：CPU 降速 8 倍時在編譯期間拍圖（`.shots` 外的 scratchpad）：`data-renderer` 是 `webgl`，提示「正在鋪設金地…」顯示，canvas 背景是南區的降級圖。

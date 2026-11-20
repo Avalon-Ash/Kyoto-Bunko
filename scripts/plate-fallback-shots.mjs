@@ -50,6 +50,8 @@ for (const theme of themes) for (const ward of wards) {
   // Only the canvas stays visible, filling the viewport, on a transparent page.
   await evalJs(`(()=>{const s=document.createElement('style');s.textContent='html,body{background:transparent!important}*{visibility:hidden!important}#scene{visibility:visible!important;position:fixed!important;left:0!important;top:0!important;width:${W}px!important;height:${H}px!important;transform:none!important;scale:none!important;filter:none!important;opacity:1!important}';document.head.append(s);})()`);
   await sleep(2000);
+  // The live plate, not the still picture shown while its shaders compile (a cold cache after a ground-shader change): wait for its first frame.
+  for (let i = 0; i < 150 && (await evalJs(`document.querySelector('#scene').dataset.renderer`)) !== 'three'; i++) await sleep(200);
   const info = JSON.parse(await evalJs(`JSON.stringify({ward:document.querySelector('#scene').dataset.renderedWard,w:document.querySelector('#scene').width,h:document.querySelector('#scene').height,plate:document.querySelector('#scene').dataset.plate,renderer:document.querySelector('#scene').dataset.renderer})`));
   if (info.ward !== ward || info.plate !== 'true' || info.renderer !== 'three') throw Error(`not ready: ${JSON.stringify(info)}`);
   let quality = 84, bytes; // 92 until the ground became a field of chips (docs/plans/2026-11-16-ground-tone.md): that detail does not compress, and the set must stay within 2.5 MB
