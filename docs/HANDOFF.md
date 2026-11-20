@@ -7,7 +7,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main`：2026-11-18 晚合併 `claude/mat-table`（快轉）並 push，使用者同意（「你自己作完這些問題後推上去」）。內容：材質表解耦第 0–2 步（`49978c8`、`ec1a9df`、`81b2b9a`；第 2 步的第一版 `d99774d` 上線後以 `5e0ae16` 退掉）、makie-painting skill 的交接與備份、解耦提案。之前的 `56fc135` 是資料線的全庫事實查核（792 → 734 筆）。2026-11-20 快轉合併 `claude/mat-table-34`（到 `8c00620`：材質表第 3、4b 步、ADR 0016）並 push，使用者分別同意；同日再快轉合併 `claude/mat-table-4c`（到 `b406ad9`：第 4c 步、ADR 0017 取代 0013）並 push（「取代 合併推上」）。實際位置以 `git log -1 main` 為準；部署結果見 §3 |
-| 工作分支 | `claude/mat-table-4c`（自 `main` @ `8c00620`）：拿掉 `doha.js` 的 `tongue`、`wedge.far` 填色旗標，量測腳本與測試改讀材質的 `fine` 欄，`mat.js` 加 `lookOf`；去鍵雜湊與量測輸出改前改後相同（材質表提案 §8.15）。已併入 `main` 並 push；`claude/mat-table-4c`、`claude/mat-table-34`、`claude/mat-table` 都可以刪。`claude/finish-1117`、`claude/data-1117` 都已併入 `main`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
+| 工作分支 | `claude/cold-compile`（自 `main` @ `09ecd79`）：第一次載入先 `compileAsync` 整個場景、編譯期間顯示降級圖，冷快取的最長長任務 11–17 秒 → 0.4–1 秒，畫面逐像素不變，ADR 0018，**未合併 `main`、未 push**（材質表提案 §8.16）。之前的 `claude/mat-table-4c`（自 `main` @ `8c00620`）：拿掉 `doha.js` 的 `tongue`、`wedge.far` 填色旗標，量測腳本與測試改讀材質的 `fine` 欄，`mat.js` 加 `lookOf`；去鍵雜湊與量測輸出改前改後相同（材質表提案 §8.15）。已併入 `main` 並 push；`claude/mat-table-4c`、`claude/mat-table-34`、`claude/mat-table` 都可以刪。`claude/finish-1117`、`claude/data-1117` 都已併入 `main`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
 | 資料分支 | `claude/data-1117`（自 `claude/finish-1117`，2026-11-17 晚）：拿掉 `getLatLng` 的假座標、YS-045 改商店類、食處描述只留有來源的說法（報告 [`agent-runs/2026-11-17-data-cleanup.md`](agent-runs/2026-11-17-data-cleanup.md)）。四項驗收過、地圖用瀏覽器面板開過中京區；連同 B-0 量測與「地圖維持現狀」已併入 `main`（`c548ae0`）並 push，GitHub Pages 部署成功（2026-11-17 晚，使用者分別同意合併與 push）。之後同一分支上做了全庫事實查核（商店、ACG、寺社、自然、近代設施、交通；734 筆），**未合併 `main`、未 push** |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
@@ -113,7 +113,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 - 量測：`node scripts/plate-doha-measure.mjs <區…>`（佔比、留白、直線）、`plate-doha-similar.mjs`（形的相似度）、`plate-clip.mjs <out.json>`（穿插）。降級圖：`node scripts/plate-fallback-shots.mjs`（22 張；只改了幾區就把其餘 `git checkout` 還原）。
 - **要證明一個修改沒有動到畫面**：`bash scripts/plate-matrix.sh <資料夾>` 拍改前與改後（固定時鐘、只拍盤），`node scripts/plate-diff.mjs <改前>/<組> <改後>/<組>` 逐像素比。改前與改後要在同一次開機、同一個 dev server 裡拍（跨一次重開機會差 1–2 級）；有差異的那一張要重拍，重現才算。拍圖進行中不改 `src/`。細節在材質表提案 §8.2、§8.7、§8.8。
 - **加材質**：在 `mat.js` 的 `MAT_LOOK` 加一列：地的欄與配方（`recipe`）、烘焙畫法（`fine`）、網格（`mesh`，`meshLook` 的欄）；地著色器不比材質編號、renderer 不比名字（測試會擋）。不要把上色搬進 GLSL 函式：冷編譯從十幾秒變成 32–49 秒（推測是共用的鋪粉被編譯器在每個配方裡各展開一份）。
-- **著色器的編譯時間要在真的瀏覽器裡、排除快取後量**：做法在材質表提案 §8.12（把程式的原始碼拿出來、加一個有用到的 uniform、另開 context 編譯計時；dev 模式的 `window.__kyotoRenderer`）。在著色器裡加一個沒用到的常數不保證快取失效；無頭 Chrome 也量不到。地著色器在 D3D 上冷編譯本來就要 12–15 秒（原本就有的問題，還沒處理）；把上色搬進 GLSL 函式會變成 32–49 秒。
+- **著色器的編譯時間要在真的瀏覽器裡、排除快取後量**：做法在材質表提案 §8.12（把程式的原始碼拿出來、加一個有用到的 uniform、另開 context 編譯計時；dev 模式的 `window.__kyotoRenderer`）。在著色器裡加一個沒用到的常數不保證快取失效；無頭 Chrome 也量不到。地著色器在 D3D 上冷編譯本來就要 12–15 秒；2026-11-20 改成先非同步編譯、期間顯示降級圖（§8.16、ADR 0018），冷快取量測用 dev 的 `?cold`；把上色搬進 GLSL 函式會變成 32–49 秒。
 - 改著色器不要用 `sed -i`：dev server 偵測不到，會量到舊畫面。用編輯工具或整檔寫回。
 - **外觀要在沒有光的時候也成立**：手機沒有滑鼠，光要等閒置自動移光才出現；桌機截圖的光剛好照在盤心，會把只靠金粉反光的差別（例如池心的深淺）拍得比實際明顯。檢查時加一張 `PLATE_LIGHT=.02,.95`（光移到盤外）和一張 375×812。（11/17：池的深淺第一版只在光下看得見。）
 - 批次拍圖時別讓別的頁面同時佔用 GPU（瀏覽器面板開著盤面、另一支拍圖腳本）：換區的按鍵會被吃掉，拍到別區或別的日夜（11/17 伏見兩張拍錯）。拍完核對輸出裡每張的 `"ward"`，日夜看圖的角落亮度。

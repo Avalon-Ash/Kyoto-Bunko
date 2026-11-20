@@ -85,8 +85,9 @@ function bakeStampTexture(doc, maxAniso) {
 /**
  * @param {WebGL2RenderingContext} gl the canvas's WebGL2 context
  * @param {HTMLCanvasElement} canvas
+ * @param {() => void} [onReady] called once the first plate's shaders have compiled and it can be drawn (loading() turns false)
  */
-export function createThreeRenderer(gl, canvas) {
+export function createThreeRenderer(gl, canvas, onReady) {
   const doc = canvas.ownerDocument;
   const renderer = new THREE.WebGLRenderer({canvas, context: gl, antialias: true, alpha: true});
   renderer.setPixelRatio(1);
@@ -132,6 +133,9 @@ export function createThreeRenderer(gl, canvas) {
   // touched: cabinets still switch and the lid still opens.
   const clockParam = import.meta.env.DEV ? new URLSearchParams(location.search).get('clock') : null;
   const fixedClock = clockParam !== null && clockParam !== '' && !Number.isNaN(Number(clockParam)) ? Number(clockParam) : null;
+  // Dev only: ?cold gives the ground shader a used uniform with a new name on every load, so the browser's shader cache misses and the
+  // first visit's compile can be measured (docs/plans/2026-11-18-material-table.md §8.12). Without it the shader text is unchanged.
+  const coldProbe = import.meta.env.DEV && new URLSearchParams(location.search).has('cold') ? `uCold${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}` : '';
   // Dev only: ?matSwap=21:19,2:3 draws material 21 as 19 and 2 as 3 on the lid, so that ground-shader paths no ward uses can be exercised.
   const matSwap = new Map(import.meta.env.DEV ? (new URLSearchParams(location.search).get('matSwap') ?? '').split(',').filter(Boolean).map(pair => pair.split(':').map(Number)) : []);
   // ?age=0..1 sets how old the box looks (0 is as new); every ageing effect is scaled by it.
@@ -435,6 +439,12 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       .replace('#include <opaque_fragment>', `${MAKIE_GROUND_FRAG_GLSL}\n#include <opaque_fragment>`)
       .replace('#include <tonemapping_fragment>', '')
       .replace('#include <colorspace_fragment>', '');
+    if (coldProbe) {
+      shader.uniforms[coldProbe] = {value: 0};
+      shader.fragmentShader = shader.fragmentShader.replace('void main() {', `uniform float ${coldProbe};
+void main() {`)
+        .replace('outgoingLight=mFinish(c,1.).rgb;', `outgoingLight=mFinish(c,1.).rgb+vec3(${coldProbe}*0.);`);
+    }
   };
   const mistMaterial = own(new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
@@ -527,6 +537,23 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
 
   const MAX_CACHED = 3; // Maximum number of ward plate entries kept in cache (active + two neighbours)
   let plate = null, life = null, lastTime = 0, wardGroup = null, disposed = false;
+  // The first plate is not drawn until every program the scene needs has compiled (renderer.compileAsync, which waits on
+  // KHR_parallel_shader_compile instead of stalling the page: the ground shader alone takes 10-15 s on a cold D3D cache,
+  // docs/plans/2026-11-18-material-table.md §8.12). Until then loading() is true and the page shows the still picture.
+  let compiled = false, compiling = false;
+  function compileScene() {
+    if (compiled || compiling) return;
+    compiling = true;
+    const group = wardGroup;
+    renderer.compileAsync(scene, camera).catch(error => console.warn('Plate shaders did not precompile:', error)).then(() => {
+      compiling = false;
+      if (disposed) return;
+      // A cabinet changed while it compiled: its parts may need programs of their own (the ground and box ones are ready by now).
+      if (wardGroup && wardGroup !== group) { compileScene(); return; }
+      compiled = true;
+      onReady?.();
+    });
+  }
   const PREFETCH_DELAY_MS = 900; // let the switch animation settle before the neighbours start building
   let lastNeighbours = [], idleHandle = null, prefetchTimer = null;
   const cache = new Map();
@@ -774,7 +801,8 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     wardGroup = entry.group;
     plate = {...entry.plate, frames: 0};
     life = createLife(entry.plate.parts);
-    canvas.dataset.renderer = 'three'; canvas.dataset.ward = entry.ward;
+    compileScene();
+    canvas.dataset.ward = entry.ward; // data-renderer turns 'three' at the first frame drawn (draw)
     canvas.dataset.meshVertices = String(entry.stats.meshVertices); canvas.dataset.parts = String(entry.stats.parts);
     canvas.dataset.treeVertices = String(entry.stats.treeVertices); canvas.dataset.treeStamps = String(entry.stats.treeStamps);
     canvas.dataset.boxVertices = String(entry.stats.boxVertices); canvas.dataset.blank = '';
@@ -859,7 +887,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
    * @param {number} unitsPerPx plate units covered by one device pixel
    */
   function draw(f, projection, unitsPerPx) {
-    if (!plate) return;
+    if (!plate || !compiled) return;
     // study.js writes 'webgl' once after init; the frame says which renderer actually drew it.
     canvas.dataset.renderer = 'three';
     const quiet = f.still || f.flat, dt = Math.min(.05, Math.max(0, (f.time - lastTime) / 1000) || .016); lastTime = f.time;
@@ -943,6 +971,8 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
 
   return {
     setWard, prefetch, draw, poke, active: () => Boolean(plate),
+    /** True while the first plate's shaders are still compiling (nothing is drawn meanwhile). */
+    loading: () => Boolean(plate) && !compiled,
     dispose() {
       disposed = true;
       cancelIdle(idleHandle); clearTimeout(prefetchTimer);

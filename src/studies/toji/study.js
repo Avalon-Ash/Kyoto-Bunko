@@ -433,7 +433,7 @@ const intersection=new IntersectionObserver(entries=>{visible=entries[0].isInter
 const resize=new ResizeObserver(()=>{syncBackdrop();schedule();queueSnapshot();});resize.observe(canvas);
 
 function init(settings){
-  const renderer=createRenderer(canvas,cabinet.id,()=>{if(!destroyed){$('loading').hidden=true;$('loading').dataset.kind='';queueSnapshot();schedule();}},{...settings,night});
+  const renderer=createRenderer(canvas,cabinet.id,()=>{if(!destroyed){const pending=Boolean(renderer.loading());$('loading').hidden=!pending;$('loading').dataset.kind=pending?'plate':'';queueSnapshot();schedule();}},{...settings,night});
   updateMesh=()=>renderer.setMesh(cabinet.id);setMeshRaw=id=>renderer.setMesh(id);rawDraw=frame=>renderer.draw(frame);queueSnapshot();
   render=(time,moving)=>{projection=renderer.draw({time,moving,still:still(),flat,night,ground,lift,opening:bookProgress,px,py,zoom,panX,panY,trails,presence:hover||autoPlaying||demoStart?1:0,offset:dragOffset,kick,years});kick=0;};
   paintGhost=(ghost,ward)=>renderer.paintNeighbour(ghost,ward,night);

@@ -46,6 +46,8 @@ const shoot = async job => {
   await send('Emulation.setDeviceMetricsOverride', {width: w, height: h, deviceScaleFactor: w < 700 ? 2 : 1, mobile: false});
   await send('Page.navigate', {url: 'http://127.0.0.1:3000/toji-study/index.html' + (query.size ? '?' + query : '')});
   for (let i = 0; i < 60 && !(await evalJs(`Boolean(document.querySelector('#scene')?.dataset.lift)`)); i++) await sleep(200);
+  // The live plate, not the still picture shown while its shaders compile (src/studies/toji/renderer.js): data-renderer turns 'three' at its first frame.
+  for (let i = 0; i < 150 && (await evalJs(`document.querySelector('#scene')?.dataset.renderer`)) !== 'three'; i++) await sleep(200);
   if (theme.endsWith('still')) { await evalJs(`document.querySelector('#motion').click()`); await sleep(200); }
   if (theme.startsWith('day')) { await evalJs(`document.querySelector('#night').click()`); await sleep(300); }
   for (let i = 0; i < Math.abs(Number(steps)); i++) {

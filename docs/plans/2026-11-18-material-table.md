@@ -676,4 +676,34 @@ bench(Date.now() % 100000);
 
 **還沒做**
 - ADR：使用者 11/20 選「取代」。另開 0017 取代 0013（原則與著色器做法照抄，材質表照現況寫）；0016 不改原文、仍採用（它最後一句的過渡期由本步結束）。
-- 第一次編譯慢（§8.12）。
+- 第一次編譯慢（§8.12）：§8.16。
+
+### 8.16 第一次載入不再卡住：先非同步編譯，期間顯示降級圖（2026-11-20，Opus 5.5，分支 `claude/cold-compile`，base `main` @ `09ecd79`）
+
+使用者 11/20：「推上繼續後續計畫」。做 §8.12 留下的那一包。決定寫在 ADR 0018。**沒有合併、沒有 push。**
+
+**原因**：第一次 `renderer.render` 同步編譯所有程式；地著色器在 `boxGroup`（盒），不在區的 group，所以既有的預熱（`warmEntry` 只編區的 group）碰不到它。
+
+**改了什麼**
+- `three-renderer.js`：啟用第一塊盤時 `renderer.compileAsync(scene, camera)`；編好前 `draw` 不畫、`loading()` 為真，編好呼叫新的第三個參數 `onReady`。編譯中換區就再編一次。`data-renderer = 'three'` 從 `activate` 移到第一幀實景。dev 專用 `?cold`（見下）。
+- `renderer.js`：`pending()` 是「three.js 還不能畫」的唯一判斷；期間清空 canvas，用 `static-plate.js` 的 `paint` 把降級圖鋪成 CSS 背景，第一幀實景時拿掉。
+- `study.js`：`onReady` 依 `renderer.loading()` 決定提示要不要留著（原本一律收起）。
+- `scripts/plate-shot.mjs`：多等 `data-renderer` 變成 `three` 再拍。
+
+**量法**（一次性腳本在 scratchpad，沒提交）：自己開無頭 Chrome（`--use-angle=d3d11`，新的設定檔；只結束自己開的 PID），`?cold` 讓地著色器多一個每次換名字、有被用到的 uniform（快取一定落空，沒有 `?cold` 時快取命中的長任務只有 0.38–0.40 秒）。用 `PerformanceObserver('longtask')` 記最長長任務，用 `requestAnimationFrame` 記降級圖出現與畫完三幀的時間。GPU：ANGLE D3D11、RTX 4070，有 `KHR_parallel_shader_compile`。內建瀏覽器的面板當時是隱藏的，所以沒用它量。
+
+| 冷快取，交替各三次 | 最長長任務（ms） | 降級圖出現（ms） | 實景（ms） |
+|---|---|---|---|
+| 改前（只有探針） | 17,004、11,975、11,069 | 沒有 | 長任務之後 |
+| 改後 | 992、418、431 | —、263、237 | 2,063、715、732 |
+
+（改後第一次是新設定檔，模組還沒進快取，降級圖解碼完之前實景就來了。）
+
+**畫面不變**：`bash scripts/plate-matrix.sh .shots/cold/{b,a} base mobile`，同一次開機、同一個 dev server，`plate-diff` 25 張：24 張 0 差異；伏見日間差 1 個像素、1 級，用改後的程式重拍兩次都和改前 0 差異，是那一次拍的閃動。
+**降級圖真的出現**：CPU 降速 8 倍時在編譯期間拍圖（`.shots` 外的 scratchpad）：`data-renderer` 是 `webgl`，提示「正在鋪設金地…」顯示，canvas 背景是南區的降級圖。
+**檢查**：lint 0（ADR 18 份）；validate `--strict` ERROR 0／WARN 0；test 154/154、17/17；build 0；正式建置裡沒有 `uCold`／`coldProbe`。
+
+**沒做**
+- 沒有 `KHR_parallel_shader_compile` 的瀏覽器（例如部分舊 Safari）仍會在第一幀前同步編譯。
+- 沒在使用者的 Chrome 有頭模式量；無頭 Chrome 用的是同一張 GPU 與 ANGLE D3D11。
+- 著色器編譯失敗不會退回降級圖（0010 的後果，沒變）。

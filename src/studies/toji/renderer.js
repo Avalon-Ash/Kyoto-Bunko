@@ -6,6 +6,8 @@
 //   static     plate/static-plate.js: no WebGL2, the three.js module failed to load or start, or the context was lost.
 //              ?plate=static forces it (for checking the fallback by hand); the canvas never asks for a GL context then.
 // Either way the canvas reports it in data-renderer ('three' or 'static'; 'webgl' only while three.js is still loading).
+// Until three.js can draw (its module is loading, or the first plate's shaders are compiling, which a cold cache makes
+// 10-15 s) the canvas shows the still picture of the cabinet as a placeholder; data-renderer stays 'webgl' meanwhile.
 import {multiply, lookAt, ortho} from './geometry.js';
 import {viewBox, renderDpr} from './view.js';
 import {createStaticPlate} from './plate/static-plate.js';
@@ -36,8 +38,15 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
   let ward = wardId, draws = 0, loading = false, disposed = false, plate = null;
   const releases = [];
   const ready = () => { if (!disposed) onReady?.(); };
+  /** The one place that says three.js cannot draw yet: its module is loading or its first plate is compiling. */
+  const pending = () => loading || Boolean(plate?.loading?.());
+  /** The still picture laid under the canvas while three.js cannot draw yet; gone at the first frame three.js draws. */
+  let placeholder = null;
+  const dropPlaceholder = () => { placeholder?.dispose(); placeholder = null; };
+  releases.push(dropPlaceholder);
   /** The still picture: the canvas keeps its (empty) buffer and carries the picture as its CSS background. */
   const useStatic = () => {
+    dropPlaceholder();
     plate = createStaticPlate(canvas, ready, Boolean(options.night)); releases.push(() => plate.dispose());
     canvas.dataset.renderer = 'static'; canvas.dataset.plate = 'true';
   };
@@ -56,7 +65,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     import('./plate/three-renderer.js').then(({createThreeRenderer}) => {
       loading = false;
       if (disposed) return;
-      try { plate = createThreeRenderer(gl2, canvas); releases.push(() => plate.dispose()); }
+      try { plate = createThreeRenderer(gl2, canvas, ready); releases.push(() => plate.dispose()); }
       catch (error) { console.warn('three.js plate unavailable, showing the still picture:', error); plate = null; useStatic(); }
       setMesh(ward); ready();
     }).catch(error => {
@@ -69,8 +78,8 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
   const clear = (w, h) => { gl2.bindFramebuffer(gl2.FRAMEBUFFER, null); gl2.viewport(0, 0, w, h); gl2.clearColor(0, 0, 0, 0); gl2.clear(gl2.COLOR_BUFFER_BIT | gl2.DEPTH_BUFFER_BIT); };
   return {
     setMesh,
-    /** True while the three.js module is still loading, or the still picture has not arrived (the canvas is blank meanwhile). */
-    loading: () => loading || Boolean(plate?.loading?.()),
+    /** True while three.js cannot draw yet (module loading, shaders compiling), or the still picture has not arrived. */
+    loading: pending,
     /** 'webgl' (three.js still loading), 'three' or 'static'. */
     mode: () => plate?.kind ?? (loading ? 'webgl' : 'three'),
     /** A tap on a part of a plate in close-up; '' when there is no plate or nothing was met. */
@@ -88,6 +97,13 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
       const dpr = renderDpr(devicePixelRatio, f.zoom, canvas.clientWidth, canvas.clientHeight), w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
       const projection = cameraMatrix(w, h, f.zoom, f.panX, f.panY);
+      if (pending()) {
+        clear(w, h);
+        placeholder ??= createStaticPlate(canvas, ready, f.night);
+        placeholder.paint(canvas, ward, f.night, f.zoom, f.panX, f.panY);
+        return projection;
+      }
+      dropPlaceholder();
       if (!plate) { clear(w, h); return projection; }
       plate.draw(f, projection, viewBox(w / h, f.zoom).halfW * 2 / w);
       return projection;
