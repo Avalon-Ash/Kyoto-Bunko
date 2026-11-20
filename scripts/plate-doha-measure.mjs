@@ -3,18 +3,21 @@
 // silver pieces, and the longest straight run in any outline. Pure node (no canvas): polygons are filled on a 1-unit grid.
 // Usage: node scripts/plate-doha-measure.mjs [W_NAKAGYO W_FUSHIMI ...]    (default: the two pilot wards)
 import {PLATES, preparePlate} from '../src/studies/toji/plate/parts.js';
-import {MAT} from '../src/studies/toji/plate/mat.js';
+import {MAT, FINE, lookOf} from '../src/studies/toji/plate/mat.js';
 import {KIND, PLATE} from '../src/studies/toji/plate/vocab.js';
 
 const W = PLATE.halfW * 2, H = PLATE.halfH * 2, LID = W * H;
 const PIECE_MATS = new Set([MAT.bankGold, MAT.bankSilver, MAT.sandGold, MAT.sandSilver, MAT.toyamaGold, MAT.toyamaBlue]);
-/** What of a bank can be seen: the crest and the wedge down to where its height is 15% (0.62 of its depth); below that it is ground. */
-export const visible = f => {
+/**
+ * What of a bank can be seen: the crest and the wedge down to where its height is 15% (0.62 of its depth); below that it is ground.
+ * fine: the part material's `fine` column (mat.js), which says whether the fill is a far mountain's head.
+ */
+export const visible = (f, fine) => {
   // A shore that runs in under the water is measured by its outline as written (f.drawn): the stretch under the water is not seen.
   if (!f.wedge) return f.drawn ?? f.d;
   // A far head is measured as the band its powder shows in: 0.62 of its depth below the ridge, and no lower than its dome's closing
   // line (the chord of the ridge's two ends, set down by wedge.drop), below which it has no powder at all.
-  if (f.wedge.far) {
+  if (fine === FINE.ridge) {
     const {ridge, depth, drop = 0} = f.wedge, a = ridge[0], b = ridge[ridge.length - 1];
     const chord = x => a[1] + (b[1] - a[1]) * (b[0] === a[0] ? 0 : (x - a[0]) / (b[0] - a[0])) + drop;
     return [...ridge.map(p => [p[0], p[1]]), ...ridge.map(p => [p[0], Math.max(p[1], Math.min(p[1] + depth * .62, chord(p[0])))]).reverse()];
@@ -62,7 +65,8 @@ export function measureDoha(ward) {
   if (errors.length) throw new Error(errors.join('; '));
   const pieces = [], rocks = [];
   for (const p of parts) {
-    if (PIECE_MATS.has(p.mat)) for (const f of p.fills) pieces.push({cluster: p.group, silver: p.mat === MAT.bankSilver || p.mat === MAT.sandSilver, area: area(visible(f)), d: visible(f), outline: f.d, ridge: f.wedge?.ridge, hasKiri: Boolean(f.kiri), far: Boolean(f.wedge?.far)});
+    const fine = lookOf(p.mat).fine;
+    if (PIECE_MATS.has(p.mat)) for (const f of p.fills) pieces.push({cluster: p.group, silver: p.mat === MAT.bankSilver || p.mat === MAT.sandSilver, area: area(visible(f, fine)), d: visible(f, fine), outline: f.d, ridge: f.wedge?.ridge, hasKiri: Boolean(f.kiri), far: fine === FINE.ridge});
     else if (p.kind === KIND.rock && p.mesh && /^rock-/.test(p.id)) rocks.push({id: p.id, area: p.fills.reduce((s, f) => s + area(f.d), 0), d: p.fills[0].d, centre: p.centre});
   }
   const clusters = [...new Set(pieces.map(p => p.cluster))];

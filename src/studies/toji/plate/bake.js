@@ -2,10 +2,10 @@
 // Channels of a painted layer:  R soft swell (blurred later)  G crisp relief  B line work  A coverage.
 import {PLATE, KIND} from './vocab.js';
 import {WEDGE_PROFILE, fadeHeight} from './doha.js';
-import {MAT_LOOK, FINE} from './mat.js';
+import {lookOf, FINE} from './mat.js';
 
 /** What a part's fine.g holds, and so how its fills are painted: its material's `fine` column (mat.js MAT_LOOK). */
-const fineOf = p => (MAT_LOOK[p.mat] ?? MAT_LOOK[0]).fine;
+const fineOf = p => lookOf(p.mat).fine;
 
 const trace = (ctx, d, close) => {
   ctx.beginPath();

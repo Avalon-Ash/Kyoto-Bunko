@@ -135,7 +135,7 @@ export function tongues(id, pieces, all = {}) {
       });
       fade = tongueFade(outline, q);
     }
-    const f = {d: outline, soft: look.soft, crisp: 1, tongue: true};
+    const f = {d: outline, soft: look.soft, crisp: 1};
     // The outline as it was written (what shows above the water), for the measuring scripts.
     if (outline !== s.outline) f.drawn = s.outline;
     if (q.kiri) { const [from, to] = q.kiri; f.kiri = [{path: pathOf(outline, from, to), pitch: 4, half: 1.1}]; }
@@ -245,7 +245,7 @@ export function mountain(id, heads) {
     const p = out[tone] ??= part(`${id}-${tone}`, id, look.mat, centre, {order: look.order});
     // A nearer head hides the one behind it; hiddenBy lists the nearer heads of the other metal (their part is painted apart from this one).
     const hiddenBy = domes.filter((_, j) => j > i && (heads[j].tone ?? 'gold') !== tone);
-    p.fills.push({d: domes[i], soft: 0, crisp: 0, hiddenBy, wedge: {ridge: s.ridge, depth: s.depth, amp: q.amp ?? 0, far: true, profile: TOYAMA_PROFILE, cluster: id, seq: i, drop: s.depth * FAR_DROP}});
+    p.fills.push({d: domes[i], soft: 0, crisp: 0, hiddenBy, wedge: {ridge: s.ridge, depth: s.depth, amp: q.amp ?? 0, profile: TOYAMA_PROFILE, cluster: id, seq: i, drop: s.depth * FAR_DROP}});
   });
   return Object.values(out);
 }

@@ -1,6 +1,6 @@
 # 材質性質集中成一張表：地著色器與它的讀者解耦（提案）
 
-日期：2026-11-18。狀態：**第 0–3 步與第 4 步的 4a、4b 做完（§8.11、§8.13、§8.14；第 3、4b 步在 `claude/mat-table-34`，沒有合併）。第 0–2 步（§8.11）：地著色器不再比材質編號。第 2 步用的是保守的寫法（分支留在主體、條件換成配方），因為配方函式的寫法會讓著色器第一次編譯卡 32–49 秒（§8.9、§8.10）。還剩 `doha.js` 的兩個填色旗標（§8.14）**。使用者 2026-11-18 同意由終審者（Fable 5.2）執行並在驗收後合併 `main`、push（原話：「你自己作完這些問題後推上去」）。設計定案與執行紀錄在 §8；終審意見在 §7。base：`claude/data-1117` @ `56fc135`。
+日期：2026-11-18。狀態：**第 0–3 步與第 4 步的 4a、4b 做完（§8.11、§8.13、§8.14；第 3、4b 步 2026-11-20 合併 `main` 並 push）。第 0–2 步（§8.11）：地著色器不再比材質編號。第 2 步用的是保守的寫法（分支留在主體、條件換成配方），因為配方函式的寫法會讓著色器第一次編譯卡 32–49 秒（§8.9、§8.10）。`doha.js` 的兩個填色旗標在 `claude/mat-table-4c` 拿掉（§8.15，沒有合併）**。使用者 2026-11-18 同意由終審者（Fable 5.2）執行並在驗收後合併 `main`、push（原話：「你自己作完這些問題後推上去」）。設計定案與執行紀錄在 §8；終審意見在 §7。base：`claude/data-1117` @ `56fc135`。
 - 開案：Claude Opus 5.5（從主工作階段分出的工作階段）。
 - 補充脈絡：做了 11/16–17 整輪盤面的工作階段「專案待辦事項討論」。它也負責終審本提案。
 - 依據：
@@ -647,6 +647,33 @@ bench(Date.now() % 100000);
 
 **還沒做**
 - **要使用者決定**：ADR 0013 的「決定」寫的是過渡期的分工（兩表欄位不得重疊、第 3 步併表），「後果」寫第 3 步未完成；併表之後這兩句過時了。ADR 的規則是不改原文：要嘛把 0013 標成「已取代（由 0016）」並在 0016 加「取代：0013」（0016 要把 0013 的原則一併寫進來），要嘛維持現狀、由 0016 補述。這次沒有標，等使用者選。
-- `doha.js` 的兩個旗標（上面）。
+- `doha.js` 的兩個旗標（上面）：§8.15 做完。
 - 第一次編譯慢（§8.12，原本就有的問題）：另開一包，縮短地著色器的編譯時間，或編譯期間先顯示降級圖。
 - 降級圖沒有重拍：這一步證明了畫面逐像素不變，降級圖不必重拍。
+
+### 8.15 第 4c 步：拿掉 `doha.js` 的填色旗標（2026-11-20，Opus 5.5，分支 `claude/mat-table-4c`，base `main` @ `8c00620`）
+
+使用者 11/20 同意把 `claude/mat-table-34` 合併 `main`（快轉）並 push，之後說「額度恢復了」，接著做 §8.14 留下的這一包。**沒有合併、沒有 push。**
+
+**改了什麼**
+- `doha.js`：洲浜填色的 `tongue: true`、遠山填色的 `wedge.far: true` 拿掉。一片填色是哪一種，由零件材質的 `fine` 欄說；填色只帶它那一種要的幾何（`f.wedge`、`f.fade`）。
+- `mat.js` 加 `lookOf(mat)`：查一個材質的列，表裡沒有的 id 讀第 0 列。原本「`MAT_LOOK[id] ?? MAT_LOOK[0]`」寫在 `bake.js`、`three-pack.js` 與測試各一份，現在都讀 `lookOf`。
+- `scripts/plate-doha-measure.mjs`：`visible(f, fine)` 多一個參數，遠山的判斷改成 `fine === FINE.ridge`；`measureDoha` 每個零件讀一次 `lookOf(p.mat).fine`。
+- `scripts/plate-doha-similar.mjs`：洲浜的判斷改成 `lookOf(p.mat).fine === FINE.powder`；有 `f.wedge` 的仍算岸（遠山的頭也是，和改前一樣）。
+- `scripts/plate.test.mjs`：
+  - `mountain()` 的測試改成檢查零件材質的 `fine` 是 `ridge`；稻荷山那條改成只檢查 `f.wedge`（零件已經是用遠山材質挑出來的）。
+  - §8.14 的範圍圍欄改成行為測試：十一區每片填色「有 `f.wedge`」等於「材質是 `wedge` 或 `ridge`」，`f.fade` 只在 `powder`，填色上沒有 `tongue`，`wedge` 上沒有 `far`。
+- `docs/plans/material-table/parts-hash-baseline.json` 重寫：拿掉兩個鍵，十區的部件雜湊會變（上京沒有洲浜也沒有遠山，不變）。
+
+**證明**（指令都在 scratchpad 跑，結果沒有提交）
+- 去掉 `tongue`、`far` 兩個鍵再算十一區的部件雜湊：改前（`8c00620`）與改後逐字相同（`cmp` 退出 0）。
+- `node scripts/plate-doha-measure.mjs <十一區>` 與 `node scripts/plate-doha-similar.mjs <十一區>` 的輸出：改前改後逐字相同。
+- `MAT_LOOK_GLSL`（`three-pack.js` 改讀 `lookOf`）：sha256 前 16 碼改前改後都是 `8146e60ca86bdbf0`。
+- 沒有重拍逐像素：`src/` 裡除了測試與量測腳本，沒有人讀這兩個鍵（`grep` 為 0）；部件去掉這兩個鍵後相同，`bake.js` 與 `three-pack.js` 只是改用 `lookOf`，值相同。
+- 檢查：`npm run lint` 0（ADR 16 份通過）；`npx --no-install tsx validate_data.js --strict` ERROR 0／WARN 0；`npm test` 154/154 與 17/17；`npm run build` 0；`node scripts/plate-parts-hash.mjs --check` 重寫基準後 identical 11/11。
+
+**沒動**：ADR 0016 的「後果」寫「過渡期還剩 `doha.js` 的兩個旗標」，現在不成立了。照 ADR 的規則不改原文，和 0013 的問題一起等使用者決定（§8.14）。
+
+**還沒做**
+- ADR 0013／0016 怎麼標（§8.14）。
+- 第一次編譯慢（§8.12）。

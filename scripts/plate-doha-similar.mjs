@@ -6,7 +6,7 @@
 //   threshold  FLOOR_X times the floor of that kind (tongues and rocks: the tongues' floor; banks: the banks'), never under MIN_DIST: a pair under it is called a copy, and the test fails
 // Usage: node scripts/plate-doha-similar.mjs [W_NAKAGYO W_FUSHIMI ...]
 import {PLATES, preparePlate} from '../src/studies/toji/plate/parts.js';
-import {MAT} from '../src/studies/toji/plate/mat.js';
+import {MAT, FINE, lookOf} from '../src/studies/toji/plate/mat.js';
 import {KIND} from '../src/studies/toji/plate/vocab.js';
 import {tongueGeom, bankGeom} from '../src/studies/toji/plate/doha.js';
 import {fileURLToPath} from 'node:url';
@@ -78,7 +78,7 @@ export async function similar(ward) {
   const {parts} = preparePlate(PLATES[ward]());
   const tong = [], bank = [], rocks = [];
   for (const p of parts) {
-    if (p.kind === KIND.hill) for (const f of p.fills) { const id = p.id + '#' + (tong.length + bank.length); if (f.tongue) tong.push({id, sig: radial(f.d)}); else if (f.wedge) bank.push({id, sig: crest(f.wedge.ridge)}); }
+    if (p.kind === KIND.hill) for (const f of p.fills) { const id = p.id + '#' + (tong.length + bank.length); if (lookOf(p.mat).fine === FINE.powder) tong.push({id, sig: radial(f.d)}); else if (f.wedge) bank.push({id, sig: crest(f.wedge.ridge)}); }
     if (p.kind === KIND.rock && /^rock-/.test(p.id)) rocks.push({id: p.id, sig: radial(p.fills[0].d)});
   }
   const specs = Object.values(mod.PIECES).flat(), tspec = specs.filter(q => q.p), bspec = specs.filter(q => q.ridge);

@@ -1509,6 +1509,7 @@ test('roof faces are gold powder; gold leaf stays on small parts and carries a g
 import {measureDoha} from './plate-doha-measure.mjs';
 import {similar} from './plate-doha-similar.mjs';
 import {bankGeom, tongueGeom, mountain, JITTER} from '../src/studies/toji/plate/doha.js';
+import {lookOf, FINE} from '../src/studies/toji/plate/mat.js';
 import {meshRock} from '../src/studies/toji/plate/rock-mesh.js';
 const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5], W_HIGASHIYAMA: [2, 2], W_KITA: [0, 0], W_MINAMI: [3, 3], W_UKYO: [0, 0], W_SAKYO: [0, 0], W_YAMASHINA: [0, 0], W_NISHIKYO: [0, 0], W_KAMIGYO: [0, 0], W_SHIMOGYO: [0, 0]}; // Kita's two rocks are not named rock-*, so the measure does not count them
 for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition numbers`, () => {
@@ -1541,7 +1542,7 @@ test('doha: Inari-yama is one far mountain: no rocks on it, a low ridge, no cut 
   const {parts} = preparePlate(PLATES.W_FUSHIMI());
   const heads = parts.filter(p => p.mat === MAT.toyamaGold || p.mat === MAT.toyamaBlue).flatMap(p => p.fills);
   assert.ok(heads.length >= 3 && heads.length <= 5 + 3, 'three to five heads on the mountain, and the far range');
-  for (const f of heads) { assert.ok(f.wedge.far && f.wedge.amp <= .2, 'a far mountain is raised only a little, at its ridge'); assert.ok(!f.kiri, 'and carries no cut gold'); }
+  for (const f of heads) { assert.ok(f.wedge && f.wedge.amp <= .2, 'a far mountain is raised only a little, at its ridge'); assert.ok(!f.kiri, 'and carries no cut gold'); }
   for (const r of parts.filter(p => p.kind === KIND.rock && /^rock-/.test(p.id))) assert.ok(r.centre[1] > 20, `${r.id} is in the near land (z ${r.centre[1].toFixed(0)}), not on the mountain`);
 });
 test('doha: a hand-drawn outline is only shaken by the jitter; a ridge sinks at both ends', () => {
@@ -1553,7 +1554,7 @@ test('doha: a hand-drawn outline is only shaken by the jitter; a ridge sinks at 
   assert.ok(g.ridge[0][2] < .02 && g.ridge[g.ridge.length - 1][2] < .02, 'crest strength is 0 at both ends');
   assert.ok(g.ridge.some(q => q[2] > .8), 'and strong in the middle');
   assert.ok(g.ridge.every(q => q[4] >= 0), 'normals point down the plate');
-  assert.equal(mountain('m', [{ridge: [[0, 0], [40, -20], [80, -26], [120, -10], [150, 0]], depth: 50}])[0].fills[0].wedge.far, true);
+  assert.equal(lookOf(mountain('m', [{ridge: [[0, 0], [40, -20], [80, -26], [120, -10], [150, 0]], depth: 50}])[0].mat).fine, FINE.ridge, 'a far mountain is painted as a ridge');
 });
 test('doha: a custom rock keeps its outline and still has foil on its lit faces', () => {
   const out = [[-9, 3], [-8, -4], [-3, -12], [2, -15], [7, -8], [10, 0], [8, 6], [0, 9], [-6, 8]];
@@ -1686,21 +1687,19 @@ test('material table: the renderer shader choices read the mesh columns and give
   assert.deepEqual(src.match(/spec\.name\s*(===?|!==?)|\.test\(spec\.name\)/g) ?? [], [], 'the renderer does not branch on a material name');
 });
 
-// Scope fence (docs/plans/2026-11-18-material-table.md, step 4b): bake.js chose how to paint a fill from flags on the fill
-// (f.wedge.far, f.tongue, f.fade); now from the part's material (MAT_LOOK fine). Every ward's fills agree with the column.
+// Behaviour (docs/plans/2026-11-18-material-table.md, steps 4b and 4c): how a fill is painted is its part material's `fine`
+// column (mat.js); the fill carries only the geometry its kind needs (f.wedge, f.fade), and no flags that name the kind.
 test('material table: every fill is painted as its part material says (fine), in every ward', async () => {
   const {readFileSync} = await import('node:fs');
-  const {MAT_LOOK, FINE} = await import('../src/studies/toji/plate/mat.js');
-  const shaped = new Set([FINE.wedge, FINE.ridge, FINE.powder]);
+  const shaped = new Set([FINE.wedge, FINE.ridge, FINE.powder]), wedged = new Set([FINE.wedge, FINE.ridge]);
   for (const ward of Object.keys(PLATES)) {
     for (const p of preparePlate(PLATES[ward]()).parts) {
-      const fine = (MAT_LOOK[p.mat] ?? MAT_LOOK[0]).fine;
+      const fine = lookOf(p.mat).fine;
       assert.ok(Object.values(FINE).includes(fine), `${ward} ${p.id}: fine is a FINE kind`);
       if (shaped.has(fine)) assert.ok(p.layer === 0 && !p.limbs && !p.mesh, `${ward} ${p.id}: a shaped powder is ground (layer 0, no mesh)`);
       for (const f of p.fills) {
-        assert.equal(Boolean(f.wedge?.far), fine === FINE.ridge, `${ward} ${p.id}: a far mountain's head is a ridge material`);
-        assert.equal(Boolean(f.wedge && !f.wedge.far), fine === FINE.wedge, `${ward} ${p.id}: a bank's wedge is a wedge material`);
-        assert.equal(Boolean(f.tongue), fine === FINE.powder, `${ward} ${p.id}: a suhama tongue is a powder material`);
+        assert.equal(Boolean(f.wedge), wedged.has(fine), `${ward} ${p.id}: a fill has a wedge exactly when its material is a bank or a far head`);
+        assert.ok(!('tongue' in f) && !('far' in (f.wedge ?? {})), `${ward} ${p.id}: no kind flags on the fill (the material says it)`);
         if (f.fade) assert.equal(fine, FINE.powder, `${ward} ${p.id}: only a powder material fades from its edge`);
       }
     }

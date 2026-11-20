@@ -1,7 +1,7 @@
 // Pure data for the three.js plate renderer (three-renderer.js): material table, box and mesh packing, motion state
 // packing and the GLSL that moves a part. Nothing here imports three, so node:test can check it.
 import {MAT, KIND} from './vocab.js';
-import {MAT_LOOK, COAT_KIND, TONE, TIER, RECIPE, meshLook} from './mat.js';
+import {MAT_LOOK, lookOf, COAT_KIND, TONE, TIER, RECIPE, meshLook} from './mat.js';
 import {MAX_PARTS} from './parts.js';
 import {packMeshes} from './mesh-geometry.js';
 import {limbMesh, stampInstances} from './limbs.js';
@@ -855,7 +855,7 @@ vec4 mFinish(vec3 c,float a){
  * toFixed), so the shader holds exactly the table's value.
  */
 const LOOK_N = Math.max(...Object.keys(MAT_LOOK).map(Number)) + 1;
-const lookColumn = (type, value) => `const ${type} T_${value.name}[${LOOK_N}]=${type}[${LOOK_N}](${Array.from({length: LOOK_N}, (_, id) => value.of(MAT_LOOK[id] ?? MAT_LOOK[0])).join(',')});`;
+const lookColumn = (type, value) => `const ${type} T_${value.name}[${LOOK_N}]=${type}[${LOOK_N}](${Array.from({length: LOOK_N}, (_, id) => value.of(lookOf(id))).join(',')});`;
 const glslFloat = v => { const text = String(v); return /[.e]/.test(text) ? text : `${text}.`; };
 const glslName = key => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
 const glslKinds = (prefix, kinds) => `const int ${Object.entries(kinds).map(([key, id]) => `${prefix}_${glslName(key)}=${id}`).join(',')};`;

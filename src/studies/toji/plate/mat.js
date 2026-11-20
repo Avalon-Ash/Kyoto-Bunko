@@ -139,6 +139,8 @@ export const MAT_LOOK = Object.freeze({
   [MAT.rockLine]: look({refColour: '#f0d98c'},
     {name: 'rockPowderLine', color: '#f0d98c', paint: '#e6cf80', metalness: .9, roughness: .4, clearcoat: .2, clearcoatRoughness: .15, flake: .1, rockPowder: true}),
 });
+/** A material's row in MAT_LOOK; an id the table does not list reads row 0 (the plain ground's). Read rows through this. */
+export const lookOf = mat => MAT_LOOK[mat] ?? MAT_LOOK[0];
 
 // Doha piece properties keyed by cluster kind and tone, so doha.js reads one table instead of branching on tone strings.
 export const DOHA_TONE = Object.freeze({
