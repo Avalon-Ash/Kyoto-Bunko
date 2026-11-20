@@ -748,3 +748,15 @@ bench(Date.now() % 100000);
 **檢查**：lint 0（ADR 19 份）；validate `--strict` ERROR 0／WARN 0；test 155/155、17/17；build 0。
 
 **沒做**：剩下的 `mNashiji` 上色組合（約 1.5 秒）；其他 24 支程式（冷快取下實景還要 8–10 秒的其餘部分）；降級圖沒有重拍（差異在 1 級以內）。
+
+### 8.18 合併之後：盒內補驗、其餘程式的冷編譯（2026-11-20，Opus 5.5）
+
+使用者 11/20 看過後說「目前看沒大問題，繼續」。
+
+**盒內補驗**（§8.17 的矩陣拍不到）：拍圖腳本開盒再拍整個視窗：
+`PLATE_CLOCK=60000 PLATE_EVAL_SHOT=1 PLATE_EVAL="(async()=>{document.querySelector('#scene').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));await new Promise(r=>setTimeout(r,4000));return 1})()" node scripts/plate-shot.mjs <資料夾> minami-open:0:day-still:1440x900:1:.5,.5 kita-open:5:night-still:1440x900:1:.5,.5`
+改前（`f1fd766` 的 `three-pack.js`）與改後各拍一次，`plate-diff` 4 張（蓋面與開盒）0 差異；開盒的圖裡盒內的梨子地、托盤、紙與卷都在。
+
+**每支程式的冷編譯**（同 §8.17 的量法，對頁面上 25 支程式逐一量，單次）：地 7,473 ms（這一輪第一個編，含暖機；§8.17 連量是 5.0–5.2 秒）；第二大的 1,510 ms；其餘 23 支 669 ms 以下（物理材質的部件 123–564 ms、陰影深度 5–32 ms）；合計 14.2 秒。冷快取下到實景 8–10 秒，主要還是地。地剩下的單項（`mNashiji` 依參數的上色約 1.5 秒、`mVnoise`、`mHirame`、`mVoro` 各約 0.5–0.7 秒）都在單次量測的誤差附近，而且依賴各呼叫處的參數，不能再提前算；這條線停在這裡。
+
+**降級圖不用重拍**：上次重拍是 `8144856`（11/17 15:46）。之後影響畫面的只有 `d409aff`（示範時年份會跑，靜止時用原本的年代）；材質表各步逐像素不變；§8.17 是 18 個像素差 1 級。
