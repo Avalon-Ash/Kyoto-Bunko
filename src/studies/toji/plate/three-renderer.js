@@ -536,7 +536,7 @@ void main() {`)
   const IDENTITY = new THREE.Matrix4();
 
   const MAX_CACHED = 3; // Maximum number of ward plate entries kept in cache (active + two neighbours)
-  let plate = null, life = null, lastTime = 0, wardGroup = null, disposed = false;
+  let plate = null, life = null, lastTime = 0, wardGroup = null, disposed = false, current = null;
   // The first plate is not drawn until every program the scene needs has compiled (renderer.compileAsync, which waits on
   // KHR_parallel_shader_compile instead of stalling the page: the ground shader alone takes 10-15 s on a cold D3D cache,
   // docs/plans/2026-11-18-material-table.md §8.12). Until then loading() is true and the page shows the still picture.
@@ -784,10 +784,11 @@ void main() {`)
     shared.uFine0.value = shared.uMistFine.value = dummyRgba;
     shared.uIdent0.value = shared.uMistIdent.value = dummyRg;
     shared.uSoft0.value = dummySoft; shared.uDens.value = neutralDens; shared.uContact.value = dummyRgba; shared.uDensMean.value = .5;
-    wardGroup = null; plate = null; life = null;
+    wardGroup = null; plate = null; life = null; current = null;
   }
 
-  function activate(entry, started, prefetched) {
+  /** Puts an entry's group and textures in the scene (nothing else: not the plate, its life or the cache). */
+  function bind(entry) {
     if (wardGroup) scene.remove(wardGroup);
     shared.uFine0.value = entry.uniforms.uFine0;
     shared.uSoft0.value = entry.uniforms.uSoft0;
@@ -799,6 +800,11 @@ void main() {`)
     shared.uMistIdent.value = entry.uniforms.uMistIdent ?? dummyRg;
     scene.add(entry.group);
     wardGroup = entry.group;
+  }
+
+  function activate(entry, started, prefetched) {
+    bind(entry);
+    current = entry;
     plate = {...entry.plate, frames: 0};
     life = createLife(entry.plate.parts);
     compileScene();
@@ -827,7 +833,27 @@ void main() {`)
     if (!slot.entry || slot.warmed) return;
     slot.warmed = true;
     for (const tex of slot.entry.textures) renderer.initTexture(tex);
-    renderer.compileAsync(slot.entry.group, camera, scene).catch(() => {});
+    renderer.compileAsync(slot.entry.group, camera, scene).catch(() => {}).then(() => {
+      if (disposed || !slot.entry) return;
+      slot.compiled = true;
+      onReady?.(); // its picture can be drawn now (drawNeighbour)
+    });
+  }
+
+  /**
+   * Draws a neighbouring ward at rest in place of the plate, for the picture of it that stands beside the box, then puts
+   * the plate back. Only a neighbour the prefetch has built and compiled: anything else would be built here, in one task,
+   * while the box is in view. Returns false then (the page waits for onReady). The cache and the prefetch are not touched.
+   */
+  function drawNeighbour(ward, f, projection, unitsPerPx) {
+    const slot = cache.get(ward);
+    if (!plate || !compiled || !current || !slot?.entry || !slot.compiled) return false;
+    const own = {entry: current, plate, life};
+    bind(slot.entry);
+    plate = {...slot.entry.plate, frames: 0}; life = slot.life ??= createLife(slot.entry.plate.parts);
+    try { draw(f, projection, unitsPerPx); }
+    finally { bind(own.entry); plate = own.plate; life = own.life; }
+    return true;
   }
 
   function pumpPrefetch() {
@@ -970,7 +996,7 @@ void main() {`)
   }
 
   return {
-    setWard, prefetch, draw, poke, active: () => Boolean(plate),
+    setWard, prefetch, draw, drawNeighbour, poke, active: () => Boolean(plate),
     /** True while the first plate's shaders are still compiling (nothing is drawn meanwhile). */
     loading: () => Boolean(plate) && !compiled,
     dispose() {

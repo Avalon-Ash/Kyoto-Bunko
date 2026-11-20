@@ -89,3 +89,4 @@
 - [0017 禁止架構耦合與蒔繪盤的一張材質表](0017-no-coupling-one-material-table.md)：沿用 0013 的不做耦合原則與著色器做法，材質性質全在 `mat.js` 的一張 `MAT_LOOK`（`lookOf` 讀列），不以名字、編號或填色旗標判斷材質（取代 0013）。
 - [0018 蒔繪盤先非同步編譯完再畫，期間顯示降級圖](0018-plate-precompile-with-still-placeholder.md)：第一塊盤先 `compileAsync` 整個場景，編譯中不畫、canvas 鋪降級圖，避免冷快取時整頁卡十幾秒；`data-renderer` 第一幀實景才變 `three`。
 - [0019 著色器先用 mSetLightAt 設好光與位置，再呼叫 mNashiji、mMetal](0019-shaders-set-light-and-position-once.md)：兩者只跟位置與光有關的部分每個像素算一次，地著色器冷編譯 9–11 秒 → 約 5 秒。
+- [0020 鄰盒的預覽只畫背景已建好的區，沒好就淡出淡入](0020-neighbour-pictures-only-from-prefetch.md)：畫預覽圖不再同步建鄰區（換函後 285–600 ms 的卡頓 → ≤77 ms），來不及預建時換函改淡出淡入。

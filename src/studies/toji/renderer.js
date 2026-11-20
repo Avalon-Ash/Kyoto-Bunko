@@ -75,6 +75,12 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
       useStatic(); setMesh(ward); ready();
     });
   }
+  /** The canvas's drawing size for frame f (resized if needed), its camera matrix and the plate units one pixel covers. */
+  const size = f => {
+    const dpr = renderDpr(devicePixelRatio, f.zoom, canvas.clientWidth, canvas.clientHeight), w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    return {w, h, projection: cameraMatrix(w, h, f.zoom, f.panX, f.panY), unitsPerPx: viewBox(w / h, f.zoom).halfW * 2 / w};
+  };
   const clear = (w, h) => { gl2.bindFramebuffer(gl2.FRAMEBUFFER, null); gl2.viewport(0, 0, w, h); gl2.clearColor(0, 0, 0, 0); gl2.clear(gl2.COLOR_BUFFER_BIT | gl2.DEPTH_BUFFER_BIT); };
   return {
     setMesh,
@@ -86,6 +92,15 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     poke: (x, z, time) => plate?.poke(x, z, time) ?? '',
     /** The still picture of `id` on a neighbour's canvas. False when this renderer is not the still picture (the caller draws it itself). */
     paintNeighbour(target, id, night) { if (plate?.kind !== 'static') return false; plate.paint(target, id, night); return true; },
+    /**
+     * Draws the neighbouring cabinet `id` at rest into this canvas (the caller copies it out and draws its own cabinet again).
+     * False when three.js cannot draw it yet: not drawing, or the neighbour not yet built and compiled by the prefetch.
+     */
+    drawNeighbour(id, f) {
+      if (plate?.kind === 'static' || !plate?.drawNeighbour || pending()) return false;
+      const {projection, unitsPerPx} = size(f);
+      return plate.drawNeighbour(id, f, projection, unitsPerPx);
+    },
     /** Draws one frame and returns the camera matrix it used. @param {Frame} f */
     draw(f) {
       canvas.dataset.renderedWard = ward; canvas.dataset.frames = String(++draws);
@@ -94,9 +109,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
         plate.draw(f);
         return projection;
       }
-      const dpr = renderDpr(devicePixelRatio, f.zoom, canvas.clientWidth, canvas.clientHeight), w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
-      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-      const projection = cameraMatrix(w, h, f.zoom, f.panX, f.panY);
+      const {w, h, projection, unitsPerPx} = size(f);
       if (pending()) {
         clear(w, h);
         placeholder ??= createStaticPlate(canvas, ready, f.night);
@@ -105,7 +118,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
       }
       dropPlaceholder();
       if (!plate) { clear(w, h); return projection; }
-      plate.draw(f, projection, viewBox(w / h, f.zoom).halfW * 2 / w);
+      plate.draw(f, projection, unitsPerPx);
       return projection;
     },
     dispose() { disposed = true; releases.splice(0).reverse().forEach(release => release()); },

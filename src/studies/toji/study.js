@@ -52,7 +52,7 @@ const ghosts=options.embedded?[-1,1].map(side=>{
   const ghost=document.createElement('canvas');ghost.className='neighbour';ghost.setAttribute('aria-hidden','true');ghost.dataset.side=String(side);
   canvas.before(ghost);return ghost;
 }):[];
-let ghostAnimations=[],ghostsStale=true,ghostTimer=0,rawDraw=null,setMeshRaw=null;
+let ghostAnimations=[],ghostsStale=true,ghostTimer=0,drawNeighbour=null;
 const spacing=()=>canvas.clientWidth*.82;
 /** Puts the box and its neighbours at `offset` px along the track. */
 function placeTrack(offset){
@@ -75,22 +75,24 @@ function slide(from,to,duration){
 }
 function snapshotNeighbours(){
   ghostsStale=false;
-  if(!ghosts.length||!rawDraw||!setMeshRaw||failed||!canvas.width)return;
+  if(!ghosts.length||!drawNeighbour||failed||!canvas.width)return;
   const own=cabinet.id;
   if(paintGhost){
     let still=false;
     for(const ghost of ghosts){const ward=adjacentCabinet(own,Number(ghost.dataset.side)).id;if(paintGhost(ghost,ward)){still=true;ghost.dataset.ward=ward;ghost.dataset.plate='true';}}
     if(still)return;
   }
+  // A neighbour is drawn only once the renderer has built and compiled it in the background; until then the pictures stay
+  // stale (the renderer calls back when one is ready) and a switch fades instead of sliding (changeCabinet).
+  let drawn=0;
   for(const ghost of ghosts){
     const ward=adjacentCabinet(own,Number(ghost.dataset.side)).id,ctx=ghost.getContext('2d');
     if(!ctx)continue;
-    setMeshRaw(ward);
-    rawDraw({time:performance.now(),moving:false,still:true,flat,night,ground,lift:.82,opening:0,px:0,py:0,zoom:1,panX:0,panY:0,trails:[],presence:0});
+    if(!drawNeighbour(ward,{time:performance.now(),moving:false,still:true,flat,night,ground,lift:.82,opening:0,px:0,py:0,zoom:1,panX:0,panY:0,trails:[],presence:0})){ghostsStale=true;continue;}
     // Same task as the draw: the WebGL canvas still holds the frame.
-    ghost.width=canvas.width;ghost.height=canvas.height;ctx.drawImage(canvas,0,0);ghost.dataset.ward=ward;ghost.dataset.plate=canvas.dataset.plate??'false';
+    ghost.width=canvas.width;ghost.height=canvas.height;ctx.drawImage(canvas,0,0);ghost.dataset.ward=ward;ghost.dataset.plate='true';drawn++;
   }
-  setMeshRaw(own);render?.(performance.now(),false);
+  if(drawn)render?.(performance.now(),false);
 }
 /** The neighbours' pictures are out of date (another cabinet, another light, another size): hide them and redraw soon. */
 function queueSnapshot(){
@@ -143,9 +145,10 @@ async function changeCabinet(direction,focusTarget=document.activeElement,fromOf
   };
   const distance=options.embedded?Math.max(100,canvas.clientWidth*.35):28;
   // On the home the whole track slides and the neighbour arrives as itself; elsewhere the box fades out and in.
-  const together=Boolean(ghosts.length&&!still()&&render&&typeof canvas.animate==='function');
+  if(ghosts.length&&ghostsStale)snapshotNeighbours();
+  // The neighbours' pictures not ready (a switch soon after the last one): the box fades out and in instead of sliding.
+  const together=Boolean(ghosts.length&&!ghostsStale&&!still()&&render&&typeof canvas.animate==='function');
   if(together){
-    if(ghostsStale)snapshotNeighbours();
     const gap=spacing();
     switchAnimation=slide(fromOffset,-direction*gap,240+220*(1-Math.min(1,Math.abs(fromOffset)/gap)));
     await switchAnimation.finished.catch(()=>{});
@@ -434,13 +437,13 @@ const resize=new ResizeObserver(()=>{syncBackdrop();schedule();queueSnapshot();}
 
 function init(settings){
   const renderer=createRenderer(canvas,cabinet.id,()=>{if(!destroyed){const pending=Boolean(renderer.loading());$('loading').hidden=!pending;$('loading').dataset.kind=pending?'plate':'';queueSnapshot();schedule();}},{...settings,night});
-  updateMesh=()=>renderer.setMesh(cabinet.id);setMeshRaw=id=>renderer.setMesh(id);rawDraw=frame=>renderer.draw(frame);queueSnapshot();
+  updateMesh=()=>renderer.setMesh(cabinet.id);drawNeighbour=(id,frame)=>renderer.drawNeighbour(id,frame);queueSnapshot();
   render=(time,moving)=>{projection=renderer.draw({time,moving,still:still(),flat,night,ground,lift,opening:bookProgress,px,py,zoom,panX,panY,trails,presence:hover||autoPlaying||demoStart?1:0,offset:dragOffset,kick,years});kick=0;};
   paintGhost=(ghost,ward)=>renderer.paintNeighbour(ghost,ward,night);
   poke=renderer.poke;
   dispose=renderer.dispose;failed=false;{const pending=Boolean(renderer.loading());$('loading').hidden=!pending;$('loading').dataset.kind=pending?'plate':'';}canvas.dataset.renderer=renderer.mode();schedule();
 }
-function failure(error){failed=true;render=null;updateMesh=null;poke=null;rawDraw=setMeshRaw=paintGhost=null;canvas.dataset.renderer='failed';$('loading').dataset.kind='';$('loading').hidden=false;syncLanguage();syncMotion();console.error('Toji study:',error);}
+function failure(error){failed=true;render=null;updateMesh=null;poke=null;drawNeighbour=paintGhost=null;canvas.dataset.renderer='failed';$('loading').dataset.kind='';$('loading').hidden=false;syncLanguage();syncMotion();console.error('Toji study:',error);}
 // A lost context leaves the still picture; if the browser restores the context, three.js is tried again.
 listen(canvas,'webglcontextlost',e=>{e.preventDefault();cancelAnimationFrame(frame);frame=0;dispose?.();try{init({static:true});syncMotion();}catch(error){failure(error);}});
 listen(canvas,'webglcontextrestored',()=>{dispose?.();try{init();syncMotion();}catch(e){failure(e);}});
