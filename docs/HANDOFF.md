@@ -7,7 +7,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 主線 | `main` 與 `origin/main`：2026-11-18 晚合併 `claude/mat-table`（快轉）並 push，使用者同意（「你自己作完這些問題後推上去」）。內容：材質表解耦第 0–2 步（`49978c8`、`ec1a9df`、`81b2b9a`；第 2 步的第一版 `d99774d` 上線後以 `5e0ae16` 退掉）、makie-painting skill 的交接與備份、解耦提案。之前的 `56fc135` 是資料線的全庫事實查核（792 → 734 筆）。2026-11-20 快轉合併 `claude/mat-table-34`（到 `8c00620`：材質表第 3、4b 步、ADR 0016）並 push，使用者分別同意；同日再快轉合併 `claude/mat-table-4c`（到 `b406ad9`：第 4c 步、ADR 0017 取代 0013）並 push（「取代 合併推上」）。實際位置以 `git log -1 main` 為準；部署結果見 §3 |
-| 工作分支 | `claude/cold-compile`（自 `main` @ `09ecd79`）：第一次載入先 `compileAsync` 整個場景、編譯期間顯示降級圖，冷快取時頁面不再整頁卡住（最長長任務 11–16 秒 → 0.4–1 秒；到實景仍要十幾秒，期間是降級圖），畫面逐像素不變，ADR 0018（材質表提案 §8.16）。2026-11-20 快轉合併 `main`（`f1fd766`）並 push，使用者分別同意；分支可以刪。之前的 `claude/mat-table-4c`（自 `main` @ `8c00620`）：拿掉 `doha.js` 的 `tongue`、`wedge.far` 填色旗標，量測腳本與測試改讀材質的 `fine` 欄，`mat.js` 加 `lookOf`；去鍵雜湊與量測輸出改前改後相同（材質表提案 §8.15）。已併入 `main` 並 push；`claude/mat-table-4c`、`claude/mat-table-34`、`claude/mat-table` 都可以刪。`claude/finish-1117`、`claude/data-1117` 都已併入 `main`，可以刪（刪前確認 `git log main..<branch>` 為 0） |
+| 工作分支 | `claude/next-1120`（自 `main` @ `2d51073`）：使用者 11/20 晚要主代理自己排的下一批（[`plans/2026-11-20-next.md`](plans/2026-11-20-next.md)）：地著色器冷編譯減半（ADR 0019，材質表提案 §8.17；18 個像素差 1 級，等使用者決定接不接受），**未合併、未 push**。2026-11-20 整理過分支：本機與遠端只剩 `main` 與這一條；最近上線的是材質表第 3–4c 步（ADR 0016、0017）與第一次載入先非同步編譯（ADR 0018，材質表提案 §8.14–§8.16）。`_wt_kyoto_doha` 工作樹已拆，它的截圖與派工紀錄在 `.shots/_archive_wt_kyoto_doha/` |
 | 資料分支 | `claude/data-1117`（自 `claude/finish-1117`，2026-11-17 晚）：拿掉 `getLatLng` 的假座標、YS-045 改商店類、食處描述只留有來源的說法（報告 [`agent-runs/2026-11-17-data-cleanup.md`](agent-runs/2026-11-17-data-cleanup.md)）。四項驗收過、地圖用瀏覽器面板開過中京區；連同 B-0 量測與「地圖維持現狀」已併入 `main`（`c548ae0`）並 push，GitHub Pages 部署成功（2026-11-17 晚，使用者分別同意合併與 push）。之後同一分支上做了全庫事實查核（商店、ACG、寺社、自然、近代設施、交通；734 筆），**未合併 `main`、未 push** |
 | 本機分支清理 | 2026-11-16 刪除已併入 `main` 的本機 `claude/great-brahmagupta-ye2uqt`、`claude/threert-reference`（刪前確認 `git log main..<branch>` 為 0） |
 | 遠端分支 | 2026-11-16 刪除已併入 `main` 的 `origin/claude/great-brahmagupta-ye2uqt`、`origin/claude/amazing-cerf-cuoj8j`（使用者同意）。遠端只剩 `main` |
@@ -126,7 +126,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ### 4.6 其他待辦
 
-0. 建盤的另一半時間在建部件網格（`creature-mesh.js` 的 `makePillow`、`architecture-mesh.js` 的 `meshWall`、`meshRoof`、`meshSandCone`），可以再拿回幾十毫秒與換區的長幀（開案書 §12 的發現）；還沒做。
+0. 建部件網格的效能：11/17 已做（`ab60d26`，`makePillow` 等，十一區部件逐位元相同；[報告](agent-runs/2026-11-17-mesh-perf.md)）。剩下的小項（`meshRock` 約 18 ms、中京預建的 387 ms 長工作要改構圖檔才能切）收益小，沒排。
 1. 用 ThreeRT 算每區俯視遮蔽圖給地用（[研究](plans/2026-11-16-lighting-research.md) 實驗 2），還沒做。
 2. 使用者還沒在實機上看 11/16–17 上線的畫面。
 3. 12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。

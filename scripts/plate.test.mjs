@@ -1705,7 +1705,22 @@ test('material table: every fill is painted as its part material says (fine), in
     }
   }
   const bake = readFileSync(new URL('../src/studies/toji/plate/bake.js', import.meta.url), 'utf8');
-  assert.deepEqual(bake.match(/\.far|f\.tongue/g) ?? [], [], 'bake.js does not read the fill flags');
+  assert.deepEqual(bake.match(/\.far\b|f\.tongue\b/g) ?? [], [], 'bake.js does not read the fill flags');
   const glb = readFileSync(new URL('../src/studies/toji/plate/export-glb.js', import.meta.url), 'utf8');
   assert.ok(!/\[MAT\.\w+\]:\s*'#/.test(glb), 'export-glb.js has no colour table of its own (MAT_LOOK refColour)');
+});
+
+// Behaviour (docs/plans/2026-11-18-material-table.md §8.17): mNashiji and mMetal read what mSetLightAt set for the pixel (its
+// light, and its chips and metal at one position), so every shader that calls them sets it first, and nothing sets the light alone.
+test('ground shaders: every shader that paints nashiji or metal sets the light and position first (mSetLightAt)', async () => {
+  const pack = await import('../src/studies/toji/plate/three-pack.js');
+  const shaders = Object.entries(pack).filter(([name, value]) => typeof value === 'string' && name.endsWith('_FRAG_GLSL')).map(([name, src]) => [name, src.includes('void main') ? src.slice(src.indexOf('void main')) : src]); // a shader that carries the library checks its main
+  const users = shaders.filter(([, src]) => /\b(mNashiji|mMetal)\(/.test(src));
+  assert.ok(users.length >= 3, 'the lid, the box side and the mist paint nashiji or metal');
+  for (const [name, src] of users) {
+    const first = src.search(/\b(mNashiji|mMetal)\(/), set = src.indexOf('mSetLightAt(');
+    assert.ok(set >= 0 && set < first, `${name} calls mSetLightAt before its first mNashiji or mMetal`);
+  }
+  for (const [name, src] of shaders) assert.ok(!/\bmSetLight\(/.test(src), `${name} sets the light only through mSetLightAt`);
+  assert.ok(!/\b(mNashiji|mMetal)\((kp|sp|vKyotoUv),/.test(pack.MAKIE_GROUND_PARS_GLSL + shaders.map(([, s]) => s).join('')), 'no call passes a position of its own');
 });
