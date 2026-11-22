@@ -287,3 +287,20 @@
 - **更正 W19**：`probe.js` 留在產品包是刻意的。`MAKIE_PLATE_HANDOFF.md` §第 312 行：閃爍量測要在實機的線上頁面加 `?probe=flicker` 跑。不加 DEV 條件。
 - **不做「`npm test` 失敗時自動存輸出」**（B9）：偶發只出現過一次；在驗收指令外面包一層，等於多一個會壞的地方。再出現時用 `npm test > .shots/test.log 2>&1` 重跑即可。
 - **派出、還在跑**：A3（`study.js` 係數命名，Neon medium，`_wt_kyoto_static`，分支 `agent/a3-1122`）；H3（首頁冒煙測試 `scripts/smoke.mjs`，Hydrogen high，`_wt_kyoto_types2`，分支 `agent/smoke-1122`）。派工單在各工作樹的 `.claude/dispatch/`。
+
+### 9.5 A3、冒煙測試、A 關卡（2026-11-23 00:30，整合分支 `a637e38`）
+
+- **A3 `study.js` 係數命名**（`gemini-4-neon-medium`，§8.3(b)）：檔頭一張 `FEEL` 表，46 個時間與手感係數各有名字與說明。主席用腳本驗：把每個 `FEEL.名稱` 代回數字、刪掉表，壓縮後與改前逐字相同；46 個名字全部有用到。
+- **跨檔的兩組數字改成導出**（主席，`a637e38`）：Neon 指出拖曳門檻 8 px 與 `interaction.js` 的 `isTap` 是同一個數、光跡邊界 364 × 234 是蓋面 370 × 240 各內縮 6。現在 `interaction.js` 匯出 `TAP_SLOP_PX`、`LID_HALF_X`、`LID_HALF_Z`，`study.js` 讀它們，只留 `FEEL.trailInset`（6）。`liftEmbedded`（.88）加 `idleLiftAmp`（.12）等於 1 這一組只寫在註解裡，沒有合併（兩個是不同的概念，剛好相加為 1 是調出來的結果）。
+- **冒煙測試**（`gemini-4-hydrogen-high`）：`npm run smoke`（`scripts/smoke.mjs`）走首頁 → 右方向鍵換函 → Enter 開蓋進卷 → 返回，最後檢查 console 沒有錯誤；約 5 秒。需要 dev server 與 GPU，不進 `npm test`。主席實際跑：正常時連過 6 次；反向檢查兩種都會失敗（在 `main.tsx` 加一行 `console.error` → 失敗在 `console`；把返回鈕的 class 改掉 → 失敗在 `open`），還原後恢復通過。
+- **A 關卡**：全組矩陣 `.shots/chain/after-a/` 對 `after-a2`。103 張 0 差異；3 張共 4 個像素差 1 級，都落在之前看過的同一批位置（南區 (448,261)、中京 (755–757, 387–392)）。重拍兩次：`base/minami-night` 與 `after-a2` 0 差異；`base/nakagyo-day`、`swapB/minami-day` 與最初的基準 `before` 0 差異。也就是每一張都和某一次改前的拍攝逐像素相同。**這幾個像素會在兩個相差 1 級的值之間跳，和程式修改無關**；之前文件記的「同一份程式拍兩次 0 差異」在這幾個像素上不成立。之後比對遇到這些位置，照「重拍、重現才算」處理。
+- 四項檢查（`a637e38`）：`npm run lint` exit 0；`validate --strict` ERROR 0／WARN 0；`npm test` 156／156、17／17；`npm run build` exit 0（`main` 362.56 kB、`three-renderer` 802.79 kB）；部件雜湊 11／11。
+
+**階段 A 到這裡完成**（A0–A5 裡只剩依賴升級在驗，見 §9.6）。
+
+### 9.6 依賴升級（進行中）
+
+- `npm update` 全部升到相容範圍內的最新版之後，`main` 包從 362.56 kB 變成 393.41 kB（+31 kB），來源是 react 19.2.6 → 19.3.1 或 motion 12.38.0 → 12.43.0。沒有換來任何需要的東西，**不升這兩個**。
+- 只升建置工具與 three 的補丁版：three 0.186.0 → 0.186.1、vite 6.4.2 → 6.4.6、tailwindcss 4.3.0 → 4.3.5、tsx 4.22.1 → 4.23.15、`@types/*`。升完 `main` 仍是 362.56 kB。
+- 途中 `npm ci` 以 EBUSY 中斷：`node_modules/.cache/chrome-profile` 被常駐的無頭 Chrome（9377 埠）鎖住。之後的 `npm update` 把缺的套件補回來；主席在工作樹另做一次乾淨安裝，逐檔比對主資料夾的 `node_modules`：14,291 個檔一個不缺（多 3 個 npm 改名留下的暫存原生模組，無害）。**在這個 repo 不要在拍圖用的 Chrome 開著時跑 `npm ci`**；要乾淨安裝就先關掉自己啟動的那個 Chrome，或在工作樹裝。
+- dev server 已重啟；全組矩陣對 `after-a` 的比對在跑。
