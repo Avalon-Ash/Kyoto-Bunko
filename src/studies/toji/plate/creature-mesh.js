@@ -208,6 +208,8 @@ const plateUv = p => [p[0], p[2]];
 /**
  * A pillow: the polygon raised to height `h` with a rounded shoulder `round` wide and a faint dome.
  * Returns the sampler `height(x, z)` (0 outside) as well as the data to mesh it.
+ * @param {number[][]} poly
+ * @param {{h?: number, round?: number, dome?: number, target?: number, coarse?: number}} [opts]
  */
 export function makePillow(poly, {h, round = h, dome = .1, target, coarse} = {}) {
   const outline = cleanPolygon(poly);
@@ -235,7 +237,13 @@ export function pillowChunk(pillow, mat, {uv = plateUv} = {}) {
 /** The surface of several pillows: wherever they overlap, the higher one shows. */
 export const surfaceOf = pillows => (x, z) => { let y = 0; for (const p of pillows) y = Math.max(y, p.height(x, z)); return y; };
 
-/** A thin sheet of cut metal following `surface`, lifted `lift` above it (and `shift` for a part whose plane sits elsewhere). */
+/**
+ * A thin sheet of cut metal following `surface`, lifted `lift` above it (and `shift` for a part whose plane sits elsewhere).
+ * @param {number[][]} poly
+ * @param {(x: number, z: number) => number} surface
+ * @param {number} mat
+ * @param {{lift?: number, shift?: number, target?: number, uv?: (p: number[]) => number[]}} [opts]
+ */
 export function sheet(poly, surface, mat, {lift = .22, shift = 0, target, uv = plateUv} = {}) {
   const outline = cleanPolygon(poly);
   if (outline.length < 3) throw new Error('sheet: need a polygon of at least 3 points');

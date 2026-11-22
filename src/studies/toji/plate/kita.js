@@ -11,7 +11,10 @@ import {mountain, tongues} from './doha.js';
 // The outline pond() draws for 'kyoko' (same arguments): the reeds are set on its north-west bank.
 const POND = [-5, 68, 244, 82, 3];
 const shore = blob(...POND, .055, 80);
-/** A reed clump on the shore at index i, rooted a little inland, leaning out over the water. */
+/**
+ * A reed clump on the shore at index i, rooted a little inland, leaning out over the water.
+ * @returns {[number, number, number, number, number]}
+ */
 function reed(i, h, n) {
   const [x, z] = shore[i];
   return [x, z - 1.2, h, n, .08];

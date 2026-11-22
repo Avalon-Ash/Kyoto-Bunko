@@ -8,6 +8,7 @@ const quad = (a, c, b, n = 10) => Array.from({length: n + 1}, (_, i) => {
   const t = i / n, u = 1 - t;
   return [u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]];
 });
+/** @returns {import('./vocab.js').Part} */
 const part = (id, kind, layer, mat, anchor, extra = {}) => ({
   id, kind, group: id, order: 0, layer, mat, reach: .7, thick: 0, bias: 0, anchor, fills: [], lines: [], ...extra,
 });
@@ -105,6 +106,7 @@ export function meshTorii(id, cx, zFoot, s = 1, {layer = 2, group = id, order = 
     p.fills.push({d: [P(side * 36 - 4.4, 0), P(side * 36 + 4.4, 0), P(side * 32 + 3.8, 90), P(side * 32 - 3.8, 90)], soft: 0, crisp: 1});
 
     const [lx0, lz0] = P(side * 36, 9), [lx1, lz1] = P(side * 32.6, 52);
+    /** @type {[number, number, number][]} */
     const postBand = Array.from({length: 13}, (_, k) => {
       const t = k / 12, px = lerp(lx0, lx1, t), pz = lerp(lz0, lz1, t);
       return [px, postSurfaceY(x0, z0, r0, x1, z1, r1, heightRatio, postSides, px, pz), pz];
@@ -135,6 +137,7 @@ export function meshTorii(id, cx, zFoot, s = 1, {layer = 2, group = id, order = 
   p.fills.push({d: [...kLow, ...[...kUp].reverse()], soft: 0, crisp: 1});
 
   // Surface gold band along kasagi
+  /** @type {[number, number, number][]} */
   const bandPts = quad(P(-54, 98.5), P(0, 86.5), P(54, 98.5), 24).map(([x, z]) => [x, 7 * s, z]);
   mesh.push(ribbonMesh(bandPts, .7 * s, .15 * s, MAT.hyomonGold));
   p.mesh = mesh;

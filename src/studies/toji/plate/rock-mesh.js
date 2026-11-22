@@ -69,6 +69,13 @@ const FOIL_LIGHT = unit([-.45, .78, .44]);
  * Explicit-mesh high-makie rock: sculpted 8-facet rounded mound with an upper-left secondary peak,
  * two carved ridge lines, and a dense mosaic of square kirikane/kirigin foil tiles lifted ~0.1 off
  * the surface along its normal.
+ * @param {string} id
+ * @param {number} cx
+ * @param {number} cz
+ * @param {number} w
+ * @param {number} h
+ * @param {number} seed
+ * @param {{mat?: number, layer?: number, outline?: number[][], peaks?: {x: number, z: number, rx: number, rz: number, h: number}[], height?: number, lines?: number[][][], foil?: number}} [opts]
  */
 export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1, outline, peaks, height, lines, foil} = {}) {
   if (typeof id !== 'string' || !id) throw new Error(`meshRock: invalid id ${id}`);

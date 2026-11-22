@@ -9,7 +9,10 @@ import {mountain, tongues} from './doha.js';
 
 // The stream's own points and widths, kept here so its banks can be found again for the grass.
 const STREAM = [[[-8, -150], [22, -70], [-30, 20], [14, 110], [-26, 232]], [7, 11, 17, 25, 36]];
-/** A tuft on the bank of the stream at t (0 head, 1 foot), side -1 east or 1 west, set 2.5 units out from the water. */
+/**
+ * A tuft on the bank of the stream at t (0 head, 1 foot), side -1 east or 1 west, set 2.5 units out from the water.
+ * @returns {[number, number, number, number, number, boolean]}
+ */
 function bankTuft(t, side, h, n, flower = false) {
   const [x, z] = streamEdge(...STREAM, t, side);
   return [x - side * 2.5, z, h, n, -side * .2, flower];

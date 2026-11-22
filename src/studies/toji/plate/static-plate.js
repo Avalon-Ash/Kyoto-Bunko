@@ -22,7 +22,7 @@ function load(key) {
       const entry = pictures[key];
       if (!entry) return null; // no such picture
       try {
-        const url = await entry();
+        const url = /** @type {string} */ (await entry());
         // Decoded before it is laid down, so a change of cabinet never shows an empty box.
         await new Promise((resolve, reject) => { const img = new Image(); img.onload = resolve; img.onerror = reject; img.src = url; });
         return url;

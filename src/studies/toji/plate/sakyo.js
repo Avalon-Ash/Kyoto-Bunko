@@ -6,7 +6,10 @@ import {mountain, tongues} from './doha.js';
 // The outline pond() draws for 'kinkyo' (same arguments): the grass is set on it.
 const POND = [-182, 36, 112, 67, 5];
 const shore = blob(...POND, .055, 80);
-/** A tuft just outside the pond's shore at index i, leaning away from the water. */
+/**
+ * A tuft just outside the pond's shore at index i, leaning away from the water.
+ * @returns {[number, number, number, number, number, boolean]}
+ */
 function bank(i, h, n, flower = false) {
   const [x, z] = shore[i], dx = x - POND[0], dz = z - POND[1], l = Math.hypot(dx, dz);
   return [x + dx / l * 2.2, z + dz / l * 2.2, h, n, Math.sign(dx) * .22, flower];
