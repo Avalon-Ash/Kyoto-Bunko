@@ -6,7 +6,7 @@
 //   threshold  FLOOR_X times the floor of that kind (tongues and rocks: the tongues' floor; banks: the banks'), never under MIN_DIST: a pair under it is called a copy, and the test fails
 // Usage: node scripts/plate-doha-similar.mjs [W_NAKAGYO W_FUSHIMI ...]
 import {PLATES, preparePlate} from '../src/studies/toji/plate/parts.js';
-import {MAT, FINE, lookOf} from '../src/studies/toji/plate/mat.js';
+import {FINE, lookOf} from '../src/studies/toji/plate/mat.js';
 import {KIND} from '../src/studies/toji/plate/vocab.js';
 import {tongueGeom, bankGeom} from '../src/studies/toji/plate/doha.js';
 import {fileURLToPath} from 'node:url';

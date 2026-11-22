@@ -76,7 +76,7 @@ export function poseKit(pose) {
  * @returns {THREE.Scene}
  */
 export function plateScene(doc, pose) {
-  const {parts, soft, ident, mw, mh, a, b, box} = pose;
+  const {parts, ident, mw, mh, box} = pose;
   const {groundY, groundNormal, partVertex, treeVertex} = poseKit(pose);
 
   const scene = new THREE.Scene();

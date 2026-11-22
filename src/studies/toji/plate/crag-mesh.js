@@ -223,7 +223,7 @@ export function meshCrag(id, cx, cz, spec0) {
   const mesh = [...out.entries()].map(([mat, vertices]) => ({mat, vertices}));
   if (lineV.length) mesh.push({mat: MAT.rockLine, vertices: lineV});
   if (tileV.length) mesh.push({mat: MAT.kirikane, vertices: tileV});
-  const fills = loops.map((d, i) => ({d, soft: .35, crisp: .7, }));
+  const fills = loops.map(d => ({d, soft: .35, crisp: .7, }));
   fills.push({d: loops[0].map(([x, z]) => { const m = loops[0].reduce((s, q) => [s[0] + q[0] / loops[0].length, s[1] + q[1] / loops[0].length], [0, 0]); return [m[0] + (x - m[0]) * .55, m[1] + (z - m[1]) * .55]; }), soft: .5, crisp: 1});
   const near = Math.max(...loops[0].map(q => q[1]));
   return [{id, kind: KIND.rock, group: id, order: 0, layer: spec.layer ?? 1, mat: MAT.rockGold, reach: 4, thick: 0, bias: 0, anchor: [cx, near - 2], fills, lines: [], mesh}];

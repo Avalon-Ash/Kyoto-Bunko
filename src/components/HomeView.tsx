@@ -39,6 +39,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ engine, cabinetWard, onCabin
     target?.focus({ preventScroll: mode !== 'area' });
     if (mode === 'area') target?.scrollIntoView({ block: 'nearest' });
     // Only on mount: later mode switches start at the top of their index.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only, see the line above
   }, []);
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: 0, behavior: 'auto' }); }, [mode]);

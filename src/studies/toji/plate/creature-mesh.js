@@ -409,7 +409,7 @@ export function meshSandCone(p, cx, zBase, halfW, top) {
 }
 
 /** The small shinnuri vessel on the cone, with the moon's reflection and silver light lines laid inside its mouth. */
-export function meshMoonBowl(bowl, reflection, light, bias) {
+export function meshMoonBowl(bowl, reflection, light) {
   const vessel = makePillow(bowl.fills[0].d, {h: 10, round: 5.5, dome: .1}), surface = surfaceOf([vessel]);
   bowl.mesh = mergeChunks([pillowChunk(vessel, MAT.lacquer), strip(bowl.lines[0].d, .9, surface, MAT.kirikane, {lift: .25})]);
   reflection.mesh = [sheet(reflection.fills[0].d, surface, MAT.aogai, {lift: .3, target: 1.8})];
