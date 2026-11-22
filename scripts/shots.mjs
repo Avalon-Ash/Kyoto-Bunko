@@ -16,9 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * 產生 16 組截圖矩陣與對應的 32 張檔名。
- * @param {string | { out?: string, outDir?: string }} [options]
- * @returns {Array<{
+ * @typedef {{
  *   width: number,
  *   height: number,
  *   theme: 'day' | 'night',
@@ -29,7 +27,13 @@ import { fileURLToPath } from 'node:url';
  *   dwellFile: string,
  *   files: string[],
  *   shots: Array<{ kind: 'full' | 'dwell', file: string }>
- * }>}
+ * }} ShotGroup
+ */
+
+/**
+ * 產生 16 組截圖矩陣與對應的 32 張檔名。
+ * @param {string | { out?: string, outDir?: string }} [options]
+ * @returns {ShotGroup[]}
  */
 export function matrix(options = {}) {
   const outDir = typeof options === 'string'
@@ -40,8 +44,11 @@ export function matrix(options = {}) {
     { width: 1440, height: 900 },
     { width: 375, height: 812 },
   ];
+  /** @type {Array<'day' | 'night'>} */
   const themes = ['day', 'night'];
+  /** @type {Array<'zh' | 'ja'>} */
   const langs = ['zh', 'ja'];
+  /** @type {Array<'motion' | 'reduced'>} */
   const motions = ['motion', 'reduced'];
 
   const groups = [];
@@ -62,10 +69,10 @@ export function matrix(options = {}) {
             fullFile,
             dwellFile,
             files: [fullFile, dwellFile],
-            shots: [
+            shots: /** @type {ShotGroup['shots']} */ ([
               { kind: 'full', file: fullFile },
               { kind: 'dwell', file: dwellFile },
-            ],
+            ]),
           });
         }
       }

@@ -76,7 +76,7 @@ if (isMain) {
       if (over) bad++;
       worst = Math.max(worst, max); total += differ;
       line = {name, pixels: diff.length, differ, share: Math.round(pct * 10000) / 10000, max, ...(differ ? {box: [x0, y0, x1, y1]} : {}), ...(noise ? {noise: noisy, inNoise: masked} : {}), ok: !over};
-    } catch (error) { bad++; line = {name, error: error.message, ok: false}; }
+    } catch (error) { bad++; line = {name, error: /** @type {Error} */ (error).message, ok: false}; }
     console.log(JSON.stringify(line));
   }
   console.log(JSON.stringify({pictures: names.length, failing: bad, differingPixels: total, largestDifference: worst, tol, share, ...(noiseDir ? {noise: noiseDir} : {})}));

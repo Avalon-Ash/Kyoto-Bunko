@@ -22,7 +22,8 @@ import {WARD_ART} from './ward-art.js';
  * onOpenVolume: called once the lid is open; without it the lid simply stays open until closed again.
  */
 export function mountBunko(root,options={}){
-const $=id=>root.querySelector(`[id="${id}"]`);
+/** @param {string} id @returns {HTMLElement} */
+const $=id=>/** @type {HTMLElement} */(root.querySelector(`[id="${id}"]`));
 let destroyed=false;
 const events=new AbortController();
 const listen=(target,type,handler,settings={})=>target.addEventListener(type,handler,{...(typeof settings==='boolean'?{capture:settings}:settings),signal:events.signal});
@@ -52,7 +53,7 @@ const ghosts=options.embedded?[-1,1].map(side=>{
   const ghost=document.createElement('canvas');ghost.className='neighbour';ghost.setAttribute('aria-hidden','true');ghost.dataset.side=String(side);
   canvas.before(ghost);return ghost;
 }):[];
-let ghostAnimations=[],ghostsStale=true,ghostTimer=0,drawNeighbour=null;
+let ghostAnimations=[],ghostsStale=true,/** @type {ReturnType<typeof setTimeout>|number} */ghostTimer=0,drawNeighbour=null;
 const spacing=()=>canvas.clientWidth*.82;
 /** Puts the box and its neighbours at `offset` px along the track. */
 function placeTrack(offset){
@@ -65,7 +66,7 @@ function placeTrack(offset){
 }
 /** Moves the whole track from one offset to another; resolves with the box's own animation. */
 function slide(from,to,duration){
-  const gap=spacing(),timing={duration,easing:'cubic-bezier(.3,.7,.2,1)',fill:'forwards'};
+  const gap=spacing(),/** @type {KeyframeAnimationOptions} */timing={duration,easing:'cubic-bezier(.3,.7,.2,1)',fill:'forwards'};
   ghostAnimations.forEach(a=>a.cancel());
   ghostAnimations=ghosts.filter(ghost=>typeof ghost.animate==='function').map(ghost=>{
     const at=Number(ghost.dataset.side)*gap,shown=ghost.dataset.ward?.9:0;
@@ -133,7 +134,8 @@ function syncCabinet(){
   canvas.dataset.ward=cabinet.id;
   syncTrack(dragOffset);
 }
-async function changeCabinet(direction,focusTarget=document.activeElement,fromOffset=0){
+/** @param {number} direction @param {HTMLElement} [focusTarget] @param {number} [fromOffset] */
+async function changeCabinet(direction,focusTarget=/** @type {HTMLElement} */(document.activeElement),fromOffset=0){
   if(bookState!=='closed')return;
   resetZoom(true);
   dragAnimation?.cancel();placeTrack(0);dragOffset=0;canvas.dataset.dragging='false';syncTrack(0);

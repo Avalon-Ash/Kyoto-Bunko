@@ -84,6 +84,7 @@ export function layoutBands(width, height, keep, seed = 7) {
   const rand = random(seed), h = bandHeight(height, width), margin = bandMargin(height), drift = driftAmplitude(width);
   const zone = centreZone(keep), bands = [];
   // The top row enters from the right so the seal (top-left) and caption (bottom-left) stay clear.
+  /** @type {[number, -1 | 1][]} */
   const rows = [[.07, 1], [.2, -1], [.34, 1], [.56, -1], [.74, 1], [.9, 1]];
   for (const [share, side] of rows) {
     const y = Math.max(h / 2, Math.min(height - h / 2, height * (share + (rand() - .5) * .06)));
@@ -350,7 +351,7 @@ function paintMotif(doc, ctx, width, height, dpr, keep, p, name) {
   if (!s || !t) return;
   const cell = Math.max(26, Math.min(38, width * .08)) * tile.cell * dpr;
   stamp.width = Math.max(8, Math.round(cell)); stamp.height = Math.max(8, Math.round(stamp.width * tile.h / tile.w));
-  const sx = stamp.width / tile.w, sy = stamp.height / tile.h, at = ([x, y]) => [x * sx, y * sy];
+  const sx = stamp.width / tile.w, sy = stamp.height / tile.h, /** @type {(p: number[]) => [number, number]} */ at = ([x, y]) => [x * sx, y * sy];
   t.strokeStyle = t.fillStyle = p.motifInk; t.lineWidth = dpr; t.lineJoin = t.lineCap = 'round';
   for (const line of tile.lines ?? []) { t.beginPath(); line.forEach((point, i) => (i ? t.lineTo(...at(point)) : t.moveTo(...at(point)))); t.stroke(); }
   for (const [cx, cy, r] of tile.circles ?? []) { t.beginPath(); t.ellipse(cx * sx, cy * sy, r * sx, r * sy, 0, 0, Math.PI * 2); t.stroke(); }

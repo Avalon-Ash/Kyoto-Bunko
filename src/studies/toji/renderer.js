@@ -23,7 +23,7 @@ export function cameraMatrix(width, height, zoom = 1, cx = 0, cy = 0) {
 
 /**
  * @typedef {{time:number, moving:boolean, still:boolean, flat:boolean, night:boolean, ground:number, lift:number, opening:number,
- * px:number, py:number, zoom:number, panX:number, panY:number, presence?:number, offset?:number, kick?:number, trails:{x:number, z:number, time:number}[]}} Frame
+ * px:number, py:number, zoom:number, panX:number, panY:number, presence?:number, offset?:number, kick?:number, years?:number|null, trails:{x:number, z:number, time:number}[]}} Frame
  * @param {HTMLCanvasElement} canvas
  * @param {string} wardId
  * @param {() => void} [onReady] called when something that was loading has loaded: the three.js module (or its failure, which

@@ -51,7 +51,7 @@ export function mountStudy(root){
     $('night').textContent=t[state.night?'day':'night'];$('night').setAttribute('aria-pressed',String(state.night));
     const number=String(CABINETS.indexOf(cabinet)+1).padStart(2,'0');
     $('cabinet-number').textContent=`${number} / 11`;$('cabinet-name').textContent=name+t.cabinet;$('cabinet-count').textContent=fill(t.count,{n:cabinet.count});
-    for(const [id,direction] of [['previous',-1],['next',1]]){
+    for(const [id,direction] of /** @type {['previous'|'next', number][]} */ ([['previous',-1],['next',1]])){
       const adjacent=adjacentCabinet(cabinet.id,direction).names[state.language];
       $(`${id}-name`).textContent=adjacent;$(`${id}-cabinet`).setAttribute('aria-label',`${t[id]}：${adjacent}`);
     }

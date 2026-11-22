@@ -14,7 +14,8 @@ if (hd.comp !== 2) throw new Error(`directory compression ${hd.comp} not handled
 function readDir(buf) {
   const b = gunzipSync(buf); let p = 0;
   const v = () => { let r = 0, m = 1, c; do { c = b[p++]; r += (c & 0x7f) * m; m *= 128; } while (c & 0x80); return r; };
-  const n = v(), e = Array.from({ length: n }, () => ({}));
+  /** @typedef {{id: number, run: number, len: number, off: number}} DirEntry */
+  const n = v(), e = Array.from({ length: n }, () => /** @type {DirEntry} */ ({}));
   let id = 0; for (const x of e) { id += v(); x.id = id; }
   for (const x of e) x.run = v();
   for (const x of e) x.len = v();
