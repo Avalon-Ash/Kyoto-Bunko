@@ -41,7 +41,7 @@ export function radial(d) {
 /** The crest of a bank over its chord: its height over the chord (in units of its own peak height) at 64 steps along it, and its aspect (peak height / chord). */
 export function crest(ridge) {
   const [x0, z0] = ridge[0], [x1, z1] = ridge[ridge.length - 1], c = Math.hypot(x1 - x0, z1 - z0), ca = (x1 - x0) / c, sa = (z1 - z0) / c;
-  const pts = ridge.map(([x, z]) => [((x - x0) * ca + (z - z0) * sa) / c, (-(x - x0) * sa + (z - z0) * ca) / c]), out = [];
+  const pts = ridge.map(([x, z]) => [((x - x0) * ca + (z - z0) * sa) / c, (-(x - x0) * sa + (z - z0) * ca) / c]), out = /** @type {number[] & {aspect: number}} */ ([]);
   const peak = Math.max(1e-6, ...pts.map(p => Math.abs(p[1])));
   for (let k = 0; k < 64; k++) {
     const u = k / 63; let j = 0;

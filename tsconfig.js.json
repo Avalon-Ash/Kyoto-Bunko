@@ -1,0 +1,7 @@
+{
+  // The JavaScript under src/, scripts/ and tools/ is type-checked from its JSDoc (docs/adr/0021). `npm run lint` runs this after tsconfig.json.
+  // Looser than the TypeScript side on purpose: untyped parameters and nulls are not errors here; a property, option or argument
+  // that does not exist is. The gate is zero errors; fix one with JSDoc, never with a cast to any or a @ts-ignore.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "checkJs": true, "noImplicitAny": false, "noImplicitThis": false, "strictNullChecks": false }
+}

@@ -74,6 +74,7 @@ function bbox(tris) {
 export function probeClip(pose, opts = {}) {
   const minDepth = opts.minDepth ?? .25;
   const groups = [...new Set(pose.parts.filter(p => !p.attach).map(p => p.group))];
+  /** @type {{name: string, group: string | null, risen?: boolean, stand?: number}[]} */
   const postures = [{name: 'lying', group: null}, {name: 'lying-hand', group: null, risen: true}, ...groups.flatMap(g => STANDS.map(stand => ({name: `stand${stand}:${g}`, group: g, stand})))];
   const ground = [], pairs = [];
   for (const posture of postures) {

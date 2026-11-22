@@ -21,13 +21,17 @@ const pushQuad = (out, a, b, c, d, n, uva, uvb, uvc, uvd) => {
 };
 
 /**
+ * @typedef {{mat: number, vertices: number[]}} MeshChunk
+ */
+
+/**
  * Extrudes a strictly convex 2D XZ polygon vertically from y0 to y1.
  * Rejects non-finite input, y1 <= y0, degenerate edges, zero area, concave or self-intersecting polygons.
  * @param {[number, number][]} outlineXZ
  * @param {number} y0
  * @param {number} y1
  * @param {number} mat
- * @returns {{mat: number, vertices: number[]}}
+ * @returns {MeshChunk}
  */
 export function extrudeConvex(outlineXZ, y0, y1, mat) {
   assertMat(mat, 'extrudeConvex');
@@ -99,8 +103,8 @@ export function extrudeConvex(outlineXZ, y0, y1, mat) {
  * Sweeps a closed semi-elliptical cross-section (flat bottom at baseY, arch above) along [x, z, r] points.
  * Rejects < 2 points, r <= 0, duplicate consecutive center points, or non-positive heightRatio.
  * @param {[number, number, number][]} points
- * @param {{heightRatio?: number, baseY?: number, mat: number, sides?: number}} opts
- * @returns {{mat: number, vertices: number[]}}
+ * @param {{heightRatio?: number, baseY?: number, mat?: number, sides?: number}} [opts]
+ * @returns {MeshChunk}
  */
 export function sweepHalfTube(points, {heightRatio = .85, baseY = 0, mat, sides = 12} = {}) {
   assertMat(mat, 'sweepHalfTube');

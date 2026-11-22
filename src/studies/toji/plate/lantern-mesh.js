@@ -3,6 +3,7 @@
 import {MAT, KIND} from './vocab.js';
 import {extrudeConvex, sweepHalfTube, ribbonMesh} from './mesh-geometry.js';
 
+/** @type {[number, number, number][]} */
 const CAP_RING = [
   [-35, 0, 53],
   [-17.5, -6, 48],
@@ -11,6 +12,7 @@ const CAP_RING = [
   [17.5, 6, 48],
   [-17.5, 6, 48],
 ];
+/** @type {[number, number, number]} */
 const CAP_APEX = [0, 0, 63];
 const CAP_THICK = 2.2;
 
@@ -109,7 +111,9 @@ function upperFrameMesh(x, z, s, mat) {
  */
 function capSupportMesh(x, z, s, mat) {
   const w = 11.5, y0 = 2.12, yK = 7 - w * 6 / 17.5, yC = 7, y1 = 8, aF = 17.5 / 6, hBot = 48.6;
+  /** @param {number[]} pt */
   const topPt = ([a, y]) => [x + a * s, y * s, z - (capBottomH(a, y) + CAP_EMBED) * s];
+  /** @param {number[]} pt */
   const botPt = ([a, y]) => [x + a * s, y * s, z - hBot * s];
 
   const pBL0 = [-w, y0], pBR0 = [w, y0];
@@ -255,7 +259,9 @@ export function meshLantern(id, x, z, s = 1) {
   if (!Number.isFinite(x) || !Number.isFinite(z)) throw new Error(`meshLantern(${id}): non-finite position`);
   if (!Number.isFinite(s) || !(s > 0)) throw new Error(`meshLantern(${id}): scale s must be > 0 (got ${s})`);
 
+  /** @returns {[number, number]} */
   const P = (a, h) => [x + a * s, z - h * s];
+  /** @returns {import('./vocab.js').Part} */
   const part = (pid, layer, mat, extra = {}) => ({
     id: pid, kind: KIND.tier, group: id, order: 0, layer, mat, reach: .6, thick: 0, bias: 0, anchor: [x, z], fills: [], lines: [], ...extra,
   });

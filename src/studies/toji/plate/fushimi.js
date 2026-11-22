@@ -131,8 +131,8 @@ export function fushimi() {
     ...romon('romon', -250, 40, 62),
     ...climb(),
     ...fox('kitsune', 176, 200, -1, 1.5),
-    ...pine('pine-a', -100, 214, 100, 16, 3, {clusters: 3}),
-    ...pine('pine-b', 288, 206, 112, -14, 6, {clusters: 3}),
+    ...pine('pine-a', -100, 214, 100, 16, 3),
+    ...pine('pine-b', 288, 206, 112, -14, 6),
     // The bird sits on the crown pad of either pine: on the pad, not above its edge, or it hangs in the air.
     ...bird('uguisu', [[-77.76, 173.28, 1, 'pine-a', 10], [266.22, 160.00, -1, 'pine-b', 10]]),
   ];

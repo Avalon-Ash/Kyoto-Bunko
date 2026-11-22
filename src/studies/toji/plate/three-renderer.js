@@ -137,7 +137,7 @@ export function createThreeRenderer(gl, canvas, onReady) {
   // first visit's compile can be measured (docs/plans/2026-11-18-material-table.md §8.12). Without it the shader text is unchanged.
   const coldProbe = import.meta.env.DEV && new URLSearchParams(location.search).has('cold') ? `uCold${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}` : '';
   // Dev only: ?matSwap=21:19,2:3 draws material 21 as 19 and 2 as 3 on the lid, so that ground-shader paths no ward uses can be exercised.
-  const matSwap = new Map(import.meta.env.DEV ? (new URLSearchParams(location.search).get('matSwap') ?? '').split(',').filter(Boolean).map(pair => pair.split(':').map(Number)) : []);
+  const matSwap = new Map(/** @type {[number, number][]} */ (import.meta.env.DEV ? (new URLSearchParams(location.search).get('matSwap') ?? '').split(',').filter(Boolean).map(pair => pair.split(':').map(Number)) : []));
   // ?age=0..1 sets how old the box looks (0 is as new); every ageing effect is scaled by it.
   const ageParam = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('age') : null;
   // ?years=N sets the lid's age in years (0: fresh from the workshop; 387: the Hatsune trousseau's age); ?age=0..1 sets uAge itself.

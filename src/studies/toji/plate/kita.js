@@ -11,7 +11,10 @@ import {mountain, tongues} from './doha.js';
 // The outline pond() draws for 'kyoko' (same arguments): the reeds are set on its north-west bank.
 const POND = [-5, 68, 244, 82, 3];
 const shore = blob(...POND, .055, 80);
-/** A reed clump on the shore at index i, rooted a little inland, leaning out over the water. */
+/**
+ * A reed clump on the shore at index i, rooted a little inland, leaning out over the water.
+ * @returns {[number, number, number, number, number]}
+ */
 function reed(i, h, n) {
   const [x, z] = shore[i];
   return [x, z - 1.2, h, n, .08];
@@ -67,7 +70,7 @@ export function kita() {
     ...pavilion,
     ...phoenix('ho-o', -85, -168, 1.25, {group: 'kinkaku', order: 6}).map(p => ({...p, motionWith: 'kinkaku-wall-2'})),
     ...pine('island-pine', 171, 97, 124, -15, 6),
-    ...pine('west-pine', -291, -28, 114, 12, 2, {clusters: 3}),
+    ...pine('west-pine', -291, -28, 114, 12, 2),
     ...bird('uguisu', [[148.36, 45.72, -1, 'island-pine', 10], [-270.03, -74.88, 1, 'west-pine', 10]]),
   ];
 }

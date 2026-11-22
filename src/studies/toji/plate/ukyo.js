@@ -64,8 +64,8 @@ export function ukyo() {
     ...rock('dragon-stone', 65, -55, 38, 22, 3),
     ...rock('shore-stone', 140, -48, 24, 20, 7, {mat: MAT.kirigin}),
     ...hall('hojo', -164, 48, 128, 54, {wallH: 34, bays: 9}),
-    ...pine('west-pine', -289, -61, 104, 12, 2, {clusters: 3}),
-    ...pine('ridge-pine', 263, -67, 98, -12, 6, {clusters: 3}),
+    ...pine('west-pine', -289, -61, 104, 12, 2),
+    ...pine('ridge-pine', 263, -67, 98, -12, 6),
     ...maple('near-maple', 272, 214, 104, -8, 9),
     ...bird('uguisu', [[-268.38, -103.48, 1, 'west-pine', 10], [298.77, 161.54, -1, 'near-maple', 12]]),
   ];

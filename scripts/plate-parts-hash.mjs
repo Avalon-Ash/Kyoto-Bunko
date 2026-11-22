@@ -12,7 +12,7 @@ import {PLATES} from '../src/studies/toji/plate/parts.js';
 const BASELINE = fileURLToPath(new URL('../docs/plans/material-table/parts-hash-baseline.json', import.meta.url));
 const plain = (key, value) => {
   if (typeof value === 'function') return '<function>';
-  if (ArrayBuffer.isView(value)) return {type: value.constructor.name, data: Array.from(value)};
+  if (ArrayBuffer.isView(value)) return {type: value.constructor.name, data: Array.from(/** @type {ArrayBufferView & ArrayLike<number>} */ (value))};
   if (typeof value === 'number' && !Number.isFinite(value)) return String(value);
   if (Object.is(value, -0)) return '-0';
   return value;

@@ -32,6 +32,31 @@ const quad = (a, c, b, n = 10) => Array.from({length: n + 1}, (_, i) => {
   const t = i / n, u = 1 - t;
   return [u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]];
 });
+/**
+ * @typedef {{
+ *   id: string,
+ *   kind: number,
+ *   group: string,
+ *   order: number,
+ *   layer: number,
+ *   mat: number,
+ *   reach: number,
+ *   thick: number,
+ *   bias: number,
+ *   anchor: number[],
+ *   fills: {d: number[][], soft: number, crisp: number}[],
+ *   lines: {d: number[][], w: number, amp: number}[],
+ *   mesh?: import('./mesh-geometry.js').MeshChunk[],
+ *   feet0?: number[],
+ *   attach?: string,
+ *   on?: string,
+ *   mountY?: number,
+ *   motionWith?: string,
+ *   rigidGroup?: boolean,
+ * }} Part
+ */
+
+/** @returns {Part} */
 const part = (id, kind, layer, mat, anchor, extra = {}) => ({id, kind, group: id, order: 0, layer, mat, reach: 4, thick: 24, bias: 0, anchor, fills: [], lines: [], ...extra});
 
 /** An organic closed outline. */
@@ -492,6 +517,9 @@ const five = (cx, cz, r, turn) => Array.from({length: 5}, (_, i) => blob(cx + Ma
  * Tufts of grass or reed at the places given: [x, z, height, blades, lean?, flower?]. Blades fan from one root and curve
  * with the lean; a tuft with a flower carries one five-petalled silver blossom on its middle blade.
  * Gold mat = grass, silver mat = reed (narrow spread).  Each blade is a thin leaf inlaid flat, not a raised stalk.
+ * @param {string} id
+ * @param {Array<[number, number, number, number, number?, boolean?]>} spots
+ * @param {{on?: string, mat?: number, seed?: number, w?: number, spread?: number}} [opts]
  */
 export function grassTufts(id, spots, {on, mat = MAT.gold, seed = 1, w = 2.6, spread = .42} = {}) {
   need('grassTufts', id, on);
@@ -519,6 +547,11 @@ export function grassTufts(id, spots, {on, mat = MAT.gold, seed = 1, w = 2.6, sp
 /**
  * A pagoda at a great distance, a flat silhouette of pale gold standing on a ridge (`on`): five stacked eaves and a mast.
  * h is its whole height; zBase is the ridge line under it.
+ * @param {string} id
+ * @param {number} x
+ * @param {number} zBase
+ * @param {number} h
+ * @param {{on?: string}} [opts]
  */
 export function farPagoda(id, x, zBase, h, {on} = {}) {
   need('farPagoda', id, on);
@@ -534,6 +567,11 @@ export function farPagoda(id, x, zBase, h, {on} = {}) {
 /**
  * The character 大 laid out in small squares of cut gold on a slope (`on`), as the bonfire on the mountain is: a bar and
  * two legs, and one square in three of red coral, for the fire. cx, cz is the middle of the bar; size is the bar's full width.
+ * @param {string} id
+ * @param {number} cx
+ * @param {number} cz
+ * @param {number} size
+ * @param {{on?: string, tile?: number, stretch?: number}} [opts]
  */
 export function daimonji(id, cx, cz, size, {on, tile = 3.8, stretch = 1} = {}) {
   need('daimonji', id, on);
@@ -555,6 +593,11 @@ export function daimonji(id, cx, cz, size, {on, tile = 3.8, stretch = 1} = {}) {
  * A plum beside a roof (`on`): a bare branch of dark line work rising from its foot, and on it blossoms of five
  * silver petals, each with a small round heart of red coral. x, z is the foot; s scales it
  * (1 is about 26 tall); lean -1 mirrors it.
+ * @param {string} id
+ * @param {number} x
+ * @param {number} z
+ * @param {number} s
+ * @param {{on?: string, lean?: number}} [opts]
  */
 export function silverPlum(id, x, z, s, {on, lean = 1} = {}) {
   need('silverPlum', id, on);
@@ -576,6 +619,10 @@ export function silverPlum(id, x, z, s, {on, lean = 1} = {}) {
 /**
  * A bamboo fence (`on`) along the line a to b: a horizontal band of silver and upright poles at an even step along it,
  * rising `rise` into the garden. Flat inlay.
+ * @param {string} id
+ * @param {[number, number]} a
+ * @param {[number, number]} b
+ * @param {{on?: string, rise?: number, step?: number, band?: number, pole?: number}} [opts]
  */
 export function bambooFence(id, a, b, {on, rise = 12, step = 7, band = 3.4, pole = 2.6} = {}) {
   need('bambooFence', id, on);

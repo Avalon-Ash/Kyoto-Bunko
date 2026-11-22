@@ -6,7 +6,10 @@ import {mountain, tongues} from './doha.js';
 // The outline pond() draws for 'kinkyo' (same arguments): the grass is set on it.
 const POND = [-182, 36, 112, 67, 5];
 const shore = blob(...POND, .055, 80);
-/** A tuft just outside the pond's shore at index i, leaning away from the water. */
+/**
+ * A tuft just outside the pond's shore at index i, leaning away from the water.
+ * @returns {[number, number, number, number, number, boolean]}
+ */
 function bank(i, h, n, flower = false) {
   const [x, z] = shore[i], dx = x - POND[0], dz = z - POND[1], l = Math.hypot(dx, dz);
   return [x + dx / l * 2.2, z + dz / l * 2.2, h, n, Math.sign(dx) * .22, flower];
@@ -69,8 +72,8 @@ export function sakyo() {
     ...storey('ginkaku-upper', -163, -138, -113, 46, {group: 'ginkaku', order: 2, windowMat: MAT.lacquer}),
     ...roof('ginkaku-crown', -163, -140, 63, 34, {group: 'ginkaku', order: 3, mat: MAT.lacquer, ridgeHalf: 25, motionWith: 'ginkaku-upper'}),
     ...hall('togudo', 84, -102, 82, 32, {wallH: 24}),
-    ...pine('near-pine', -293, 178, 99, 12, 2, {clusters: 3}),
-    ...pine('east-pine', 282, -54, 112, -12, 6, {clusters: 3}),
+    ...pine('near-pine', -293, 178, 99, 12, 2),
+    ...pine('east-pine', 282, -54, 112, -12, 6),
     ...bird('uguisu', [[-272.56, 137.72, 1, 'near-pine', 10], [261.10, -100.00, -1, 'east-pine', 10]]),
   ];
 }

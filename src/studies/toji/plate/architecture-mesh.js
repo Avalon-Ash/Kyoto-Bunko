@@ -11,9 +11,11 @@ const quad = (a, c, b, n = 10) => Array.from({length: n + 1}, (_, i) => {
   const t = i / n, u = 1 - t;
   return [u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]];
 });
+/** @returns {import('./vocab.js').Part} */
 const part = (id, kind, layer, mat, anchor, extra = {}) => ({
   id, kind, group: id, order: 0, layer, mat, reach: .6, thick: 0, bias: 0, anchor, fills: [], lines: [], ...extra,
 });
+/** @returns {[number, number][]} */
 const rect = (x0, x1, z0, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -46,9 +48,14 @@ function tri(out, a, b, c, hint, na, nb, nc, ua, ub, uc) {
 }
 const quadFace = (out, a, b, c, d, hint, na, nb, nc, nd, uvs) => { uvs = uvs || []; tri(out, a, b, c, hint, na, nb, nc, uvs[0], uvs[1], uvs[2]); tri(out, a, c, d, hint, na, nc, nd, uvs[0], uvs[2], uvs[3]); };
 
-/** Chamfers every corner of a convex 2D polygon by at most `chamfer` units. */
+/**
+ * Chamfers every corner of a convex 2D polygon by at most `chamfer` units.
+ * @param {[number, number][]} pts
+ * @param {number} chamfer
+ * @returns {[number, number][]}
+ */
 function chamferConvex(pts, chamfer) {
-  const n = pts.length, out = [];
+  const n = pts.length, out = /** @type {[number, number][]} */ ([]);
   for (let i = 0; i < n; i++) {
     const a = pts[(i - 1 + n) % n], b = pts[i], c = pts[(i + 1) % n];
     const ux = a[0] - b[0], uz = a[1] - b[1], l1 = Math.hypot(ux, uz);
@@ -192,7 +199,15 @@ export function roofSurface(cx, zEave, halfW, rise, ridgeHalf, upturn) {
   return {at, shape: s, k, mountY: 14 * k, eaveY: 11 * k};
 }
 
-/** Roof: a 2.8-deep shell on the original outline, tile bands from ridge to eave, a ridge band and a silver eave lip. */
+/**
+ * Roof: a 2.8-deep shell on the original outline, tile bands from ridge to eave, a ridge band and a silver eave lip.
+ * @param {string} id
+ * @param {number} cx
+ * @param {number} zEave
+ * @param {number} halfW
+ * @param {number} rise
+ * @param {{ridgeHalf?: number, upturn?: number, layer?: number, group?: string, order?: number, tiles?: number, mat?: number, motionWith?: string}} [opts]
+ */
 export function meshRoof(id, cx, zEave, halfW, rise, {ridgeHalf = halfW * .2, upturn = halfW * .09, layer = 2, group = id, order = 0, tiles = 15, mat = MAT.gold, motionWith} = {}) {
   const surf = roofSurface(cx, zEave, halfW, rise, ridgeHalf, upturn), S = surf.at, k = surf.k;
   const p = part(id, KIND.tier, layer, mat, [cx, zEave], {group, order, mountY: surf.mountY, ...(motionWith ? {motionWith} : {})});
@@ -220,7 +235,15 @@ export function meshRoof(id, cx, zEave, halfW, rise, {ridgeHalf = halfW * .2, up
 /** Relief depth of a wall: narrow storeys stand a fifth lower. */
 const wallDepth = halfW => (halfW < 60 ? 6.4 : 8);
 
-/** Storey: a flat wall box, posts and beams a little proud of it, windows set back between the posts. */
+/**
+ * Storey: a flat wall box, posts and beams a little proud of it, windows set back between the posts.
+ * @param {string} id
+ * @param {number} cx
+ * @param {number} zTop
+ * @param {number} zBottom
+ * @param {number} halfW
+ * @param {{bays?: number, layer?: number, group?: string, order?: number, mat?: number, windowMat?: number, motionWith?: string}} [opts]
+ */
 export function meshStorey(id, cx, zTop, zBottom, halfW, {bays = 3, layer = 2, group = id, order = 0, mat = MAT.lacquer, windowMat = MAT.lamp, motionWith} = {}) {
   const wy = wallDepth(halfW), timber = mat === MAT.lacquer ? MAT.gold : mat;
   const wall = part(id, KIND.tier, layer, mat, [cx, zBottom], {group, order, ...(motionWith ? {motionWith} : {})});
@@ -280,6 +303,7 @@ function sorinRing(cx, zc, hw, ry, height, thick, mat, segs = 14) {
 export function meshPagoda(id, cx, zBase, {storeys = 5, halfW = 66, taper = 6.5, pitch = 40, layer = 2} = {}) {
   const parts = [];
   const base = part(`${id}-base`, KIND.tier, layer, MAT.kirigin, [cx, zBase + 10], {group: id, order: 0});
+  /** @type {[number, number][]} */
   const basePoly = [[cx - halfW * .95, zBase], [cx + halfW * .95, zBase], [cx + halfW * 1.04, zBase + 9], [cx - halfW * 1.04, zBase + 9]];
   base.fills.push({d: basePoly, soft: .2, crisp: .9});
   base.mesh = [extrudeConvex(chamferConvex(basePoly, .6), 0, 8, MAT.kirigin)];
@@ -341,6 +365,7 @@ export function meshRomon(id, cx, zBase, halfW, {layer = 2} = {}) {
   lamp.mesh = lmp;
 
   const balcony = part(`${id}-balcony`, KIND.tier, layer, MAT.kirigin, [cx, waist], {group, order: 1});
+  /** @type {[number, number][]} */
   const deck = [[cx - halfW * .92, waist - 6], [cx + halfW * .92, waist - 6], [cx + halfW * .86, waist + 1.5], [cx - halfW * .86, waist + 1.5]];
   balcony.fills.push({d: deck, soft: .2, crisp: .9});
   const bm = [extrudeConvex(chamferConvex(deck, .4), 0, 6, MAT.kirigin)];

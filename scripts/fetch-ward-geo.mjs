@@ -108,13 +108,13 @@ export function selectWard(data, name) {
 export async function publishArtifacts(entries, io = fs) {
   const staged = [], published = [];
   const cleanup = async name => {
-    try { await io.unlink(name); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    try { await io.unlink(name); } catch (error) { if (/** @type {NodeJS.ErrnoException} */ (error).code !== 'ENOENT') throw error; }
   };
   // Refuse stale recovery files before altering either official artifact.
   for (const { file } of entries) {
     for (const suffix of ['.tmp', '.rollback']) {
       try { await io.readFile(file + suffix); }
-      catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+      catch (error) { if (/** @type {NodeJS.ErrnoException} */ (error).code === 'ENOENT') continue; throw error; }
       throw new Error(`Recovery file exists: ${file + suffix}; inspect it before rebuilding`);
     }
   }
@@ -122,7 +122,7 @@ export async function publishArtifacts(entries, io = fs) {
     for (const entry of entries) {
       let previous = null;
       try { previous = await io.readFile(entry.file); }
-      catch (error) { if (error.code !== 'ENOENT') throw error; }
+      catch (error) { if (/** @type {NodeJS.ErrnoException} */ (error).code !== 'ENOENT') throw error; }
       staged.push({ ...entry, previous });
       if (previous !== null) await io.writeFile(entry.file + '.rollback', previous);
       await io.writeFile(entry.file + '.tmp', entry.body);
@@ -168,7 +168,7 @@ export async function main() {
       const cacheFile = path.join(CACHE, `${key}.json`);
       let cached;
       try { cached = JSON.parse(await fs.readFile(cacheFile, 'utf8')); }
-      catch (error) { if (error.code !== 'ENOENT') throw error; }
+      catch (error) { if (/** @type {NodeJS.ErrnoException} */ (error).code !== 'ENOENT') throw error; }
       if (cached && cached.url !== url.href) throw new Error(`${key}: cached query differs; review manually, do not auto-refetch`);
       if (!cached) {
         if (process.argv.includes('--offline')) throw new Error(`${key}: response cache missing in offline mode`);
