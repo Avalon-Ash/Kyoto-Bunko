@@ -303,4 +303,21 @@
 - `npm update` 全部升到相容範圍內的最新版之後，`main` 包從 362.56 kB 變成 393.41 kB（+31 kB），來源是 react 19.2.6 → 19.3.1 或 motion 12.38.0 → 12.43.0。沒有換來任何需要的東西，**不升這兩個**。
 - 只升建置工具與 three 的補丁版：three 0.186.0 → 0.186.1、vite 6.4.2 → 6.4.6、tailwindcss 4.3.0 → 4.3.5、tsx 4.22.1 → 4.23.15、`@types/*`。升完 `main` 仍是 362.56 kB。
 - 途中 `npm ci` 以 EBUSY 中斷：`node_modules/.cache/chrome-profile` 被常駐的無頭 Chrome（9377 埠）鎖住。之後的 `npm update` 把缺的套件補回來；主席在工作樹另做一次乾淨安裝，逐檔比對主資料夾的 `node_modules`：14,291 個檔一個不缺（多 3 個 npm 改名留下的暫存原生模組，無害）。**在這個 repo 不要在拍圖用的 Chrome 開著時跑 `npm ci`**；要乾淨安裝就先關掉自己啟動的那個 Chrome，或在工作樹裝。
-- dev server 已重啟；全組矩陣對 `after-a` 的比對在跑。
+- dev server 重啟後，全組矩陣 `.shots/chain/after-deps/` 對 `after-a`：106 張裡 105 張 0 差異；剩下一張是 `base/minami-night` 的 (448,261)，和 `after-a2` 那一次的同一張 0 差異（已知會跳的像素）。四項檢查與冒煙測試在最終的依賴狀態重跑都過。鎖檔已提交（`f63e37f`）。
+- 用完的工作樹（`_wt_kyoto_static`、`_wt_kyoto_types2`）與分支已清掉；剩 `_wt_kyoto_data`（未審的資料報告）與 `claude/docs-1122`（整合分支的祖先，合併後再刪）。
+
+### 9.7 階段 A 的總帳與接下來
+
+| 項目 | 誰做的 | 結果 |
+|---|---|---|
+| 測試拆成行為與圍欄 | Sonnet 子代理（上限前做完主體） | 斷言 512 → 512，測試 155 → 156 |
+| JavaScript 型別檢查 231 → 0 | agy：Neon medium 一包、Hydrogen high 兩包；主席修三類真問題 | 接進 `npm run lint`；ADR 0021 |
+| ESLint（只管正確性） | 主席 | 20 個發現，修 6 個、關掉 14 個口味規則 |
+| 區順序與拍圖腳本環境（提案 a） | agy Neon medium | 矩陣沒有可歸因的差異 |
+| `study.js` 係數命名（提案 b） | agy Neon medium；跨檔兩組由主席改成導出 | 46 個名字，代回數字後與改前逐字相同 |
+| 冒煙測試 | agy Hydrogen high | 正常通過；兩種反向檢查都會失敗 |
+| 依賴補丁版 | 主席 | react、motion 不升（主包 +31 kB） |
+
+agy 共六包，沒有一包被拒或需要重派；每包主席都重跑驗收並用腳本證明「只改註解」或「只換名字」。
+
+還沒做：階段 B（量測與載入）、C（資料未結項與門面）、D（畫面收尾）、E（合併、push、確認部署、刪 `.shots` 舊批次）。這幾個階段是定調、前後相依的量測、或要查原文的資料，不適合派 agy，要用 Claude 額度。

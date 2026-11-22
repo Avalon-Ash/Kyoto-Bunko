@@ -1,6 +1,6 @@
 # 京都專案交接入口
 
-更新：2026-11-22。這是**唯一的目前狀態入口**；各輪細節在 `agent-runs/`，舊狀態以 Git 歷史為準，不在文件頂端堆疊「最新狀態」。新對話依序讀 `../AGENTS.md`、本檔（**先看 §4**）、[`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md)（目前的開案書：弱點、積壓工作、下一批的拆包）。架構決策在 [`adr/`](adr/README.md)，動結構前先查。蒔繪盤的畫法在 skill `makie-painting`（§4.4）。
+更新：2026-11-23。這是**唯一的目前狀態入口**；各輪細節在 `agent-runs/`，舊狀態以 Git 歷史為準，不在文件頂端堆疊「最新狀態」。新對話依序讀 `../AGENTS.md`、本檔（**先看 §4**）、[`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md)（目前的開案書：弱點、積壓工作、下一批的拆包）。架構決策在 [`adr/`](adr/README.md)，動結構前先查。蒔繪盤的畫法在 skill `makie-painting`（§4.4）。
 
 ## 1. Git 狀態
 
@@ -65,7 +65,9 @@ npm run dev -- --host 127.0.0.1 --strictPort
 3. **地圖維持現狀、不再投資**：T4.3（個別景點地圖）與 MapLibre 從待辦移除；要拔掉另外開案（會取代 ADR 0006）。
 4. **歲時記擱到體質與畫面收完**。
 
-開案書的 P0（本檔與 README 對齊現況）已做。接下來照開案書 §4 的順序：P2（靜態保護）與 P4（資料未結項）並行，同時寫 P3 的解耦提案。
+之後使用者要求把工作排成一條長鏈、對齊一次、做完才合回主線（開案書 §8；回主線前分支自由開，技術上的取捨由主代理定）。使用者事先同意了：全鏈 A–E、解耦提案 (a)(b)、新增 ESLint、刪 `.shots` 舊批次、驗收過就合併 `main` 並 push。
+
+**長鏈做到哪裡**（整合分支 `claude/chain-1122`，還沒合併 `main`；細節在開案書 §9）：階段 A（工程體質）完成：JavaScript 型別檢查與 ESLint 接進 `npm run lint`（ADR 0021）、區的順序與拍圖腳本環境只定義一處、`study.js` 的係數命名、測試拆成行為與圍欄、冒煙測試 `npm run smoke`、依賴補丁版。剩下階段 B（量測與載入）、C（資料未結項與門面；資料查核做了一部分，在工作樹 `C:Git_wt_kyoto_data`，沒審）、D（畫面收尾）、E（合併、push、清理）。
 
 誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與開案書 §4 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
 
@@ -99,6 +101,10 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 - 拍圖：`node scripts/plate-shot.mjs <outDir> <job…>`，job＝`name:steps:theme:WxH:zoom:fx,fy`。步數：南 0、右京 1、西京 2、山科 3、伏見 4、北 5、上京 6、下京 -1、東山 -2、中京 -3、左京 -4。環境變數：`PLATE_TONE=1`（分層調子）、`PLATE_KIRI=1`（切金佔比）、`PLATE_CPU=4`、`PLATE_LIGHT=fx,fy`（把游標光移開）、`PLATE_SHOT_QUERY='?coat=0'`。dev server 在 127.0.0.1:3000、無頭 Chrome 用 9377。
 - 量測：`node scripts/plate-doha-measure.mjs <區…>`（佔比、留白、直線）、`plate-doha-similar.mjs`（形的相似度）、`plate-clip.mjs <out.json>`（穿插）。降級圖：`node scripts/plate-fallback-shots.mjs`（22 張；只改了幾區就把其餘 `git checkout` 還原）。
+- **冒煙測試**：`npm run smoke`（首頁 → 換函 → 開蓋進卷 → 返回，console 無錯；約 5 秒；要 dev server 與 GPU，不在 `npm test` 裡）。改了文箱或首頁的流程就跑一次。
+- **拍圖 job 可以直接寫區名**（`kita`、`W_KITA`），步數的寫法照舊能用；腳本的 dev 位址、埠與 Chrome 啟動都在 `scripts/lib/plate-env.mjs`。
+- **有幾個像素會自己跳 1 級**：南區 (448,261)、中京 (755–757, 387–392)、伏見兩個點（1440×900 的圖）。逐像素比對只在這些位置差 1 級時，重拍那一張再比；和任何一次改前的拍攝相同就不算差異（開案書 §9.4、§9.5）。
+- **不要在拍圖用的 Chrome 開著時跑 `npm ci`**：`node_modules/.cache/chrome-profile` 被它鎖住，`npm ci` 會刪到一半以 EBUSY 中斷。要乾淨安裝就在工作樹裝，或先關掉自己啟動的那個 Chrome（開案書 §9.6）。
 - **要證明一個修改沒有動到畫面**：`bash scripts/plate-matrix.sh <資料夾>` 拍改前與改後（固定時鐘、只拍盤），`node scripts/plate-diff.mjs <改前>/<組> <改後>/<組>` 逐像素比。改前與改後要在同一次開機、同一個 dev server 裡拍（跨一次重開機會差 1–2 級）；有差異的那一張要重拍，重現才算。拍圖進行中不改 `src/`。細節在材質表提案 §8.2、§8.7、§8.8。拍圖腳本的檢查偶爾會讀早了、對某一張報 WRONG 而圖本身是對的（`plans/2026-11-20-next.md` N5）：以比對結果為準並重拍那一張。
 - **加材質**：在 `mat.js` 的 `MAT_LOOK` 加一列：地的欄與配方（`recipe`）、烘焙畫法（`fine`）、網格（`mesh`，`meshLook` 的欄）；地著色器不比材質編號、renderer 不比名字（測試會擋）。不要把上色搬進 GLSL 函式：冷編譯從十幾秒變成 32–49 秒（推測是共用的鋪粉被編譯器在每個配方裡各展開一份）。
 - **要拍開盒的畫面**（盒內、托盤、紙）：`plate-shot.mjs` 加 `PLATE_EVAL_SHOT=1` 與送 Enter 鍵的 `PLATE_EVAL`，會多存一張 `<name>-after.png`；指令在材質表提案 §8.18。
