@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEV_HOME_URL } from './lib/plate-env.mjs';
 
 /**
  * @typedef {{
@@ -258,7 +259,7 @@ export async function main() {
   }
 
   // 2. 檢查目標伺服器連線（連不上時 exit 3）
-  const baseUrl = process.env.SHOTS_BASE || 'http://127.0.0.1:3000/';
+  const baseUrl = process.env.SHOTS_BASE || DEV_HOME_URL;
   try {
     const res = await fetch(baseUrl);
     if (!res.ok && res.status >= 500) {

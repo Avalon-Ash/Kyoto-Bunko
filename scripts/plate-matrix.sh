@@ -8,10 +8,10 @@
 set -u
 out=${1:?usage: bash scripts/plate-matrix.sh <outDir> [group…]}; shift
 groups=${*:-base coat0 new v4 v5 v6 swapA swapB lightoff mobile}
-wards="minami:0 ukyo:1 nishikyo:2 yamashina:3 fushimi:4 kita:5 kamigyo:6 shimogyo:-1 higashiyama:-2 nakagyo:-3 sakyo:-4"
+wards="minami ukyo nishikyo yamashina fushimi kita kamigyo shimogyo higashiyama nakagyo sakyo"
 jobs() { # jobs <theme> <size> [ward…]
   local theme=$1 size=$2; shift 2
-  for w in ${*:-$wards}; do printf '%s-%s:%s:%s-still:%s:1:.5,.5 ' "${w%%:*}" "$theme" "${w##*:}" "$theme" "$size"; done
+  for w in ${*:-$wards}; do printf '%s-%s:%s:%s-still:%s:1:.5,.5 ' "$w" "$theme" "$w" "$theme" "$size"; done
 }
 export PLATE_CLOCK=60000
 fail=0
@@ -24,9 +24,9 @@ for g in $groups; do
     v4|v5|v6) export PLATE_VIEW=${g#v}; j=$(jobs day 1440x900);;
     # Materials no ward draws on the lid: 19 and 20 (banks) stand in for 21 and 22, 3 for 2; then 4 for 2 and 13 for the plain ground.
     swapA)    export PLATE_SHOT_QUERY='?matSwap=21:19,22:20,2:3'; j=$(jobs day 1440x900);;
-    swapB)    export PLATE_SHOT_QUERY='?matSwap=2:4,1:13'; j=$(jobs day 1440x900 minami:0 ukyo:1 kita:5 kamigyo:6);;
+    swapB)    export PLATE_SHOT_QUERY='?matSwap=2:4,1:13'; j=$(jobs day 1440x900 minami ukyo kita kamigyo);;
     lightoff) export PLATE_LIGHT=.02,.95; j=$(jobs day 1440x900);;
-    mobile)   j=$(jobs day 375x812 minami:0 fushimi:4 kamigyo:6);;
+    mobile)   j=$(jobs day 375x812 minami fushimi kamigyo);;
     *) echo "unknown group $g"; fail=1; continue;;
   esac
   mkdir -p "$out/$g"

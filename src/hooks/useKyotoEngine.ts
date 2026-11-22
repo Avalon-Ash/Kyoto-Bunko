@@ -44,14 +44,9 @@
  */
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Lang, FlatSpot, WardKey } from '../types';
-import { loadSpotsByWard, WARD_BY_AREA, getTagCounts, getWardStats } from '../data/index';
+import { loadSpotsByWard, WARD_BY_AREA, WARD_KEYS, getTagCounts, getWardStats } from '../data/index';
 import { translate } from '../data/i18n';
 import { TYPES } from '../data/types';
-
-const ALL_WARD_KEYS: WardKey[] = [
-  'W_KITA','W_KAMIGYO','W_SAKYO','W_NAKAGYO','W_HIGASHIYAMA',
-  'W_SHIMOGYO','W_MINAMI','W_UKYO','W_NISHIKYO','W_YAMASHINA','W_FUSHIMI'
-];
 
 const TYPE_ORDER: Record<string, number> = Object.fromEntries(Object.values(TYPES).map(type => [type.id, type.sortOrder]));
 const TOTAL_COUNT = Object.values(getWardStats()).reduce((a, b) => a + b, 0);
@@ -126,7 +121,7 @@ export function useKyotoEngine() {
     }
     let isMounted = true;
     setIsGlobalLoading(true);
-    Promise.all(ALL_WARD_KEYS.map(w => loadSpotsByWard(w, lang)))
+    Promise.all((WARD_KEYS as WardKey[]).map(w => loadSpotsByWard(w, lang)))
       .then(results => {
         if (isMounted) setAllLoadedSpots(results.flat());
       })

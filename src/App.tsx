@@ -4,13 +4,14 @@ import { useKyotoEngine } from './hooks/useKyotoEngine';
 import { HomeView } from './components/HomeView';
 import { DetailView } from './components/DetailView';
 import type { BunkoPreferences } from './components/BunkoEntrance';
+import { DEFAULT_CABINET } from './studies/toji/collection';
 
 /** Matches --entry-paper in theme.css so the browser chrome blends with the page. */
 const THEME_COLOR = { dark: '#1b2228', light: '#eee8db' };
 
 export default function App() {
   const engine = useKyotoEngine();
-  const [cabinetWard, setCabinetWard] = useState('W_MINAMI');
+  const [cabinetWard, setCabinetWard] = useState<string>(DEFAULT_CABINET);
   const [preferences, setPreferences] = useState<BunkoPreferences>({ night: true, paused: false });
   const theme = preferences.night ? 'dark' : 'light';
   const lang = engine.lang === 'zh' ? 'zh-Hant' : 'ja';

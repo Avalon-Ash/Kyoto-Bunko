@@ -3,29 +3,15 @@
 // Usage: node scripts/plate-clip.mjs <out.json> [--anchor] [--min=0.5]
 //   --anchor measures the trees as they moved before the fix (one flat height per tree), for the before column.
 // Prints one line per finding and a summary; the full list is written to <out.json>. docs/plans/2026-11-16-clip.md.
-import {spawn} from 'node:child_process';
 import {writeFileSync} from 'node:fs';
-import {fileURLToPath} from 'node:url';
+import {SHARED_DEBUG_PORT, ensureSharedChrome, connectCdp, studyUrl, sleep} from './lib/plate-env.mjs';
 
-const PORT = 9377, CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const [out, ...flags] = process.argv.slice(2);
 const anchor = flags.includes('--anchor'), minDepth = Number(flags.find(f => f.startsWith('--min='))?.slice(6) ?? .25);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const alive = async () => { try { return (await fetch(`http://127.0.0.1:${PORT}/json/version`)).ok; } catch { return false; } };
-if (!await alive()) {
-  spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${fileURLToPath(new URL('../node_modules/.cache/chrome-profile', import.meta.url))}`, '--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--hide-scrollbars', '--window-size=1440,900', 'about:blank'], {detached: true, stdio: 'ignore'}).unref();
-  for (let i = 0; i < 40 && !await alive(); i++) await sleep(250);
-}
-const target = await (await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, {method: 'PUT'})).json();
-const ws = new WebSocket(target.webSocketDebuggerUrl);
-await new Promise(r => ws.addEventListener('open', r));
-let seq = 0; const pending = new Map();
-ws.addEventListener('message', e => { const m = JSON.parse(e.data); if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } });
-const send = (method, params = {}) => new Promise(r => { const id = ++seq; pending.set(id, r); ws.send(JSON.stringify({id, method, params})); });
-const evalJs = async expression => { const r = (await send('Runtime.evaluate', {expression, awaitPromise: true, returnByValue: true})).result; if (r?.exceptionDetails) throw new Error(JSON.stringify(r.exceptionDetails)); return r?.result?.value; };
-await send('Runtime.enable'); await send('Page.enable');
+await ensureSharedChrome();
+const {ws, send, evalJs} = await connectCdp(SHARED_DEBUG_PORT, {throwOnException: true});
 await send('Emulation.setDeviceMetricsOverride', {width: 1440, height: 900, deviceScaleFactor: 1, mobile: false});
-await send('Page.navigate', {url: 'http://127.0.0.1:3000/toji-study/index.html'});
+await send('Page.navigate', {url: studyUrl()});
 for (let i = 0; i < 80 && !(await evalJs(`Boolean(document.querySelector('#scene')?.dataset.lift)`)); i++) await sleep(200);
 
 const all = [], seen = new Set();

@@ -4,6 +4,9 @@ import { MAKIE_LANDMARKS } from '../../lib/makie-scene';
 import type { Lang, WardKey } from '../../types';
 import { LANDMARK_STUDIES } from './landmarks.js';
 
+/** Initial cabinet shown on both the home entrance and the standalone study page. */
+export const DEFAULT_CABINET: WardKey = 'W_MINAMI';
+
 const counts = computeWardStats();
 export const CABINETS = WARD_KEYS.map(id => {
   const landmark = MAKIE_LANDMARKS.find(item => item.wardId === id);

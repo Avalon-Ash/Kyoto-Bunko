@@ -2,7 +2,7 @@ import {groundPoint, trailIntensity} from './geometry.js';
 import {createRenderer, cameraMatrix} from './renderer.js';
 import {translate} from '../../data/i18n';
 import {progressToward,isTap,onLid,cabinetDragDirection,cabinetOffset,switchDistance,idlePlaybackAllowed,kanjiNumber} from './interaction.js';
-import {CABINETS,cabinetFor,adjacentCabinet} from './collection';
+import {CABINETS,DEFAULT_CABINET,cabinetFor,adjacentCabinet} from './collection';
 import {LANDMARK_STUDIES} from './landmarks.js';
 import {viewBox,clampPan,clampZoom,isZoomed,rubberBand,panLimit,planePoint,anchorPan,dragPan,isDoubleTap,ZOOM_STEP} from './view.js';
 import {mountBackdrop,cabinetKeepout} from './backdrop.js';
@@ -34,7 +34,8 @@ const still=()=>paused||media.matches;
 let frame=0,last=0,lift=.55,px=0,py=0,tx=0,ty=0,demoStart=0;
 let trails=[];
 let bookState='closed',bookProgress=0,bookTarget=0,bookReadyAt=0,gesture=null,returnFocus=null;
-let cabinet=cabinetFor(options.wardId??'W_MINAMI'),switchAnimation=null,updateMesh;
+let cabinet=cabinetFor(options.wardId??DEFAULT_CABINET),switchAnimation=null,updateMesh;
+if(import.meta.env.DEV)window.__kyotoCabinetIds=CABINETS.map(c=>c.id);
 let dragOffset=0,dragAnimation=null,kick=0;
 // Close-up: current and target zoom/pan; a pinch or pan writes both, the tick eases current toward target.
 let zoom=1,zoomTarget=1,panX=0,panY=0,panTX=0,panTY=0,pinch=null,lastTap=null;

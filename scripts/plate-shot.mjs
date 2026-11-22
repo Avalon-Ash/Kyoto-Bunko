@@ -1,6 +1,6 @@
 // Screenshots of the makie plate through headless Chrome over the DevTools protocol; no Playwright needed.
 // Usage: node scripts/plate-shot.mjs <outDir> <job> [job…]   (the dev server must be on 127.0.0.1:3000)
-// job = name:steps:theme:WxH:zoom:fx,fy   steps: signed cabinet steps from Minami; theme: night|day, plus "-still"
+// job = name:steps:theme:WxH:zoom:fx,fy   steps: signed cabinet steps from the starting ward, or a ward name (kita, KITA, W_KITA); theme: night|day, plus "-still"
 // to press pause first; zoom 1..3; fx,fy: where the light rests, as fractions of the canvas. See docs/MAKIE_PLATE_HANDOFF.md §7.
 // PLATE_SHOT_QUERY=?plate=static node scripts/plate-shot.mjs …  shoots the still-picture fallback instead of three.js.
 // PLATE_TONE=1 also prints each shot's tone over the lid's own pixels (three.js only): luminance percentiles, median
@@ -9,49 +9,39 @@
 // The same line carries three layers (docs/plans/2026-11-16-ground-tone.md): ground (plain ground), dense (faces of dense nashiji: hills,
 // water, banks, suhama, toyama, mist) and pattern (the rest: inlays, parts), each with its share of the lid, L25/L50/L75, and the share of
 // the lid it covers with luminance above 75 (bright). Dev mask view 5 paints plain ground magenta, dense faces cyan, the rest green.
-import {spawn} from 'node:child_process';
 import {writeFileSync, mkdirSync} from 'node:fs';
 import {join} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {SHARED_DEBUG_PORT, ensureSharedChrome, connectCdp, studyUrl, sleep} from './lib/plate-env.mjs';
 
-const PORT = 9377, CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const [outDir, ...jobs] = process.argv.slice(2);
 mkdirSync(outDir, {recursive: true});
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const alive = async () => { try { return (await fetch(`http://127.0.0.1:${PORT}/json/version`)).ok; } catch { return false; } };
-if (!await alive()) {
-  spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${fileURLToPath(new URL('../node_modules/.cache/chrome-profile', import.meta.url))}`, '--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--hide-scrollbars', '--window-size=1440,900', 'about:blank'], {detached: true, stdio: 'ignore'}).unref();
-  for (let i = 0; i < 40 && !await alive(); i++) await sleep(250);
-}
-const target = await (await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, {method: 'PUT'})).json();
-const ws = new WebSocket(target.webSocketDebuggerUrl);
-await new Promise(r => ws.addEventListener('open', r));
-let seq = 0; const pending = new Map(), logs = [];
-ws.addEventListener('message', e => {
-  const m = JSON.parse(e.data);
-  if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); }
-  if (m.method === 'Runtime.consoleAPICalled' && ['error', 'warning'].includes(m.params.type)) logs.push(m.params.args.map(a => a.value ?? a.description).join(' '));
-  if (m.method === 'Runtime.exceptionThrown') logs.push('EXC ' + m.params.exceptionDetails.text + ' ' + (m.params.exceptionDetails.exception?.description ?? ''));
-});
-const send = (method, params = {}) => new Promise(r => { const id = ++seq; pending.set(id, r); ws.send(JSON.stringify({id, method, params})); });
-const evalJs = async expression => (await send('Runtime.evaluate', {expression, awaitPromise: true, returnByValue: true})).result?.result?.value;
-await send('Runtime.enable'); await send('Page.enable');
+await ensureSharedChrome();
+const {target, ws, send, evalJs, logs} = await connectCdp(SHARED_DEBUG_PORT);
 
-// The eleven cabinets in the order the next button walks them from Minami; a job's steps index into it.
-const RING = ['MINAMI', 'UKYO', 'NISHIKYO', 'YAMASHINA', 'FUSHIMI', 'KITA', 'KAMIGYO', 'SAKYO', 'NAKAGYO', 'HIGASHIYAMA', 'SHIMOGYO'];
 const query = new URLSearchParams((process.env.PLATE_SHOT_QUERY ?? '').replace(/^\?/, ''));
 if (process.env.PLATE_CLOCK) query.set('clock', process.env.PLATE_CLOCK);
 const shoot = async job => {
-  const [name, steps, theme, size, zoom, at] = job.split(':'), [w, h] = size.split('x').map(Number), [fx, fy] = at.split(',').map(Number);
+  const [name, stepSpec, theme, size, zoom, at] = job.split(':'), [w, h] = size.split('x').map(Number), [fx, fy] = at.split(',').map(Number);
   await send('Emulation.setDeviceMetricsOverride', {width: w, height: h, deviceScaleFactor: w < 700 ? 2 : 1, mobile: false});
-  await send('Page.navigate', {url: 'http://127.0.0.1:3000/toji-study/index.html' + (query.size ? '?' + query : '')});
+  await send('Page.navigate', {url: studyUrl(query)});
   for (let i = 0; i < 60 && !(await evalJs(`Boolean(document.querySelector('#scene')?.dataset.lift)`)); i++) await sleep(200);
   // The live plate, not the still picture shown while its shaders compile (src/studies/toji/renderer.js): data-renderer turns 'three' at its first frame.
   for (let i = 0; i < 150 && (await evalJs(`document.querySelector('#scene')?.dataset.renderer`)) !== 'three'; i++) await sleep(200);
+  const ids = await evalJs(`window.__kyotoCabinetIds`), startWard = await evalJs(`document.querySelector('#scene')?.dataset.ward`);
+  if (!Array.isArray(ids) || !ids.length || !ids.includes(startWard)) throw new Error(`missing cabinet order: ${JSON.stringify({ids, startWard})}`);
+  const startIdx = ids.indexOf(startWard), n = ids.length, order = [...ids.slice(startIdx), ...ids.slice(0, startIdx)];
+  let stepCount;
+  if (/^[+-]?\d+$/.test(stepSpec)) stepCount = Number(stepSpec);
+  else {
+    const upper = stepSpec.toUpperCase(), id = upper.startsWith('W_') ? upper : 'W_' + upper, idx = order.indexOf(id);
+    if (idx < 0) throw new Error(`unknown ward: ${stepSpec}`);
+    stepCount = idx <= Math.ceil(n / 2) ? idx : idx - n;
+  }
+  const want = order[((stepCount % n) + n) % n];
   if (theme.endsWith('still')) { await evalJs(`document.querySelector('#motion').click()`); await sleep(200); }
   if (theme.startsWith('day')) { await evalJs(`document.querySelector('#night').click()`); await sleep(300); }
-  for (let i = 0; i < Math.abs(Number(steps)); i++) {
-    await evalJs(`document.querySelector('#${Number(steps) < 0 ? 'previous' : 'next'}-cabinet').click()`);
+  for (let i = 0; i < Math.abs(stepCount); i++) {
+    await evalJs(`document.querySelector('#${stepCount < 0 ? 'previous' : 'next'}-cabinet').click()`);
     for (let k = 0; k < 40; k++) { await sleep(150); if (!(await evalJs(`document.querySelector('#next-cabinet').disabled`))) break; }
   }
   await evalJs(`document.querySelector('#scene').scrollIntoView({block:'center'})`);
@@ -81,7 +71,7 @@ const shoot = async job => {
   await sleep(400);
   const info = await evalJs(`JSON.stringify(Object.assign({}, document.querySelector('#scene').dataset))`);
   // The picture must be of the ward and theme the job asked for: a swallowed click leaves the previous ward or theme on screen.
-  const want = 'W_' + RING[((Number(steps) % 11) + 11) % 11], isNight = await evalJs(`Boolean(document.querySelector('#scene').closest('.night'))`);
+  const isNight = await evalJs(`Boolean(document.querySelector('#scene').closest('.night'))`);
   if (JSON.parse(info).renderedWard !== want || isNight !== theme.startsWith('night')) {
     console.log(name, 'WRONG', JSON.parse(info).renderedWard, isNight ? 'night' : 'day', '(wanted', want, theme + ')');
     return false;

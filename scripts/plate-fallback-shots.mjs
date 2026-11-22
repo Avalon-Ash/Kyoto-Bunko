@@ -5,44 +5,42 @@
 //   outDir  default src/studies/toji/plate/static          themes  comma list of day,night (default day,night)
 //   wards   comma list of ward ids (default all eleven)    Needs the dev server on 127.0.0.1:3000 (npm run dev) and Chrome.
 // Files: <WARD>.<theme>.webp. Quality steps down until a file is within BUDGET bytes.
-import {spawn, spawnSync} from 'node:child_process';
+import {spawnSync} from 'node:child_process';
 import {writeFileSync, mkdirSync, mkdtempSync, rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
+import {FALLBACK_DEBUG_PORT, launchChrome, waitForChrome, connectCdp, studyUrl, sleep} from './lib/plate-env.mjs';
 
-const PORT = 9378, CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe', BUDGET = 150 * 1024, SCALE = 1;
-const WARDS = ['W_KITA', 'W_KAMIGYO', 'W_SAKYO', 'W_NAKAGYO', 'W_HIGASHIYAMA', 'W_SHIMOGYO', 'W_MINAMI', 'W_UKYO', 'W_NISHIKYO', 'W_YAMASHINA', 'W_FUSHIMI'];
-const START = 'W_MINAMI';
+const BUDGET = 150 * 1024, SCALE = 1;
 const [outArg, themeArg, wardArg] = process.argv.slice(2);
 const outDir = outArg ?? fileURLToPath(new URL('../src/studies/toji/plate/static', import.meta.url));
-const themes = (themeArg ?? 'day,night').split(','), wards = wardArg ? wardArg.split(',') : WARDS;
+const themes = (themeArg ?? 'day,night').split(',');
 mkdirSync(outDir, {recursive: true});
 const W = Math.round(950 * SCALE), H = Math.round(680 * SCALE);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const alive = async () => { try { return (await fetch(`http://127.0.0.1:${PORT}/json/version`)).ok; } catch { return false; } };
 const profile = mkdtempSync(join(tmpdir(), 'plate-fallback-'));
-const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`, '--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--hide-scrollbars', `--window-size=${W},${H}`, 'about:blank'], {stdio: 'ignore'});
+const chrome = launchChrome({port: FALLBACK_DEBUG_PORT, profileDir: profile, width: W, height: H});
 const done = () => { try { spawnSync('taskkill', ['/F', '/T', '/PID', String(chrome.pid)], {stdio: 'ignore'}); } catch {} try { rmSync(profile, {recursive: true, force: true}); } catch {} };
 process.on('exit', done);
-for (let i = 0; i < 40 && !await alive(); i++) await sleep(250);
-const target = await (await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, {method: 'PUT'})).json();
-const ws = new WebSocket(target.webSocketDebuggerUrl);
-await new Promise(r => ws.addEventListener('open', r));
-let seq = 0; const pending = new Map();
-ws.addEventListener('message', e => { const m = JSON.parse(e.data); if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } });
-const send = (method, params = {}) => new Promise(r => { const id = ++seq; pending.set(id, r); ws.send(JSON.stringify({id, method, params})); });
-const evalJs = async expression => (await send('Runtime.evaluate', {expression, awaitPromise: true, returnByValue: true})).result?.result?.value;
-await send('Runtime.enable'); await send('Page.enable');
+await waitForChrome(FALLBACK_DEBUG_PORT);
+const {target, ws, send, evalJs} = await connectCdp(FALLBACK_DEBUG_PORT);
 await send('Emulation.setDeviceMetricsOverride', {width: W, height: H, deviceScaleFactor: 1, mobile: false});
 await send('Emulation.setDefaultBackgroundColorOverride', {color: {r: 0, g: 0, b: 0, a: 0}});
 
+await send('Page.navigate', {url: studyUrl()});
+for (let i = 0; i < 60 && !(await evalJs(`Boolean(document.querySelector('#scene')?.dataset.lift)`)); i++) await sleep(200);
+const allWards = await evalJs(`window.__kyotoCabinetIds`), startWard = await evalJs(`document.querySelector('#scene')?.dataset.ward`);
+if (!Array.isArray(allWards) || !allWards.length || !allWards.includes(startWard)) throw new Error(`missing cabinet order: ${JSON.stringify({allWards, startWard})}`);
+const wards = wardArg ? wardArg.split(',') : allWards;
+
 for (const theme of themes) for (const ward of wards) {
-  await send('Page.navigate', {url: 'http://127.0.0.1:3000/toji-study/index.html'});
+  await send('Page.navigate', {url: studyUrl()});
   for (let i = 0; i < 60 && !(await evalJs(`Boolean(document.querySelector('#scene')?.dataset.lift)`)); i++) await sleep(200);
   await evalJs(`document.querySelector('#motion').click()`); await sleep(200);          // paused: light centred, no trails
   if (theme === 'day') { await evalJs(`document.querySelector('#night').click()`); await sleep(300); }
-  const steps = WARDS.indexOf(ward) - WARDS.indexOf(START);
+  const idx = allWards.indexOf(ward);
+  if (idx < 0) throw new Error(`unknown ward: ${ward}`);
+  const steps = idx - allWards.indexOf(startWard);
   for (let i = 0; i < Math.abs(steps); i++) {
     await evalJs(`document.querySelector('#${steps < 0 ? 'previous' : 'next'}-cabinet').click()`);
     for (let k = 0; k < 40; k++) { await sleep(150); if (!(await evalJs(`document.querySelector('#next-cabinet').disabled`))) break; }
