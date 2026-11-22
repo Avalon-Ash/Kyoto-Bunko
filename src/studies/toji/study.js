@@ -8,6 +8,69 @@ import {viewBox,clampPan,clampZoom,isZoomed,rubberBand,panLimit,planePoint,ancho
 import {mountBackdrop,cabinetKeepout} from './backdrop.js';
 import {WARD_ART} from './ward-art.js';
 
+// Cabinet timings (ms), distances (px), and feel coefficients. Expressions read only this table; tune feel here.
+const FEEL = Object.freeze({
+  // Cabinet track & switching
+  trackSpacingRatio: .82, // Neighbour offset along the track as a fraction of canvas width
+  neighbourOpacity: .9, // Peak opacity of neighbour cabinet previews during drag and slide
+  neighbourFadePx: 60, // Drag distance (px) over which neighbour previews fade in to neighbourOpacity
+  settleMs: 350, // Delay (ms) after settle before snapshotting neighbours; shorter than max slide (slideBaseMs + slideExtraMs)
+  trackPullMax: 1.25, // Max normalised pull shown on the track light past switchDistance (interaction.js)
+  armedVibrateMs: 10, // Haptic tick duration (ms) when a drag crosses the cabinet switch threshold
+  switchFadeMs: 180, // Fade-switch duration (ms) when neighbours are unavailable or on the standalone study page
+  switchFadeMinPx: 100, // Minimum horizontal travel (px) for the embedded fallback fade-switch
+  switchFadeWidthRatio: .35, // Horizontal travel for the embedded fallback fade-switch as a fraction of canvas width
+  switchFadeStudyPx: 28, // Horizontal travel (px) for the standalone study page fade-switch
+  slideBaseMs: 240, // Base duration (ms) of a track slide switch; total is up to slideBaseMs + slideExtraMs (~460 ms, near bunko.css .track>b .5s)
+  slideExtraMs: 220, // Additional slide duration (ms) scaled by the remaining distance fraction
+  returnMs: 180, // Spring-back duration (ms) when a cabinet drag is released below switchDistance
+
+  // Lid & reading
+  unrollMs: 420, // Pause (ms) in the unrolling state after lid opening completes (OPEN_DURATION in interaction.js) before entering reading
+
+  // Frame loop, relief lift & easing
+  idleFps: 30, // Frame rate cap (fps) while idle autoplay is running
+  dtMaxMs: 50, // Upper clamp (ms) on per-frame elapsed time
+  dtDefaultMs: 16, // Fallback per-frame delta (ms, ~60 fps) on the first tick
+  liftFlat: .025, // Minimal relief lift in flat comparison mode
+  liftStill: .82, // Fixed relief lift when reduced motion is active or when snapshotting neighbours
+  liftEmbedded: .88, // Resting relief lift on the embedded home (also the midpoint of idleLiftAmp breathing; liftEmbedded + idleLiftAmp = 1)
+  liftRest: .55, // Resting relief lift on the standalone study page
+  lightEaseMs: 170, // Exponential smoothing time constant (ms) for relief lift and light position
+  zoomEaseMs: 110, // Exponential smoothing time constant (ms) for zoom and pan
+  easeSnapEpsilon: .0005, // Convergence snap threshold for normalised values (lift, light px/py, zoom)
+  panSnapEpsilon: .05, // Convergence snap threshold (camera-plane units) for panX/panY
+
+  // Idle sweep, demo & patina aging
+  sweepFreqX: 1.25, // Horizontal angular frequency (rad/s) of the idle and demo light sweep
+  sweepAmpX: .9, // Horizontal amplitude of the idle and demo light sweep in normalised light coordinates
+  sweepFreqY: .9, // Vertical angular frequency (rad/s) of the idle and demo light sweep
+  sweepAmpY: .7, // Vertical amplitude of the idle and demo light sweep in normalised light coordinates
+  sweepTrailScaleX: .63, // Trail X scale applied to the swept light position
+  sweepTrailScaleY: .45, // Trail Y scale applied to the swept light position
+  demoDurationSec: 7, // Total length (s) of the demonstration sweep; slightly longer than demoAgeMs
+  demoAgeMs: 6500, // Duration (ms) for the demo patina age to progress from 0 to HATSUNE_YEARS
+  idleAgeFreq: .16, // Angular frequency (rad/s) of the unattended patina breathing cycle
+  idleLiftFreq: .7, // Angular frequency (rad/s) of the unattended relief lift breathing
+  idleLiftAmp: .12, // Amplitude of the unattended relief lift breathing around liftEmbedded
+
+  // Light trail on the lid
+  trailBoundX: 364, // Half-width bound (world units) for trail points; 6 units inside onLid (370 in interaction.js)
+  trailBoundZ: 234, // Half-depth bound (world units) for trail points; 6 units inside onLid (240 in interaction.js)
+  trailMinStep: 4, // Minimum distance (world units) between consecutive trail samples
+  trailMaxPoints: 20, // Maximum number of active trail points kept
+
+  // Pointer, zoom, pan & keyboard
+  dragThresholdPx: 8, // Pointer travel (px) before a press counts as a drag; matches isTap (<=8 in interaction.js)
+  panRubberBandRatio: .5, // Rubber-band resistance dimension as a fraction of viewBox half-extents (view.js rubberBand)
+  wheelPinchZoomRate: .01, // Exponential zoom sensitivity per wheel deltaY unit for trackpad pinch (ctrlKey)
+  wheelZoomRate: .0015, // Exponential zoom sensitivity per wheel deltaY unit for regular wheel
+  keyLightStep: .25, // Normalised light-position step per arrow key press on the standalone study page
+
+  // Export
+  exportRevokeMs: 10000, // Delay (ms) before revoking the object URL created for PNG download
+});
+
 /**
  * The cabinet itself: canvas, light, zoom, cabinet changes and the lid. It owns no buttons and no page chrome.
  * The React home drives it through options and the returned controller; the standalone study page wraps it
@@ -31,7 +94,7 @@ const canvas=/** @type {HTMLCanvasElement} */($('scene'));
 let language=options.language??'zh',night=options.night??true,flat=false,paused=options.paused??false,hover=false,visible=true,failed=false;
 const media=matchMedia('(prefers-reduced-motion: reduce)');
 const still=()=>paused||media.matches;
-let frame=0,last=0,lift=.55,px=0,py=0,tx=0,ty=0,demoStart=0;
+let frame=0,last=0,/** @type {number} */lift=FEEL.liftRest,px=0,py=0,tx=0,ty=0,demoStart=0;
 let trails=[];
 let bookState='closed',bookProgress=0,bookTarget=0,bookReadyAt=0,gesture=null,returnFocus=null;
 let cabinet=cabinetFor(options.wardId??DEFAULT_CABINET),switchAnimation=null,updateMesh;
@@ -55,14 +118,14 @@ const ghosts=options.embedded?[-1,1].map(side=>{
   canvas.before(ghost);return ghost;
 }):[];
 let ghostAnimations=[],ghostsStale=true,/** @type {ReturnType<typeof setTimeout>|number} */ghostTimer=0,drawNeighbour=null;
-const spacing=()=>canvas.clientWidth*.82;
+const spacing=()=>canvas.clientWidth*FEEL.trackSpacingRatio;
 /** Puts the box and its neighbours at `offset` px along the track. */
 function placeTrack(offset){
   ghostAnimations.forEach(a=>a.cancel());ghostAnimations=[];
   canvas.style.transform=offset?`translateX(${offset}px)`:'';
   for(const ghost of ghosts){
     ghost.style.transform=`translateX(${Number(ghost.dataset.side)*spacing()+offset}px)`;
-    ghost.style.opacity=ghost.dataset.ward&&offset?String(Math.min(.9,Math.abs(offset)/60)):'0';
+    ghost.style.opacity=ghost.dataset.ward&&offset?String(Math.min(FEEL.neighbourOpacity,Math.abs(offset)/FEEL.neighbourFadePx)):'0';
   }
 }
 /** Moves the whole track from one offset to another; resolves with the box's own animation. */
@@ -70,7 +133,7 @@ function slide(from,to,duration){
   const gap=spacing(),/** @type {KeyframeAnimationOptions} */timing={duration,easing:'cubic-bezier(.3,.7,.2,1)',fill:'forwards'};
   ghostAnimations.forEach(a=>a.cancel());
   ghostAnimations=ghosts.filter(ghost=>typeof ghost.animate==='function').map(ghost=>{
-    const at=Number(ghost.dataset.side)*gap,shown=ghost.dataset.ward?.9:0;
+    const at=Number(ghost.dataset.side)*gap,shown=ghost.dataset.ward?FEEL.neighbourOpacity:0;
     return ghost.animate([{transform:`translateX(${at+from}px)`,opacity:from?shown:0},{transform:`translateX(${at+to}px)`,opacity:to?shown:0}],timing);
   });
   return canvas.animate([{transform:`translateX(${from}px)`},{transform:`translateX(${to}px)`}],timing);
@@ -90,7 +153,7 @@ function snapshotNeighbours(){
   for(const ghost of ghosts){
     const ward=adjacentCabinet(own,Number(ghost.dataset.side)).id,ctx=ghost.getContext('2d');
     if(!ctx)continue;
-    if(!drawNeighbour(ward,{time:performance.now(),moving:false,still:true,flat,night,ground,lift:.82,opening:0,px:0,py:0,zoom:1,panX:0,panY:0,trails:[],presence:0})){ghostsStale=true;continue;}
+    if(!drawNeighbour(ward,{time:performance.now(),moving:false,still:true,flat,night,ground,lift:FEEL.liftStill,opening:0,px:0,py:0,zoom:1,panX:0,panY:0,trails:[],presence:0})){ghostsStale=true;continue;}
     // Same task as the draw: the WebGL canvas still holds the frame.
     ghost.width=canvas.width;ghost.height=canvas.height;ctx.drawImage(canvas,0,0);ghost.dataset.ward=ward;ghost.dataset.plate='true';drawn++;
   }
@@ -100,7 +163,7 @@ function snapshotNeighbours(){
 function queueSnapshot(){
   ghostsStale=true;for(const ghost of ghosts)delete ghost.dataset.ward;
   clearTimeout(ghostTimer);
-  ghostTimer=setTimeout(()=>{if(!destroyed&&ghostsStale&&bookState==='closed'&&!gesture)snapshotNeighbours();},350);
+  ghostTimer=setTimeout(()=>{if(!destroyed&&ghostsStale&&bookState==='closed'&&!gesture)snapshotNeighbours();},FEEL.settleMs);
 }
 // The unseen track made faintly visible: one cut-gold tick per cabinet, and a light that travels with the box.
 const track=$('track'),trackLight=document.createElement('b');
@@ -110,7 +173,7 @@ let armed=0;
 /** offset: how far the box has been pulled from rest, px. Past the switch distance the next cabinet's tick answers. */
 function syncTrack(offset=0){
   if(!track)return;
-  const index=CABINETS.indexOf(cabinet),reach=switchDistance(canvas.clientWidth)||1,pull=Math.max(-1.25,Math.min(1.25,offset/reach));
+  const index=CABINETS.indexOf(cabinet),reach=switchDistance(canvas.clientWidth)||1,pull=Math.max(-FEEL.trackPullMax,Math.min(FEEL.trackPullMax,offset/reach));
   const next=offset&&Math.abs(offset)>=reach?-Math.sign(offset):0,target=(index+next+CABINETS.length)%CABINETS.length;
   ticks.forEach((tick,i)=>{tick.dataset.current=String(i===index);tick.dataset.armed=String(Boolean(next)&&i===target);});
   track.style.setProperty('--at',(index-pull).toFixed(3));track.dataset.dragging=String(Boolean(offset));
@@ -118,7 +181,7 @@ function syncTrack(offset=0){
   armed=next;canvas.dataset.armed=String(next);
   // Crossing the threshold is felt: the box checks for an instant and, where the device can, the hand feels a tick.
   canvas.style.scale=next&&!still()?'.985':'';
-  if(next&&!still())navigator.vibrate?.(10);
+  if(next&&!still())navigator.vibrate?.(FEEL.armedVibrateMs);
 }
 function syncNight(){root.classList.toggle('night',night);}
 function syncBackdrop(){const stage=$('stage'),w=stage.clientWidth,h=stage.clientHeight;if(w&&h)backdrop.resize(w,h,devicePixelRatio||1,cabinetKeepout(cameraMatrix(w,h),w,h));}
@@ -143,22 +206,22 @@ async function changeCabinet(direction,focusTarget=/** @type {HTMLElement} */(do
   bookState='switching';demoStart=0;trails=[];gesture=null;hover=false;tx=ty=px=py=0;syncBook();
   const animate=async frames=>{
     if(still())return;
-    switchAnimation=canvas.animate(frames,{duration:180,easing:'ease-in-out',fill:'forwards'});
+    switchAnimation=canvas.animate(frames,{duration:FEEL.switchFadeMs,easing:'ease-in-out',fill:'forwards'});
     await switchAnimation.finished.catch(()=>{});
   };
-  const distance=options.embedded?Math.max(100,canvas.clientWidth*.35):28;
+  const distance=options.embedded?Math.max(FEEL.switchFadeMinPx,canvas.clientWidth*FEEL.switchFadeWidthRatio):FEEL.switchFadeStudyPx;
   // On the home the whole track slides and the neighbour arrives as itself; elsewhere the box fades out and in.
   if(ghosts.length&&ghostsStale)snapshotNeighbours();
   // The neighbours' pictures not ready (a switch soon after the last one): the box fades out and in instead of sliding.
   const together=Boolean(ghosts.length&&!ghostsStale&&!still()&&render&&typeof canvas.animate==='function');
   if(together){
     const gap=spacing();
-    switchAnimation=slide(fromOffset,-direction*gap,240+220*(1-Math.min(1,Math.abs(fromOffset)/gap)));
+    switchAnimation=slide(fromOffset,-direction*gap,FEEL.slideBaseMs+FEEL.slideExtraMs*(1-Math.min(1,Math.abs(fromOffset)/gap)));
     await switchAnimation.finished.catch(()=>{});
   }else await animate([{opacity:1,transform:`translateX(${fromOffset}px)`},{opacity:0,transform:`translateX(${-direction*Math.max(distance,Math.abs(fromOffset))}px)`}]);
   if(destroyed)return;
   cabinet=adjacentCabinet(cabinet.id,direction);kick=still()?0:direction;options.onWardChange?.(cabinet.id);updateMesh?.();backdrop.setWard(cabinet.id);
-  lift=flat?.025:still()?.82:1;
+  lift=flat?FEEL.liftFlat:still()?FEEL.liftStill:1;
   // Commit the new mesh before its label is revealed, even when a quiet tab defers RAF.
   render?.(performance.now(),false);syncCabinet();schedule();
   switchAnimation?.cancel();
@@ -190,36 +253,36 @@ function tick(time){
   if(!visible||document.hidden)return;
   autoPlaying=idlePlaybackAllowed({embedded:options.embedded,reduced:still(),visible,hidden:document.hidden,failed,bookState,dragging:Boolean(gesture),idleFor:time-lastActivity});
   // An unattended scene need not draw at a high-refresh monitor's full rate.
-  if(autoPlaying&&time-last<1000/30){schedule();return;}
-  const dt=Math.min(50,time-last||16);last=time;
+  if(autoPlaying&&time-last<1000/FEEL.idleFps){schedule();return;}
+  const dt=Math.min(FEEL.dtMaxMs,time-last||FEEL.dtDefaultMs);last=time;
   if(autoPlaying){
     idlePhase+=dt/1000;
-    tx=Math.sin(idlePhase*1.25)*.9;ty=Math.cos(idlePhase*.9)*.7;
-    addTrail(tx*.63,ty*.45,time);
+    tx=Math.sin(idlePhase*FEEL.sweepFreqX)*FEEL.sweepAmpX;ty=Math.cos(idlePhase*FEEL.sweepFreqY)*FEEL.sweepAmpY;
+    addTrail(tx*FEEL.sweepTrailScaleX,ty*FEEL.sweepTrailScaleY,time);
   }
   if(demoStart){
     const t=(time-demoStart)/1000;
-    if(t>7||still()){demoStart=0;hover=false;tx=ty=0;notify();}
-    else{tx=Math.sin(t*1.25)*.9;ty=Math.cos(t*.9)*.7;addTrail(tx*.63,ty*.45,time);}
+    if(t>FEEL.demoDurationSec||still()){demoStart=0;hover=false;tx=ty=0;notify();}
+    else{tx=Math.sin(t*FEEL.sweepFreqX)*FEEL.sweepAmpX;ty=Math.cos(t*FEEL.sweepFreqY)*FEEL.sweepAmpY;addTrail(tx*FEEL.sweepTrailScaleX,ty*FEEL.sweepTrailScaleY,time);}
   }
-  years=demoStart?Math.min(1,(time-demoStart)/6500)*HATSUNE_YEARS:autoPlaying?HATSUNE_YEARS*(.5-.5*Math.cos(idlePhase*.16)):null;syncEra();
+  years=demoStart?Math.min(1,(time-demoStart)/FEEL.demoAgeMs)*HATSUNE_YEARS:autoPlaying?HATSUNE_YEARS*(.5-.5*Math.cos(idlePhase*FEEL.idleAgeFreq)):null;syncEra();
   bookProgress=progressToward(bookProgress,bookTarget,dt,still());
-  if(bookProgress===1&&bookState==='opening'){bookState='unrolling';bookReadyAt=time+(still()?0:420);syncBook();}
+  if(bookProgress===1&&bookState==='opening'){bookState='unrolling';bookReadyAt=time+(still()?0:FEEL.unrollMs);syncBook();}
   if(bookState==='unrolling'&&(time>=bookReadyAt||still()))enterReading();
   if(destroyed)return;
   if(bookProgress===0&&bookState==='closing'){bookState='closed';syncBook();returnFocus?.focus({preventScroll:true});}
-  const target=flat?.025:still()?.82:autoPlaying?.88+Math.sin(idlePhase*.7)*.12:(hover||demoStart||bookState==='switching')?1:options.embedded?.88:.55;
-  const ease=1-Math.exp(-dt/170);
+  const target=flat?FEEL.liftFlat:still()?FEEL.liftStill:autoPlaying?FEEL.liftEmbedded+Math.sin(idlePhase*FEEL.idleLiftFreq)*FEEL.idleLiftAmp:(hover||demoStart||bookState==='switching')?1:options.embedded?FEEL.liftEmbedded:FEEL.liftRest;
+  const ease=1-Math.exp(-dt/FEEL.lightEaseMs);
   lift=still()?target:lift+(target-lift)*ease;
   // Motion off stops what moves by itself. The light is the hand's own and keeps following it.
   px+=(tx-px)*ease;py+=(ty-py)*ease;
-  if(Math.abs(target-lift)<.0005)lift=target;
-  if(Math.abs(tx-px)<.0005)px=tx;if(Math.abs(ty-py)<.0005)py=ty;
+  if(Math.abs(target-lift)<FEEL.easeSnapEpsilon)lift=target;
+  if(Math.abs(tx-px)<FEEL.easeSnapEpsilon)px=tx;if(Math.abs(ty-py)<FEEL.easeSnapEpsilon)py=ty;
   if(!pinch&&!gesture?.panning){
     const aspect=canvas.clientWidth/Math.max(1,canvas.clientHeight);[panTX,panTY]=clampPan(aspect,zoomTarget,panTX,panTY);
-    const zEase=still()?1:1-Math.exp(-dt/110);
+    const zEase=still()?1:1-Math.exp(-dt/FEEL.zoomEaseMs);
     zoom+=(zoomTarget-zoom)*zEase;panX+=(panTX-panX)*zEase;panY+=(panTY-panY)*zEase;
-    if(Math.abs(zoomTarget-zoom)<.0005)zoom=zoomTarget;if(Math.abs(panTX-panX)<.05)panX=panTX;if(Math.abs(panTY-panY)<.05)panY=panTY;
+    if(Math.abs(zoomTarget-zoom)<FEEL.easeSnapEpsilon)zoom=zoomTarget;if(Math.abs(panTX-panX)<FEEL.panSnapEpsilon)panX=panTX;if(Math.abs(panTY-panY)<FEEL.panSnapEpsilon)panY=panTY;
   }
   syncZoomUi();
   trails=trails.filter(p=>trailIntensity(p.time,time)>0);
@@ -232,17 +295,17 @@ function tick(time){
 function addTrail(x,y,time=performance.now()){
   if(flat||bookState!=='closed'||!projection)return;
   const [wx,wz]=groundPoint(projection,x,-y);
-  if(Math.abs(wx)>364||Math.abs(wz)>234)return;
+  if(Math.abs(wx)>FEEL.trailBoundX||Math.abs(wz)>FEEL.trailBoundZ)return;
   const previous=trails.at(-1);
-  if(previous&&Math.hypot(wx-previous.x,wz-previous.z)<4)return;
-  trails.push({x:wx,z:wz,time});if(trails.length>20)trails.shift();
+  if(previous&&Math.hypot(wx-previous.x,wz-previous.z)<FEEL.trailMinStep)return;
+  trails.push({x:wx,z:wz,time});if(trails.length>FEEL.trailMaxPoints)trails.shift();
 }
 function point(e){
   if(bookState!=='closed')return;
   if(pinch){movePinch(e);return;}
   if(gesture&&gesture.id!==e.pointerId)return;
   if(gesture?.panning){movePan(e);return;}
-  if(gesture&&Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>8)gesture.moved=true;
+  if(gesture&&Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>FEEL.dragThresholdPx)gesture.moved=true;
   canvas.dataset.pointerType=e.pointerType;
   if(options.embedded&&gesture?.moved){
     // The box trails the finger along its unseen track; the light below still follows the finger itself.
@@ -288,7 +351,7 @@ function save(){
   output.toBlob(blob=>{
     if(!blob||destroyed)return;
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`${cabinet.id.slice(2).toLowerCase()}-${flat?'flat':'relief'}-${ground}-${night?'night':'day'}.png`;a.click();
-    setTimeout(()=>URL.revokeObjectURL(url),10000);
+    setTimeout(()=>URL.revokeObjectURL(url),FEEL.exportRevokeMs);
   },'image/png');
 }
 function syncMotion(){
@@ -330,13 +393,13 @@ function movePinch(e){
   zoom=zoomTarget=clampZoom(pinch.zoom*Math.hypot(a.x-b.x,a.y-b.y)/pinch.distance);
   // The midpoint may travel too: two fingers zoom and pan at once.
   const [cx,cy]=anchorPan(aspect,zoom,pinch.anchor,fx,fy),l=panLimit(aspect,zoom);
-  const v=viewBox(aspect,zoom);panX=panTX=rubberBand(cx,l.x,v.halfW*.5);panY=panTY=rubberBand(cy,l.y,v.halfH*.5);
+  const v=viewBox(aspect,zoom);panX=panTX=rubberBand(cx,l.x,v.halfW*FEEL.panRubberBandRatio);panY=panTY=rubberBand(cy,l.y,v.halfH*FEEL.panRubberBandRatio);
   schedule();
 }
 function movePan(e){
   const r=canvas.getBoundingClientRect(),aspect=aspectNow(),[dx,dy]=dragPan(aspect,zoom,e.clientX-gesture.x,e.clientY-gesture.y,r.width,r.height),l=panLimit(aspect,zoom),v=viewBox(aspect,zoom);
-  if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>8){gesture.moved=true;canvas.dataset.dragging='true';}
-  panX=panTX=rubberBand(gesture.panX+dx,l.x,v.halfW*.5);panY=panTY=rubberBand(gesture.panY+dy,l.y,v.halfH*.5);
+  if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>FEEL.dragThresholdPx){gesture.moved=true;canvas.dataset.dragging='true';}
+  panX=panTX=rubberBand(gesture.panX+dx,l.x,v.halfW*FEEL.panRubberBandRatio);panY=panTY=rubberBand(gesture.panY+dy,l.y,v.halfH*FEEL.panRubberBandRatio);
   schedule();
 }
 const liftTouch=e=>{
@@ -353,7 +416,7 @@ listen(canvas,'touchmove',e=>{if(options.embedded||e.touches.length>1||isZoomed(
 listen(canvas,'wheel',e=>{
   if(bookState!=='closed'||!(options.embedded||e.ctrlKey))return;
   e.preventDefault();activity();
-  const [fx,fy]=frac(e);setZoom(zoomTarget*Math.exp(-e.deltaY*(e.ctrlKey?.01:.0015)),fx,fy);
+  const [fx,fy]=frac(e);setZoom(zoomTarget*Math.exp(-e.deltaY*(e.ctrlKey?FEEL.wheelPinchZoomRate:FEEL.wheelZoomRate)),fx,fy);
 },{passive:false});
 listen($('zoom-reset'),'click',()=>{resetZoom();canvas.focus({preventScroll:true});});
 listen(canvas,'pointerdown',e=>{
@@ -384,7 +447,7 @@ function endDrag(){
 }
 function returnCabinet(){
   const offset=dragOffset;dragOffset=0;placeTrack(0);syncTrack(0);
-  if(offset&&!still()&&typeof canvas.animate==='function')dragAnimation=slide(offset,0,180);
+  if(offset&&!still()&&typeof canvas.animate==='function')dragAnimation=slide(offset,0,FEEL.returnMs);
 }
 // Once the hand has let go, the track belongs to whatever the release started (a switch slides the
 // cabinet out from under a resting mouse): leaving only lets the light go, it does not pull the track back.
@@ -430,8 +493,8 @@ listen(canvas,'keydown',e=>{
   if(e.key===' '){e.preventDefault();if(options.embedded)openBook(canvas);else demo();return;}
   if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;
   e.preventDefault();hover=true;
-  tx=Math.max(-1,Math.min(1,tx+(e.key==='ArrowLeft'?-.25:e.key==='ArrowRight'?.25:0)));
-  ty=Math.max(-1,Math.min(1,ty+(e.key==='ArrowUp'?-.25:e.key==='ArrowDown'?.25:0)));
+  tx=Math.max(-1,Math.min(1,tx+(e.key==='ArrowLeft'?-FEEL.keyLightStep:e.key==='ArrowRight'?FEEL.keyLightStep:0)));
+  ty=Math.max(-1,Math.min(1,ty+(e.key==='ArrowUp'?-FEEL.keyLightStep:e.key==='ArrowDown'?FEEL.keyLightStep:0)));
   addTrail(tx,ty);schedule();
 });
 listen(document,'visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);frame=0;demoStart=0;trails=[];autoPlaying=false;canvas.dataset.autoplay='false';}else schedule();});
