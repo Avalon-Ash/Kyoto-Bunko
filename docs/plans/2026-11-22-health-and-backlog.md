@@ -256,3 +256,20 @@
   - H1（Hydrogen high，`_wt_kyoto_types2`，分支 `agent/types-b-1122`）：文箱外層 24 個、腳本與工具 16 個。
   - 規則：只改 JSDoc（與一個 `.d.ts`），執行的程式一個字都不動；不准 `any` 轉型或 `@ts-ignore`；只有改程式才消得掉的錯誤當「真問題」留著回報。主席驗收：重跑四個指令、部件雜湊 11／11、每個改過的檔去掉註解後與改前相同。
   - 測試檔的 66 個（`plate.test.mjs` 64）還沒派。
+
+### 9.3 A1 型別檢查：231 → 18（2026-11-22 23:55，已進整合分支 `c3d3a3d`）
+
+| 包 | 模型（agy log 確認） | 範圍 | 結果 | 主席的驗收 |
+|---|---|---|---|---|
+| H1 | `gemini-4-hydrogen-high` | 文箱外層 24、腳本與工具 16 | 清掉 38；剩 2 個找不到模組 | 十個檔去掉註解後與改前相同（esbuild 壓縮後逐字比）；沒有 `any` 轉型或 `@ts-ignore`；沒有被拒的動作 |
+| N1 | `gemini-4-neon-medium` | `src/studies/toji/plate/` 125 | 清掉 105；回報 18 個真問題（另 2 個是 H1 的 `Frame.years`） | 十三個檔去掉註解後與改前相同；新增 `plate/dev-globals.d.ts` |
+
+兩包的自述驗收（tsc、部件雜湊、`npm test`）主席都重跑過。H1 的報告把測試檔的錯誤數寫成 63（實際 66），其餘數字相符。
+
+型別檢查找到、主席修掉的三類（`687c213`；部件雜湊十一區相同）：
+- **十六處 `pine(…, {clusters: 3})`**：第七個引數從來沒人讀（`trees.js` 的 `stampedPine` 只收六個）。拿掉。這表示構圖檔裡「三簇」的意圖一直沒有生效；松現在的樣子就是沒有這個選項的樣子，階段 D 看松的時候再決定要不要做。
+- **`meshRock` 的粉岩分支回傳單一零件**，其他分支回傳陣列，而每個呼叫端都用展開：改成回傳陣列。目前沒有區走這個分支（粉岩都改用 `crag-mesh.js`），所以是潛在的錯，沒有發作過。
+- `creature-mesh.js` 的 `refine()` 把三個布林相加：各包一層 `Number()`。
+- `src/optional-modules.d.ts`：宣告 `playwright` 與 `@threert/scene`（這個 repo 不安裝的兩個模組）。
+
+剩下 18 個都在四個測試檔，派給 Hydrogen（H2，`_wt_kyoto_types2`，分支 `agent/types-c-1122`），還在跑。清到 0 之後把 `tsc -p tsconfig.js.json` 接進 `npm run lint`、寫 ADR 0021。ESLint 還沒裝。
