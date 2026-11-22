@@ -135,7 +135,7 @@ test('material table: doha and rock-mesh read DOHA_TONE and ROCK_LOOK with valid
       assert.ok(matIds.has(spec.mat), `DOHA_TONE.${kind}.${tone}.mat (${spec.mat}) is a registered MAT id`);
     }
   }
-  for (const [id, spec] of [...Object.entries(ROCK_LOOK), ['default', ROCK_DEFAULT]]) {
+  for (const [id, spec] of [...Object.entries(ROCK_LOOK), /** @type {[string, typeof ROCK_DEFAULT]} */ (['default', ROCK_DEFAULT])]) {
     assert.equal(typeof spec.powder, 'boolean', `ROCK_LOOK[${id}].powder is boolean`);
     assert.ok(matIds.has(spec.body), `ROCK_LOOK[${id}].body (${spec.body}) is a registered MAT id`);
     assert.ok(matIds.has(spec.tile), `ROCK_LOOK[${id}].tile (${spec.tile}) is a registered MAT id`);
@@ -168,7 +168,7 @@ test('material table: the renderer shader choices read the mesh columns and give
     assert.equal(s.grain === 'leaf', was.leaf(n), `${n}: gold leaf`);
     assert.equal(s.wood === 'silver', was.woodSilver(n), `${n}: silver wood`);
   }
-  for (const [s] of all) for (const [k, kinds] of [['coat', [...Object.keys(MESH_COAT), 'none']], ['grain', [null, 'powder', 'leaf']], ['wood', ['gold', 'silver']], ['rock', [null, 'gold', 'silver']]])
+  for (const [s] of all) for (const [k, kinds] of /** @type {['coat' | 'grain' | 'wood' | 'rock', (string | null)[]][]} */ ([['coat', [...Object.keys(MESH_COAT), 'none']], ['grain', [null, 'powder', 'leaf']], ['wood', ['gold', 'silver']], ['rock', [null, 'gold', 'silver']]]))
     assert.ok(kinds.includes(s[k]), `${s.name}.${k} is one of ${kinds}`);
   const src = readFileSync(new URL('../src/studies/toji/plate/three-renderer.js', import.meta.url), 'utf8');
   assert.deepEqual(src.match(/spec\.name\s*(===?|!==?)|\.test\(spec\.name\)/g) ?? [], [], 'the renderer does not branch on a material name');

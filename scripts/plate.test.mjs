@@ -429,18 +429,22 @@ test('torii and kakezukuri keep true open apertures, real beam/post coverage, an
       assert.equal(parts[1].motionWith, 't');
       assertValidMeshChunks(parts[1].mesh);
     }
+    /** @type {[number, number]} */
     const lowerHole = [0, -26 * s];
     assert.equal(gate.fills.some(f => inside(lowerHole, f.d)), false, `torii s=${s} lower hole not in fills`);
     assert.equal(topTrianglesXZ(gate.mesh, lowerHole), false, `torii s=${s} lower hole has no top triangles`);
+    /** @type {[number, number][]} */
     const upperHoles = s >= 1 ? [[-16 * s, -74 * s], [16 * s, -74 * s]] : [[0, -74 * s]];
     for (const uh of upperHoles) {
       assert.equal(gate.fills.some(f => inside(uh, f.d)), false, `torii s=${s} upper hole not in fills`);
       assert.equal(topTrianglesXZ(gate.mesh, uh), false, `torii s=${s} upper hole has no top triangles`);
     }
+    /** @type {[number, number]} */
     const nukiMid = [0, -56.5 * s];
     assert.equal(gate.fills.some(f => inside(nukiMid, f.d)), true, `torii s=${s} nuki midpoint in fills`);
     assert.equal(topTrianglesXZ(gate.mesh, nukiMid), true, `torii s=${s} nuki midpoint in mesh`);
     for (const side of [-1, 1]) {
+      /** @type {[number, number]} */
       const postMid = [side * 34 * s, -45 * s];
       assert.equal(gate.fills.some(f => inside(postMid, f.d)), true, `torii s=${s} post ${side} in fills`);
     }
@@ -461,6 +465,7 @@ test('torii and kakezukuri keep true open apertures, real beam/post coverage, an
     assert.equal(frame.fills.some(f => inside([holeX, z], f.d)), false, `frame hole (${holeX},${z}) not in fills`);
     assert.equal(topTrianglesXZ(frame.mesh, [holeX, z]), false, `frame hole (${holeX},${z}) has no top triangles`);
   }
+  /** @type {[number, number]} */
   const railHole = [-40 - 9 + .9 + 6.5, -8 - 3 - 5];
   assert.equal(deck.fills.some(f => inside(railHole, f.d)), false, 'railing hole not in fills');
   assert.equal(topTrianglesXZ(deck.mesh, railHole), false, 'railing hole has no top triangles');
@@ -840,6 +845,7 @@ test('meshLantern builds accurate proportions, recessed window, 6-faceted cap, a
 test('all three ward lanterns migrate to rigidGroup mesh while keeping part counts, motion sync, and deterministic glow', async () => {
   const {lantern, rand} = await import('../src/studies/toji/plate/vocab.js');
 
+  /** @type {[keyof typeof PLATES, number, string[]][]} */
   const wardLanterns = [
     ['W_NISHIKYO', 34, ['shore-lantern']], // 34: R5b added the Katsura fence
     ['W_YAMASHINA', 39, ['west-lantern', 'east-lantern']], // 39: R5b added the stair-foot grass, P3b the coral leaves; the nine-wards run replaced the ground and hill by two heads' parts and the banks
@@ -1525,7 +1531,8 @@ test('material table: the GLSL arrays hold the table exactly, and kinds are comp
 // column (mat.js); the fill carries only the geometry its kind needs (f.wedge, f.fade), and no flags that name the kind.
 test('material table: every fill is painted as its part material says (fine), in every ward', async () => {
   const {readFileSync} = await import('node:fs');
-  const shaped = new Set([FINE.wedge, FINE.ridge, FINE.powder]), wedged = new Set([FINE.wedge, FINE.ridge]);
+  /** @typedef {import('../src/studies/toji/plate/mat.js').FineKind} FineKind */
+  const shaped = /** @type {Set<FineKind>} */ (new Set([FINE.wedge, FINE.ridge, FINE.powder])), wedged = /** @type {Set<FineKind>} */ (new Set([FINE.wedge, FINE.ridge]));
   for (const ward of Object.keys(PLATES)) {
     for (const p of preparePlate(PLATES[ward]()).parts) {
       const fine = lookOf(p.mat).fine;

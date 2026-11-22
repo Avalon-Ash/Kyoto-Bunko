@@ -65,7 +65,8 @@ export const RECIPE = {lamp: 0, ground: 1, hill: 2, gyobu: 3, gold: 4, hirame: 5
 export const MESH_COAT = Object.freeze({sunk: 0, top: 1, faint: 2}); // three-pack.js kyotoCoatPart's cls; 'none' has no class
 const MESH_DEFAULT = {coat: 'top', shine: true, shinnuri: false, rock: null, rockPowder: false, grain: null, wood: 'gold'};
 export const meshLook = spec => Object.freeze({...MESH_DEFAULT, ...spec});
-const LOOK_DEFAULT = {ch: 2.4, chRidge: false, lh: .7, coat: 'top', density: false, flakeD: 0, flakeCell: 0, foil: false, tone: 'gold', hill: false, cloud: false, tier: 'pattern', recipe: 'lamp', fine: 'mask', refColour: null, mesh: null};
+/** @typedef {(typeof FINE)[keyof typeof FINE]} FineKind */
+const LOOK_DEFAULT = {ch: 2.4, chRidge: false, lh: .7, coat: 'top', density: false, flakeD: 0, flakeCell: 0, foil: false, tone: 'gold', hill: false, cloud: false, tier: 'pattern', recipe: 'lamp', fine: /** @type {FineKind} */ ('mask'), refColour: null, mesh: null};
 const look = (over = {}, mesh = null) => Object.freeze({...LOOK_DEFAULT, ...over, mesh: mesh && meshLook(mesh)});
 const HILL = {coat: 'foot', hill: true, tier: 'dense'};
 export const MAT_LOOK = Object.freeze({
@@ -160,8 +161,15 @@ export const DOHA_TONE = Object.freeze({
 });
 
 // High-makie rock body and foil-tile materials keyed by the requested MAT id; unlisted ids keep the gold kirikane mound default.
+/** @typedef {{powder: boolean, body: number, tile: number}} RockLook */
+/** @type {Readonly<RockLook>} */
 export const ROCK_DEFAULT = Object.freeze({powder: false, body: MAT.mura, tile: MAT.kirikane});
+/**
+ * @param {Partial<RockLook>} [over]
+ * @returns {Readonly<RockLook>}
+ */
 const rockLook = (over = {}) => Object.freeze({...ROCK_DEFAULT, ...over});
+/** @type {Readonly<Record<number, Readonly<RockLook>>>} */
 export const ROCK_LOOK = Object.freeze({
   [MAT.kirikane]: rockLook(),
   [MAT.kirigin]: rockLook({body: MAT.muraSilver, tile: MAT.kirigin}),

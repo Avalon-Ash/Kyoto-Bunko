@@ -38,6 +38,7 @@ test('silhouette encloses the lid and every vertex of all eleven plate meshes', 
     const m = camera(w, h), keep = cabinetKeepout(m, w, h);
     for (const [ward, index, x, y, z] of vertices) {
       const [nx, ny] = project(m, [x, y, z]);
+      /** @type {[number, number]} */
       const point = [(nx + 1) / 2 * w, (1 - ny) / 2 * h];
       assert.ok(inside(keep, point) || keep.some(([kx, ky]) => Math.hypot(kx - point[0], ky - point[1]) < .5), `${ward} vertex ${index} at ${w}x${h}`);
     }

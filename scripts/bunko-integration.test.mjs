@@ -31,7 +31,7 @@ function environment(t,reduced=false,options={}){
     requestAnimationFrame:callback=>{pendingFrames.set(++frame,callback);return frame;},
     cancelAnimationFrame:id=>pendingFrames.delete(id)};
   if(options.search!==undefined)globals.location={search:options.search};
-  if(options.image)globals.Image=class{set src(value){this._src=value;queueMicrotask(()=>this.onload?.());}get src(){return this._src;}};
+  if(options.image)globals.Image=class{set src(value){this._src=value;queueMicrotask(()=>/** @type {{onload?: () => void}} */ (this).onload?.());}get src(){return this._src;}};
   const originals=new Map(Object.keys(globals).map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
   for(const [key,value] of Object.entries(globals))Object.defineProperty(globalThis,key,{configurable:true,writable:true,value});
   t.after(()=>{dom.window.close();for(const [key,descriptor] of originals){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}});
