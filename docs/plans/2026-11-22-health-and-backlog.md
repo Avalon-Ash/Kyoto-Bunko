@@ -233,3 +233,13 @@
 ## 9. 長鏈執行紀錄
 
 （每包做完記一段。）
+
+### 9.1 停在這裡（2026-11-22 約 23:40，用量上限到了）
+
+做到的：
+- 整合分支 `claude/chain-1122`（自 `claude/docs-1122`）；三個工作樹：`C:\Git\_wt_kyoto_static`（`claude/static-1122`）、`_wt_kyoto_tests`（`agent/tests-1122`）、`_wt_kyoto_data`（`agent/data-1122`），`node_modules` 都是 junction（拆之前先 `cmd /c rmdir`）。
+- A0：部件雜湊存在 `.shots/chain/parts-hash-before.txt`（對 repo 基準 11／11 相同）。「改前」全組矩陣在背景拍到 `.shots/chain/before/`，**停下來時還沒確認拍完**：接手先看每組的張數與 `*.log` 有沒有 WRONG。dev server 是瀏覽器面板啟動的（3000 埠，PID 11096）；9377 埠的無頭 Chrome（PID 33032）是 11/20 留下來的，不是這次啟動的。基準只在同一次開機、同一個 dev server 內有效；重開機過就從 `8a0fdb5` 重拍。
+- A1 開了頭（`claude/static-1122`，一個 commit）：`tsconfig.json` 加 `include`／`exclude`（不再掃 `dist/`）；新增 `tsconfig.js.json`：用 JSDoc 檢查全部 JS，不把沒標型別的參數與 null 當錯。這個設定下有 **231 個錯誤**（`npx tsc -p tsconfig.js.json --noEmit`），當作關卡是 0。最多的幾類：`mesh` 等屬性不在型別上 55、選項不在 JSDoc 裡（例 `h`）21、陣列對元組 20、**多傳一個引數（傳 7 個、函式收 0–6 個）16**、`Frame` 少了 `years`。還沒接進 `npm run lint`、還沒修任何一個。
+- 派出兩個 Sonnet 子代理（派工單在對話裡）：資料未結項的唯讀報告（要寫到 `_wt_kyoto_data` 的 `docs/agent-runs/2026-11-22-data-open-items.md`）、`plate.test.mjs` 拆成行為與圍欄（`_wt_kyoto_tests`，不 commit）。**停下來時兩個都還在跑，成果沒審過**；可能被用量上限中斷，接手先看兩個工作樹的 `git status` 與 diff。
+
+接著做（順序照 §8.2）：審兩個子代理的成果 → A1 修 231 個錯誤（只改 JSDoc，不改執行的值；多傳引數那 16 個先逐一看是不是真錯）、裝 ESLint（等矩陣拍完再裝，免得 dev server 重載）→ A2 → A3 → A 關卡 → B → C → D → E。
