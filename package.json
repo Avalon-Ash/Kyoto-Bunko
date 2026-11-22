@@ -10,7 +10,8 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit && tsc -p tsconfig.js.json --noEmit && eslint . && node scripts/check-adr.mjs",
     "adr:check": "node scripts/check-adr.mjs",
-    "test": "node --test --test-concurrency=1 \"scripts/*.test.mjs\" && tsx --test \"src/lib/*.test.ts\""
+    "test": "node --test --test-concurrency=1 \"scripts/*.test.mjs\" && tsx --test \"src/lib/*.test.ts\"",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
