@@ -1,7 +1,7 @@
 import {groundPoint, trailIntensity} from './geometry.js';
 import {createRenderer, cameraMatrix} from './renderer.js';
 import {translate} from '../../data/i18n';
-import {progressToward,isTap,onLid,cabinetDragDirection,cabinetOffset,switchDistance,idlePlaybackAllowed,kanjiNumber} from './interaction.js';
+import {progressToward,isTap,onLid,TAP_SLOP_PX,LID_HALF_X,LID_HALF_Z,cabinetDragDirection,cabinetOffset,switchDistance,idlePlaybackAllowed,kanjiNumber} from './interaction.js';
 import {CABINETS,DEFAULT_CABINET,cabinetFor,adjacentCabinet} from './collection';
 import {LANDMARK_STUDIES} from './landmarks.js';
 import {viewBox,clampPan,clampZoom,isZoomed,rubberBand,panLimit,planePoint,anchorPan,dragPan,isDoubleTap,ZOOM_STEP} from './view.js';
@@ -55,13 +55,11 @@ const FEEL = Object.freeze({
   idleLiftAmp: .12, // Amplitude of the unattended relief lift breathing around liftEmbedded
 
   // Light trail on the lid
-  trailBoundX: 364, // Half-width bound (world units) for trail points; 6 units inside onLid (370 in interaction.js)
-  trailBoundZ: 234, // Half-depth bound (world units) for trail points; 6 units inside onLid (240 in interaction.js)
+  trailInset: 6, // How far (world units) inside the lid's edge (LID_HALF_X, LID_HALF_Z in interaction.js) the light trail stops
   trailMinStep: 4, // Minimum distance (world units) between consecutive trail samples
   trailMaxPoints: 20, // Maximum number of active trail points kept
 
   // Pointer, zoom, pan & keyboard
-  dragThresholdPx: 8, // Pointer travel (px) before a press counts as a drag; matches isTap (<=8 in interaction.js)
   panRubberBandRatio: .5, // Rubber-band resistance dimension as a fraction of viewBox half-extents (view.js rubberBand)
   wheelPinchZoomRate: .01, // Exponential zoom sensitivity per wheel deltaY unit for trackpad pinch (ctrlKey)
   wheelZoomRate: .0015, // Exponential zoom sensitivity per wheel deltaY unit for regular wheel
@@ -295,7 +293,7 @@ function tick(time){
 function addTrail(x,y,time=performance.now()){
   if(flat||bookState!=='closed'||!projection)return;
   const [wx,wz]=groundPoint(projection,x,-y);
-  if(Math.abs(wx)>FEEL.trailBoundX||Math.abs(wz)>FEEL.trailBoundZ)return;
+  if(Math.abs(wx)>LID_HALF_X-FEEL.trailInset||Math.abs(wz)>LID_HALF_Z-FEEL.trailInset)return;
   const previous=trails.at(-1);
   if(previous&&Math.hypot(wx-previous.x,wz-previous.z)<FEEL.trailMinStep)return;
   trails.push({x:wx,z:wz,time});if(trails.length>FEEL.trailMaxPoints)trails.shift();
@@ -305,7 +303,7 @@ function point(e){
   if(pinch){movePinch(e);return;}
   if(gesture&&gesture.id!==e.pointerId)return;
   if(gesture?.panning){movePan(e);return;}
-  if(gesture&&Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>FEEL.dragThresholdPx)gesture.moved=true;
+  if(gesture&&Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>TAP_SLOP_PX)gesture.moved=true;
   canvas.dataset.pointerType=e.pointerType;
   if(options.embedded&&gesture?.moved){
     // The box trails the finger along its unseen track; the light below still follows the finger itself.
@@ -398,7 +396,7 @@ function movePinch(e){
 }
 function movePan(e){
   const r=canvas.getBoundingClientRect(),aspect=aspectNow(),[dx,dy]=dragPan(aspect,zoom,e.clientX-gesture.x,e.clientY-gesture.y,r.width,r.height),l=panLimit(aspect,zoom),v=viewBox(aspect,zoom);
-  if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>FEEL.dragThresholdPx){gesture.moved=true;canvas.dataset.dragging='true';}
+  if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>TAP_SLOP_PX){gesture.moved=true;canvas.dataset.dragging='true';}
   panX=panTX=rubberBand(gesture.panX+dx,l.x,v.halfW*FEEL.panRubberBandRatio);panY=panTY=rubberBand(gesture.panY+dy,l.y,v.halfH*FEEL.panRubberBandRatio);
   schedule();
 }

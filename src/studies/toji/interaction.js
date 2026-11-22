@@ -4,10 +4,14 @@ export function progressToward(current,target,elapsed,reduced){
   const step=Math.max(0,elapsed)/OPEN_DURATION;
   return target>current?Math.min(target,current+step):Math.max(target,current-step);
 }
+/** A press that travels further than this (px) is a drag, not a tap; study.js marks a gesture as moved by the same number. */
+export const TAP_SLOP_PX=8;
 export function isTap(start,end){
-  return Boolean(start&&end&&!start.moved&&start.id===end.id&&Math.hypot(end.x-start.x,end.y-start.y)<=8&&end.time>=start.time&&end.time-start.time<700);
+  return Boolean(start&&end&&!start.moved&&start.id===end.id&&Math.hypot(end.x-start.x,end.y-start.y)<=TAP_SLOP_PX&&end.time>=start.time&&end.time-start.time<700);
 }
-export function onLid(x,z){return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x)<=370&&Math.abs(z)<=240;}
+/** Half the lid's width and depth (world units): the bounds of onLid; study.js keeps its light trail a little inside them. */
+export const LID_HALF_X=370,LID_HALF_Z=240;
+export function onLid(x,z){return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x)<=LID_HALF_X&&Math.abs(z)<=LID_HALF_Z;}
 
 // The standalone study retains its quick-swipe collection rail.
 export function swipeDirection(start,end){
