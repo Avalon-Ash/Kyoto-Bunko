@@ -321,3 +321,26 @@
 agy 共六包，沒有一包被拒或需要重派；每包主席都重跑驗收並用腳本證明「只改註解」或「只換名字」。
 
 還沒做：階段 B（量測與載入）、C（資料未結項與門面）、D（畫面收尾）、E（合併、push、確認部署、刪 `.shots` 舊批次）。這幾個階段是定調、前後相依的量測、或要查原文的資料，不適合派 agy，要用 Claude 額度。
+
+### 9.8 停工，留兩包給 agy 跑（2026-11-23 00:33）
+
+使用者：「agy也有Claude 可用妳看著派，池很小但也可以作一點簡單的。今天這邊5小時用量要留給relay-diorama那邊處理美術重構，妳先停或是派Agy妳判斷」。
+
+主席的判斷：這個工作階段的脈絡已經很長，每多一輪都要重讀一次，光是驗收 agy 的回報就會吃 5 小時窗。所以只派兩包**不需要馬上驗收**的，用脫離工作階段的方式啟動（跑完不會喚醒主席），然後停工。成果留在工作樹，下次開工再驗。
+
+| 包 | 模型（agy log 確認） | 工作樹／分支 | 內容 | 成果在哪 | Windows PID |
+|---|---|---|---|---|---|
+| H4 | `gemini-4-hydrogen-high`，可寫 | `C:\Git\_wt_kyoto_libtests`／`agent/libtests-1123` | 替 `src/lib/` 三個沒有測試的模組（`map-clusters.ts`、`numerals.ts`、`makie-icons.ts`）補行為測試；只准新增三個測試檔 | 工作樹的未提交 diff；報告在 `.claude/dispatch/libtests.out.json` | 21956 |
+| R1 | `gemini-4-argon-medium`，只讀（`--mode plan`） | `C:\Git\_wt_kyoto_audit`／`agent/audit-1123` | 兩份核對：README 三個語言版的敘述逐句對程式；每區的事實（地標名等）有沒有在兩處各寫一份（W11） | `.claude/dispatch/audit.out.json` 的 `response` | 33328 |
+
+派工單在各工作樹的 `.claude/dispatch/`。兩包都設了逾時（35 分、30 分）。
+
+**沒派 agy 的 Claude 池**：agy 裡的 Claude 在無頭模式讀檔走終端機，第一步就會被拒（`agy-call` skill 的實測），只能做「所有脈絡都貼在提示詞裡、不用讀檔」的工作；這條鏈剩下的事沒有這種形狀的。池留著。
+
+**下次開工先做**（建議開新的工作階段，讀 `AGENTS.md`、`HANDOFF.md`、本節）：
+1. 驗 H4：解析 `libtests.out.json` 開頭是 `{` 的那一行（看 `denied_actions` 與報告）；`git -C C:\Git\_wt_kyoto_libtests status` 應只有三個新測試檔；讀測試確認預期值不是照抄輸出、斷言沒有放水；主資料夾 `git cherry-pick` 後跑 `npm run lint`、`npm test`。它回報「現在行為有錯」的地方由主席判斷。
+2. 讀 R1 的兩份報告：README 不符的地方直接改 README；W11 若有真的重複，照 §8.3(c) 另寫提案。Argon 的結論逐條回到檔案:行號核對再採用。
+3. 兩個工作樹用完就拆（`_wt_kyoto_libtests` 的 `node_modules` 是 junction，先 `cmd /c rmdir`；`_wt_kyoto_audit` 沒有 `node_modules`）。
+4. 接著做階段 B–E（§8.2）。資料查核的半份報告仍在 `C:\Git\_wt_kyoto_data`。
+
+dev server（3000 埠）是這個工作階段的瀏覽器面板啟動的，工作階段結束會跟著停；9377 埠的無頭 Chrome 是 11/20 留下的，沒有動它。跨了重開機之後，`.shots/chain/` 的基準要重拍才能再用來比對。
