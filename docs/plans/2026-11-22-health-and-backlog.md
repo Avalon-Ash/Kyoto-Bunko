@@ -273,3 +273,17 @@
 - `src/optional-modules.d.ts`：宣告 `playwright` 與 `@threert/scene`（這個 repo 不安裝的兩個模組）。
 
 剩下 18 個都在四個測試檔，派給 Hydrogen（H2，`_wt_kyoto_types2`，分支 `agent/types-c-1122`），還在跑。清到 0 之後把 `tsc -p tsconfig.js.json` 接進 `npm run lint`、寫 ADR 0021。ESLint 還沒裝。
+
+### 9.4 A1 收尾、A2、ESLint（2026-11-23 00:20，整合分支 `f4cc424`）
+
+- **型別錯誤 18 → 0**：H2（`gemini-4-hydrogen-high`）只加 JSDoc 清掉四個測試檔的 18 個；五個檔去掉註解後與改前相同，測試名稱與斷言沒動。`tsc -p tsconfig.js.json` 接進 `npm run lint`（`bc81942`）。
+- **A2 區順序與拍圖腳本環境**（`gemini-4-neon-medium`，§8.3(a)）：`scripts/lib/plate-env.mjs` 是 dev 位址、兩個偵錯埠、Chrome 啟動與 CDP 連線的唯一定義；`RING`、`WARDS`、`START`、`ALL_WARD_KEYS` 都刪了，腳本向 dev 頁面要順序（`window.__kyotoCabinetIds`，只在 dev；`dist/` 裡搜不到）；job 可以直接寫區名；預設區在 `collection.ts` 的 `DEFAULT_CABINET`。主席逐行看過 diff。`plate-doha-similar.mjs` 第 77 行那張「區 ID → 檔名」的表這次沒動。
+- **A2 的瀏覽器驗收**：用新腳本重拍全組矩陣（`.shots/chain/after-a2/`）對 A0 的基準。106 張裡 102 張 0 差異；4 張共 6 個像素差 1 級。逐張查：
+  - `base/nakagyo-day`、`swapB/minami-day`：各重拍兩次都和基準 0 差異，是雜訊。
+  - `base/fushimi-day`（2 個像素）、`v4/minami-day`（1 個像素）：重拍會重現。把主資料夾切回改前的 `8a0fdb5` 用舊腳本重拍這兩張，**和基準差的是同樣的像素**，而和新程式重拍的圖 0 差異（`node scripts/plate-diff.mjs`）。所以差異來自 A0 那一次拍攝本身（當時瀏覽器面板的分頁剛關），不是修改造成的。
+  - 結論：到 `f4cc424` 為止沒有任何像素差異可歸因於程式修改。之後的比對改用 `.shots/chain/after-a2/` 當基準（同一次開機、同一個 dev server）。
+- **ESLint**（`f4cc424`）：只開正確性規則，接進 `npm run lint`。全庫 20 個發現：14 個是口味或刻意的寫法（關掉那幾條規則；受保護檔案不為 lint 修改），6 個修掉：一個沒用到的 import、一個沒用到的回呼參數、dev 匯出裡三個沒用到的解構名稱、`meshMoonBowl` 沒有人傳的第四個參數、一個只在掛載時跑的 effect 加註記。ADR 0021 記下型別檢查與 ESLint 的範圍。
+- **四項檢查**（主席在主資料夾跑）：`npm run lint` exit 0（ADR 21 份）；`validate --strict` ERROR 0／WARN 0；`npm test` 156／156、17／17；`npm run build` exit 0（`three-renderer` 802.79 kB、`main` 362.56 kB、`ClusterMap` 205.87 kB）；部件雜湊 11／11。
+- **更正 W19**：`probe.js` 留在產品包是刻意的。`MAKIE_PLATE_HANDOFF.md` §第 312 行：閃爍量測要在實機的線上頁面加 `?probe=flicker` 跑。不加 DEV 條件。
+- **不做「`npm test` 失敗時自動存輸出」**（B9）：偶發只出現過一次；在驗收指令外面包一層，等於多一個會壞的地方。再出現時用 `npm test > .shots/test.log 2>&1` 重跑即可。
+- **派出、還在跑**：A3（`study.js` 係數命名，Neon medium，`_wt_kyoto_static`，分支 `agent/a3-1122`）；H3（首頁冒煙測試 `scripts/smoke.mjs`，Hydrogen high，`_wt_kyoto_types2`，分支 `agent/smoke-1122`）。派工單在各工作樹的 `.claude/dispatch/`。
