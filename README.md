@@ -2,7 +2,7 @@
 
 # Kyoto Bunko 京洛文庫
 
-**A lacquer-box guide to Kyoto — eleven wards, eleven boxes, 792 places.**
+**A lacquer-box guide to Kyoto — eleven wards, eleven boxes, 734 places.**
 
 English · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
@@ -55,7 +55,7 @@ Every place opens in Google Maps with one tap.
 
 - **Eleven maki-e boxes.** Each lid is a hand-composed relief: raised forms for the shapes you'd recognise, and flat inlays of cut gold, silver and mother-of-pearl for the details. Light follows your finger or cursor, and pieces stand up as the light passes.
 - **Moonlight and daylight themes**, a language switch, and a reduced-motion mode that lays every piece flat while keeping the light.
-- **792 places** in seven types: transport hubs, temples and shrines, shops and tea houses, modern sites, landscapes, food, and anime and game locations. Food listings are checked against Tabelog whenever they're added or changed.
+- **734 places** in seven types: transport hubs, temples and shrines, shops and tea houses, modern sites, landscapes, food, and anime and game locations. Food listings are checked against Tabelog whenever they're added or changed.
 - **Mobile first.** One-finger brushing, swipes between boxes, pinch to zoom, plus full keyboard control (arrows, Enter, `+`/`−`).
 
 ## Run it locally
