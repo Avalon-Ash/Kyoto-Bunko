@@ -243,3 +243,16 @@
 - 派出兩個 Sonnet 子代理（派工單在對話裡）：資料未結項的唯讀報告（要寫到 `_wt_kyoto_data` 的 `docs/agent-runs/2026-11-22-data-open-items.md`）、`plate.test.mjs` 拆成行為與圍欄（`_wt_kyoto_tests`，不 commit）。**停下來時兩個都還在跑，成果沒審過**；可能被用量上限中斷，接手先看兩個工作樹的 `git status` 與 diff。
 
 接著做（順序照 §8.2）：審兩個子代理的成果 → A1 修 231 個錯誤（只改 JSDoc，不改執行的值；多傳引數那 16 個先逐一看是不是真錯）、裝 ESLint（等矩陣拍完再裝，免得 dev server 重載）→ A2 → A3 → A 關卡 → B → C → D → E。
+
+### 9.2 續做（2026-11-22 23:15 起）：低風險的包改派 agy
+
+使用者：「因為有另一個專案在高耗量，妳這邊先派比較沒風險的給agy跑」。額度（`quota` skill，23:13）：Gemini Models 5 小時剩 100%、週剩 37.6%（偏低；使用者指定用它）；Codex 週剩 52%。
+
+- **A0 基準拍完**：`.shots/chain/before/` 十組共 106 張（base 22、coat0 11、new 11、v4／v5／v6 各 11、swapA 11、swapB 4、lightoff 11、mobile 3）。`coat0.log` 對下京夜間報了一次 WRONG；重拍那一張與基準逐像素比，0 差異（`node scripts/plate-diff.mjs .shots/chain/recheck/orig .shots/chain/recheck/coat0`），是檢查讀早了，圖是對的。
+- **A4 測試拆檔（完成，已進整合分支）**：Sonnet 子代理在用量上限前已做完主體。主席核對：斷言數 512 → 512、測試 155 → 156（一段混在行為測試裡的圍欄切成獨立測試）、`npm test` 156／156 與 17／17、`npm run lint` exit 0。圍欄在 `scripts/plate-fences.test.mjs`，共用的區集合在 `scripts/lib/plate-test-helpers.mjs`。工作樹 `_wt_kyoto_tests` 已拆。冒煙測試與「失敗時存輸出」還沒做（等 A2 的腳本環境模組）。
+- **資料查核（部分）**：Sonnet 子代理做了八項中的約三項半就被上限中斷，全部只到 PLAUSIBLE；報告在 `C:\Git\_wt_kyoto_data\docs\agent-runs\2026-11-22-data-open-items.md`，還沒審、沒有改任何資料。這一包要查原文、真實性第一，不派 agy；等 Claude 額度。
+- **A1 型別錯誤 231 個，拆兩包派 agy**（派工單在各工作樹的 `.claude/dispatch/`，允許清單 `C:\Git\_agent_allow\kyoto-types.json`）：
+  - N1（Neon medium，`_wt_kyoto_static`）：`src/studies/toji/plate/` 的 125 個。
+  - H1（Hydrogen high，`_wt_kyoto_types2`，分支 `agent/types-b-1122`）：文箱外層 24 個、腳本與工具 16 個。
+  - 規則：只改 JSDoc（與一個 `.d.ts`），執行的程式一個字都不動；不准 `any` 轉型或 `@ts-ignore`；只有改程式才消得掉的錯誤當「真問題」留著回報。主席驗收：重跑四個指令、部件雜湊 11／11、每個改過的檔去掉註解後與改前相同。
+  - 測試檔的 66 個（`plate.test.mjs` 64）還沒派。
