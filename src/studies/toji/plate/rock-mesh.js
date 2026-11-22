@@ -298,7 +298,7 @@ export function meshRock(id, cx, cz, w, h, seed, {mat = MAT.kirikane, layer = 1,
   const maxSpan = Math.ceil(Math.hypot(w, h) * 1.15 / pitch);
   const tileVerts = [];
   const tileThick = .022;
-  if (powder) { p.mesh = [{mat: bodyMat, vertices: bodyVerts}]; return p; }
+  if (powder) { p.mesh = [{mat: bodyMat, vertices: bodyVerts}]; return [p]; }
 
   for (let iz = -maxSpan; iz <= maxSpan; iz++) {
     for (let ix = -maxSpan; ix <= maxSpan; ix++) {

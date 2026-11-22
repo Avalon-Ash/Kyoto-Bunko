@@ -72,8 +72,8 @@ export function sakyo() {
     ...storey('ginkaku-upper', -163, -138, -113, 46, {group: 'ginkaku', order: 2, windowMat: MAT.lacquer}),
     ...roof('ginkaku-crown', -163, -140, 63, 34, {group: 'ginkaku', order: 3, mat: MAT.lacquer, ridgeHalf: 25, motionWith: 'ginkaku-upper'}),
     ...hall('togudo', 84, -102, 82, 32, {wallH: 24}),
-    ...pine('near-pine', -293, 178, 99, 12, 2, {clusters: 3}),
-    ...pine('east-pine', 282, -54, 112, -12, 6, {clusters: 3}),
+    ...pine('near-pine', -293, 178, 99, 12, 2),
+    ...pine('east-pine', 282, -54, 112, -12, 6),
     ...bird('uguisu', [[-272.56, 137.72, 1, 'near-pine', 10], [261.10, -100.00, -1, 'east-pine', 10]]),
   ];
 }

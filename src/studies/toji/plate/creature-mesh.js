@@ -144,7 +144,7 @@ function refine(poly, target, band = Infinity, coarse = target) {
     let split = false;
     for (const tri of current) {
       const a = tri[0], b = tri[1], c = tri[2], m0 = T.mid[slotOf(T, a, b)], m1 = T.mid[slotOf(T, b, c)], m2 = T.mid[slotOf(T, c, a)];
-      const count = (m0 >= 0) + (m1 >= 0) + (m2 >= 0);
+      const count = Number(m0 >= 0) + Number(m1 >= 0) + Number(m2 >= 0);
       if (!count) { next.push(tri); continue; }
       split = true;
       if (count === 3) { next.push([a, m0, m2], [m0, b, m1], [m2, m1, c], [m0, m1, m2]); continue; }

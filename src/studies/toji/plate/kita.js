@@ -70,7 +70,7 @@ export function kita() {
     ...pavilion,
     ...phoenix('ho-o', -85, -168, 1.25, {group: 'kinkaku', order: 6}).map(p => ({...p, motionWith: 'kinkaku-wall-2'})),
     ...pine('island-pine', 171, 97, 124, -15, 6),
-    ...pine('west-pine', -291, -28, 114, 12, 2, {clusters: 3}),
+    ...pine('west-pine', -291, -28, 114, 12, 2),
     ...bird('uguisu', [[148.36, 45.72, -1, 'island-pine', 10], [-270.03, -74.88, 1, 'west-pine', 10]]),
   ];
 }

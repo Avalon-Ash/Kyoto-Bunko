@@ -53,8 +53,8 @@ export function nishikyo() {
     ...moonDeck('tsukimi', -176, -100, -32, 20),
     ...steppingStones('approach', [[-210, 114, 11], [-178, 129, 12], [-145, 140, 11], [-110, 146, 12], [-74, 148, 11]]),
     ...lantern('shore-lantern', 246, 171, .9),
-    ...pine('near-pine', -291, 183, 99, 12, 2, {clusters: 3}),
-    ...pine('far-pine', 286, -60, 112, -12, 6, {clusters: 3}),
+    ...pine('near-pine', -291, 183, 99, 12, 2),
+    ...pine('far-pine', 286, -60, 112, -12, 6),
     ...bird('uguisu', [[-270.56, 142.72, 1, 'near-pine', 10], [265.10, -106.00, -1, 'far-pine', 10]]),
   ];
 }

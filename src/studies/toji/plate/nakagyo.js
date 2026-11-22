@@ -88,8 +88,8 @@ export function nakagyo() {
     ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
     ...rooms.flatMap(([x, z, w], i) => hall(`ninomaru-${i}`, x, z, w, 22, {wallH: 22, bays: 5})),
     ...karamon('karamon', -172, 184, 69),
-    ...pine('west-pine', -305, 62, 99, 12, 2, {clusters: 3}),
-    ...pine('east-pine', 282, -79, 112, -12, 6, {clusters: 3}),
+    ...pine('west-pine', -305, 62, 99, 12, 2),
+    ...pine('east-pine', 282, -79, 112, -12, 6),
     ...bird('uguisu', [[-284.56, 21.72, 1, 'west-pine', 10], [261.10, -125.00, -1, 'east-pine', 10]]),
   ];
 }

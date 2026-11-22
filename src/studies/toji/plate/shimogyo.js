@@ -45,7 +45,7 @@ export function shimogyo() {
     ...lantern('goeido-lantern-east', 168, 46, .8).map(p => ({...p, on: 'goeido-wall'})),
     ...fallenFans('ginkgo-fall', -170, 190, 150, 32, 42, 6, {size: 12}),
     ...ginkgo('great-ginkgo', -224, 198, 139),
-    ...pine('east-pine', 284, 201, 112, -12, 6, {clusters: 3}),
+    ...pine('east-pine', 284, 201, 112, -12, 6),
     ...rock('ginkgo-stone', -104, 206, 21, 17, 4),
     ...rock('east-stone', 173, 178, 23, 16, 7, {mat: MAT.kirigin}),
     ...bird('uguisu', [[263.10, 155.00, -1, 'east-pine', 10], [-192.73, 129.80, 1, 'great-ginkgo', 21]]),

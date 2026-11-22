@@ -30,8 +30,8 @@ export function kamigyo() {
     // Short gold grass at the foot of each pine: only outside the white court is there any, which keeps the court bare.
     ...grassTufts('west-pine-grass', [[-318, -77, 14, 5], [-264, -76, 14, 5]], {on: 'west-pine', seed: 2}),
     ...grassTufts('east-pine-grass', [[258, -76, 14, 5], [314, -76, 14, 5]], {on: 'east-pine', seed: 3}),
-    ...pine('west-pine', -292, -84, 99, 12, 2, {clusters: 3}),
-    ...pine('east-pine', 285, -83, 99, -12, 6, {clusters: 3}),
+    ...pine('west-pine', -292, -84, 99, 12, 2),
+    ...pine('east-pine', 285, -83, 99, -12, 6),
     ...bird('uguisu', [[-271.56, -124.28, 1, 'west-pine', 10], [-65.08, 27.28, -1, 'sakon-sakura', 12]]),
   ];
 }
