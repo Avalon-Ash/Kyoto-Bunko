@@ -25,12 +25,13 @@
 | explorer | 定位符號、查引用、找已知差異 | gpt-6-luna／low | 只讀；先精確搜尋，最多兩輪擴大搜尋；找不到就回報 |
 | worker | 確定性的標籤／locale 編輯、指定命令驗證 | gpt-6-luna／medium | 每包最多 3 個指定檔案；不得自行做地理或分類決策 |
 | researcher | 地標座標、行政區身分、來源交叉核對 | gpt-6.1-sol／medium | 網路與程式只讀；交付來源、日期、候選座標、確信程度 |
-| implementer | 界線明確的跨函式實作，例如 loader、投影工具 | gpt-6.1-sol／medium | 指定 write set；不得擴張到整體架構 |
+| implementer | 界線明確的跨函式實作，例如 loader、投影工具 | gpt-6.2-sol／medium（2026-11-22 起；派工單要求把碰到的阻礙寫進報告） | 指定 write set；不得擴張到整體架構 |
 | reviewer | 完成 diff 的獨立審查、回歸情境 | gpt-6.1-sol／medium | 只讀；按指定 base SHA 比較，不能只信代理報告 |
 | specialist | 已有證據的座標／React 生命週期疑難 | gpt-6.1-sol／high | 一個問題一包；先記錄失敗原因與升級理由 |
 | 主代理 | 分解、核心地圖整合、美術取捨、最終驗收 | 保留使用者設定；一般 medium，複雜整合建議 high | 強度建議不代表主代理已自行切換模型 |
 
 - （2026-11-13 補註：蒔繪浮雕盤工作線上，使用者當天兩次指名用 `gpt-6-astra`／high 做八區實作與驗收，理由是 Codex 額度較多；做法與教訓在 `MAKIE_PLATE_HANDOFF.md` §8.7。下一條的一般原則不變，是否再用以使用者當次指示為準。）
+- （2026-11-22：Codex 6.2 上線，實作改 `gpt-6.2-sol`；researcher、reviewer、specialist 是讀碼與審查，留 `gpt-6.1-sol`，因為 6.2 Sol 讀碼庫答題退步。上面補註的 Astra 現在是 `gpt-6.2-astra`。）
 - 平常不使用 Astra、xhigh、max、ultra。確實需要時先提交問題、已嘗試方法與升級理由，取得對應模型／強度的使用者指示；不是每個任務都要再問一次。
 - 高強度不能補足無來源資料；來源不足標為阻塞，不以更換模型推測答案。
 - 最多兩個子代理同時工作，機械任務只有幾行時主代理直接完成。禁止子代理遞迴派工。
