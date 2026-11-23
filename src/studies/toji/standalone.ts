@@ -8,7 +8,8 @@ if(!root)throw new Error('Missing study root');
 const controller=mountStudy(root);
 if(import.meta.hot)import.meta.hot.dispose(()=>controller.destroy());
 
-if (typeof window !== 'undefined') {
+// The flicker probe is a dev tool: the DEV guard lets the production build drop the dynamic import, so probe.js stays out of dist.
+if (import.meta.env.DEV && typeof window !== 'undefined') {
   const params = new URLSearchParams(window.location.search);
   if (params.get('probe') === 'flicker') {
     document.documentElement.dataset.probe = 'running';

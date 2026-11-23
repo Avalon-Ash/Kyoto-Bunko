@@ -10,12 +10,10 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit && tsc -p tsconfig.js.json --noEmit && eslint . && node scripts/check-adr.mjs",
     "adr:check": "node scripts/check-adr.mjs",
-    "test": "node --test --test-concurrency=1 \"scripts/*.test.mjs\" && tsx --test \"src/lib/*.test.ts\"",
+    "test": "node scripts/run-tests.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
@@ -26,10 +24,12 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.1.14",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.0.4",
     "eslint": "^10.15.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
