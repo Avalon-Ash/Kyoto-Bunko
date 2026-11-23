@@ -50,7 +50,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 | `npm run build` | exit 0；`three-renderer` 809.24 kB（gzip 230.76）、`main` 362.56 kB（gzip 117.49）、`ClusterMap` 205.87 kB（gzip 61.42） |
 | `npm run smoke` | 通過（three.js 畫出、console 無錯） |
 | 穿插、部件雜湊 | `plate-clip` findings 0；`plate-parts-hash --check` 11／11（基準已更新成換岩之後） |
-| 部署 | 整合分支還沒合併 `main`；`main` 的 `b61314c` 已部署 |
+| 部署 | `73ac948` 已合併 `main`、push，GitHub Pages 部署成功（2026-11-23） |
 
 以上是主代理 11/23 在主資料夾跑的（整合分支）。11/22 那天沒有拍圖；最近一次蓋面矩陣是 11/20 的 `plate-matrix.sh`（25 張 0 差異，[`plans/2026-11-20-next.md`](plans/2026-11-20-next.md)）。穿插檢查用 `node scripts/plate-clip.mjs <out.json>`，上次量是 11/17（十一區 0）。
 
@@ -69,7 +69,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 之後使用者要求把工作排成一條長鏈、對齊一次、做完才合回主線（開案書 §8；回主線前分支自由開，技術上的取捨由主代理定）。使用者事先同意了：全鏈 A–E、解耦提案 (a)(b)、新增 ESLint、刪 `.shots` 舊批次、驗收過就合併 `main` 並 push。
 
-**長鏈做到哪裡**（整合分支 `claude/chain-1122`，還沒合併 `main`；細節在開案書 §9）：階段 A（工程體質）完成：JavaScript 型別檢查與 ESLint 接進 `npm run lint`（ADR 0021）、區的順序與拍圖腳本環境只定義一處、`study.js` 的係數命名、測試拆成行為與圍欄、冒煙測試 `npm run smoke`、依賴補丁版。11/23 晚由 Opus 主席接手（Fable 週額度用完）：階段 B 完成，只量不改，數字在開案書 §9.10，量測腳本是 `scripts/perf-home.mjs`。階段 C 的資料未結項完成（`817dfc2` 與後續修正；報告 `agent-runs/2026-11-23-data-open-items.md`），門面做了 meta description 與 favicon；OG 圖與 README 的八張截圖（都是 11/13 舊管線）等階段 D 做完再拍。lib 測試 27 個、README 與 `DEVELOPMENT.md` 的修正也進了整合分支。階段 D：八項逐項決定，只改了「岩」：九區 17 顆舊圓岩換成伏見、中京的尖岩簇，其餘七項不改，理由在開案書 §9.11–§9.12。README 的八張圖與 OG 圖已重拍（§9.13）。階段 E：Fable 終審（API 點數）結論「可以合併」，應修的已修（§9.14）。**剩下：使用者同意後合併 `main`、push、確認部署、刪 `.shots` 舊批次、刪 `claude/docs-1122` 與整合分支。**
+**長鏈做到哪裡**（已全部合併 `main` 並部署，2026-11-23；細節在開案書 §9）：階段 A（工程體質）完成：JavaScript 型別檢查與 ESLint 接進 `npm run lint`（ADR 0021）、區的順序與拍圖腳本環境只定義一處、`study.js` 的係數命名、測試拆成行為與圍欄、冒煙測試 `npm run smoke`、依賴補丁版。11/23 晚由 Opus 主席接手（Fable 週額度用完）：階段 B 完成，只量不改，數字在開案書 §9.10，量測腳本是 `scripts/perf-home.mjs`。階段 C 的資料未結項完成（`817dfc2` 與後續修正；報告 `agent-runs/2026-11-23-data-open-items.md`），門面做了 meta description 與 favicon；OG 圖與 README 的八張截圖（都是 11/13 舊管線）等階段 D 做完再拍。lib 測試 27 個、README 與 `DEVELOPMENT.md` 的修正也進了整合分支。階段 D：八項逐項決定，只改了「岩」：九區 17 顆舊圓岩換成伏見、中京的尖岩簇，其餘七項不改，理由在開案書 §9.11–§9.12。README 的八張圖與 OG 圖已重拍（§9.13）。階段 E：Fable 終審（API 點數）結論「可以合併」，應修的已修（§9.14）。**全部完成**：合併 `main`、push、部署成功，工作分支已刪；`.shots` 只刪了沒被任何文件、skill、記憶或程式引用的 19 項（約 139 MB），被引用的舊批次都留著。**下一步**：積壓在開案書 §3 與 §9.14 的「留到積壓」；NK-084、NK-085 是等 Tabelog 的自動安全驗證過了才查的，算不算數等使用者決定（`agent-runs/2026-11-23-data-open-items.md`）。
 
 誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與開案書 §4 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
 
