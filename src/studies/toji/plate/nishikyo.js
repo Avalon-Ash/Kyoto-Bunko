@@ -38,20 +38,19 @@ const SHORES = [
 // beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
 // (x, z). on: what it stands against; why: the reason it is there.
 export const ROCKS = [
-  // east of the shore lantern, on the south-east shore: a high crown with a notch behind a second, shorter crown, a gold step at the right and a silver shoulder at the left
-  {id: 'east-stone', x: 326, z: 182, scale: .95,
+  // east of the shore lantern, on the south-east shore: a long slab that leans to the right, low at its left foot and steep at its high back-right end, a gold shoulder at the left, silver in front
+  {id: 'east-stone', x: 330, z: 182, scale: 1.45,
     crags: [
       {seed: 7, blocks: [
-        {mat: 'olive', ridge: [[-12, -5, 14, 6.5], [-6, -8, 20, 6.5], [-1, -5, 13, 5]], strata: {ang: -.8, period: 4.2, amp: .6, w: 1.1}},
-        {mat: 'gold', ridge: [[7, -6, 15, 5.5], [13, -3, 10, 5], [17, 1, 6, 4]], strata: {ang: .6, period: 3.6, amp: .5, w: 1}},
-        {mat: 'silver', ridge: [[-17, 1, 8, 5.5], [-10, 3, 10, 5]], q: .85},
-        {mat: 'olive', ridge: [[-2, 4, 8, 5], [5, 5, 7, 4.5]]},
-      ], grooves: [{p: [[1, -11], [1, -4], [2, 2]], w: 2.8, depth: 3.4}]},
-      {at: [-29, 6], blocks: [{mat: 'olive', ridge: [[0, 0, 6, 4.2], [4, 1, 4.5, 3.2]]}, {mat: 'silver', ridge: [[-2, 4, 3.5, 3]]}]},
+        {mat: 'olive', ridge: [[-14, 6, 5, 4.6], [-8, 1, 12, 5.3], [-2, -3, 19, 5], [6, -7, 25, 4.5], [10, -10, 28, 4]], strata: {ang: .8, period: 4.2, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[-11, -4, 9, 4.8], [-6, -7, 13, 4.6]], strata: {ang: .6, period: 3.6, amp: .5, w: 1}},
+        {mat: 'silver', ridge: [[4, 3, 10, 5], [11, 1, 8, 4.5]], q: .85},
+        {mat: 'olive', ridge: [[-2, 8, 5, 4.5], [6, 9, 5, 4]]},
+      ], grooves: [{p: [[3, -12], [3, -6], [2, 0]], w: 2.4, depth: 3.2}]},
     ],
-    lines: [[[-6, -8], [-7, -3], [-9, 2], [-11, 6]], [[-1, -6], [0, -1], [1, 4]], [[8, -6], [10, -1], [12, 3]], [[15, -2], [17, 2]], [[-15, 1], [-17, 5]], [[-1, 5], [3, 7], [7, 6]]],
-    kiri: [{at: [10, -3], cols: 2, rows: 3, turn: .25}],
-    pebbles: [[-22, 10, 3, 1.8, .8, .2, 'silver'], [6, 12, 3.4, 2, .9, -.2, 'olive'], [21, 8, 2.2, 1.5, .6, .3, 'silver'], [-33, 0, 2, 1.4, .6, 0, 'olive']],
+    lines: [[[10, -10], [6, -6], [1, -2], [-4, 3]], [[6, -7], [9, -2], [10, 3]], [[-14, -4], [-16, 1]], [[11, 1], [13, 5]], [[-2, 8], [3, 10]]],
+    kiri: [{at: [-6, -4], cols: 2, rows: 3, turn: .6}],
+    pebbles: [[-17, 11, 3, 1.8, .8, .2, 'silver'], [6, 13, 3.4, 2, .9, -.2, 'olive'], [12, 13, 2.2, 1.5, .6, .3, 'silver']],
     on: 'the south-east shore, east of the stone lantern at the water\'s edge', why: 'the lantern has a stone to lean its light toward; the garden\'s east edge is closed by it'},
 ];
 

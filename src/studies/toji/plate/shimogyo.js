@@ -32,34 +32,33 @@ const BANK = [
 // beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
 // (x, z). on: what it stands against; why: the reason it is there.
 export const ROCKS = [
-  // where the left piece of the bank runs under the middle one, in the lee of the fallen fans: a pale silver pair of crowns, a tall olive thorn behind, a gold step between
-  {id: 'ginkgo-stone', x: -104, z: 206, scale: 1.05,
+  // where the left piece of the bank runs under the middle one, in the lee of the fallen fans: a pair, a tall silver boulder and a smaller olive one at its right with a gold step between
+  {id: 'ginkgo-stone', x: -104, z: 206, scale: 1.5,
     crags: [
       {seed: 4, blocks: [
-        {mat: 'olive', ridge: [[2, -6, 14, 5], [5, -10, 21, 4.8], [9, -6, 13, 4.6]], strata: {ang: 1.3, period: 4, amp: .55, w: 1}},
-        {mat: 'silver', ridge: [[-14, -2, 12, 6.5], [-8, -5, 16, 6]], q: .9},
-        {mat: 'gold', ridge: [[-2, 2, 8, 5], [5, 3, 10, 4.5]], strata: {ang: -.4, period: 3.4, amp: .45, w: 1}},
-        {mat: 'silver', ridge: [[-12, 6, 6, 4.5], [-5, 8, 5, 4]], q: .8},
-      ], grooves: [{p: [[-3, -8], [-3, -2], [-4, 3]], w: 2.2, depth: 2.6}]},
-      {at: [24, 7], blocks: [{mat: 'olive', ridge: [[0, 0, 5, 4], [3, 2, 4, 3]]}]},
+        {mat: 'silver', ridge: [[-14, -4, 20, 6], [-8, -7, 26, 5.5], [-4, -4, 18, 5.5]], q: .9},
+        {mat: 'gold', ridge: [[1, 1, 7, 4.5], [5, 2, 8, 4]], strata: {ang: -.4, period: 3.4, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[-16, 4, 7, 4.5], [-9, 6, 7, 4]], q: .8},
+      ], grooves: [{p: [[-8, -9], [-7, -3], [-8, 2]], w: 2, depth: 3}]},
+      {at: [16, -1], blocks: [{mat: 'olive', ridge: [[0, 0, 12, 4.5], [3, -2, 15, 4], [5, 0, 10, 3.8]], strata: {ang: 1.3, period: 4, amp: .55, w: 1}}]},
     ],
-    lines: [[[5, -10], [4, -5], [3, 0], [2, 4]], [[-8, -5], [-10, 0], [-12, 4]], [[9, -6], [10, -1]], [[-14, -2], [-16, 2]], [[-1, 3], [3, 5], [7, 4]]],
-    pebbles: [[-20, 9, 3, 1.8, .8, .2, 'silver'], [2, 12, 3.2, 1.9, .8, -.2, 'olive'], [15, 9, 2.2, 1.5, .6, .3, 'silver']],
+    lines: [[[-8, -7], [-9, -2], [-10, 3]], [[-14, -4], [-16, 1]], [[-4, -4], [-3, 1]], [[3, -2], [3, 3]], [[16, -2], [17, 2]]],
+    kiri: [{at: [-9, -2], cols: 2, rows: 2, turn: .3}],
+    pebbles: [[-22, 10, 3, 1.8, .8, .2, 'silver'], [-2, 12, 3.2, 1.9, .8, -.2, 'olive'], [24, 7, 2.2, 1.5, .6, .3, 'silver']],
     on: 'the near edge of the bank, at the join of its left and middle pieces, beyond the fallen fans', why: 'the stone the fans drift to and lie against: the leaves of the ginkgo stop at it'},
-  // the right end of the middle piece, before the east pine: a long spine that rises from the right and breaks at a notch, a silver crown behind, a gold lobe in front
-  {id: 'east-stone', x: 173, z: 178, scale: 1.1,
+  // the right end of the middle piece, before the east pine: a stair of four blocks that steps down toward the front left, olive, silver, gold, olive
+  {id: 'east-stone', x: 173, z: 178, scale: 1.15,
     crags: [
       {seed: 7, blocks: [
-        {mat: 'olive', ridge: [[14, -2, 9, 6.5], [8, -5, 14, 7], [1, -7, 19, 6]], strata: {ang: .1, period: 4.4, amp: .6, w: 1.1}},
-        {mat: 'silver', ridge: [[-8, -5, 17, 5.5], [-13, -2, 12, 5]], q: .88},
-        {mat: 'gold', ridge: [[6, 4, 8, 5.5], [-1, 5, 6, 4.5]], strata: {ang: .9, period: 3.4, amp: .45, w: 1}},
-        {mat: 'olive', ridge: [[-12, 5, 6, 4.5], [-6, 7, 5, 4]]},
-      ], grooves: [{p: [[-4, -10], [-4, -3], [-5, 3]], w: 2.4, depth: 3}]},
-      {at: [-30, 4], blocks: [{mat: 'silver', ridge: [[0, 0, 6, 4.2], [4, 1, 4.5, 3.2]]}]},
+        {mat: 'olive', ridge: [[4, -9, 23, 6], [11, -8, 20, 6.5]], strata: {ang: .1, period: 4.4, amp: .6, w: 1.1}},
+        {mat: 'silver', ridge: [[-4, -3, 16, 6], [3, -3, 15, 5.5]], q: .88},
+        {mat: 'gold', ridge: [[-11, 3, 10, 5.5], [-4, 3, 9, 5]], strata: {ang: .9, period: 3.4, amp: .45, w: 1}},
+        {mat: 'olive', ridge: [[-18, 8, 5, 4.5], [-11, 8, 5, 4]]},
+      ], grooves: [{p: [[8, -12], [8, -6], [7, -1]], w: 2.4, depth: 3}]},
     ],
-    lines: [[[1, -7], [2, -2], [3, 3], [4, 6]], [[-8, -5], [-9, 0], [-11, 4]], [[8, -4], [10, 0], [12, 4]], [[-13, -2], [-15, 2]], [[-2, 5], [3, 7], [8, 6]]],
-    kiri: [{at: [7, -2], cols: 2, rows: 2, turn: .3}],
-    pebbles: [[-20, 9, 3, 1.8, .8, .2, 'silver'], [8, 12, 3.4, 2, .9, -.2, 'olive'], [20, 7, 2.2, 1.5, .6, .3, 'silver'], [-34, -2, 2, 1.4, .6, 0, 'olive']],
+    lines: [[[4, -9], [3, -4], [2, 1]], [[11, -8], [12, -3]], [[-4, -3], [-5, 2]], [[-11, 3], [-12, 7]], [[-15, 8], [-9, 9]]],
+    kiri: [{at: [7, -4], cols: 2, rows: 2, turn: .3}],
+    pebbles: [[-26, 10, 3, 1.8, .8, .2, 'silver'], [0, 12, 3.4, 2, .9, -.2, 'olive'], [18, 6, 2.2, 1.5, .6, .3, 'silver'], [-32, 1, 2, 1.4, .6, 0, 'olive']],
     on: 'the right end of the bank\'s middle piece, a way before the east pine', why: 'the stone that stands between the Goei-do\'s court and the pine: where the bank passes to the pine\'s ground'},
 ];
 

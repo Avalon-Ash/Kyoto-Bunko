@@ -53,20 +53,20 @@ const SHORES = [
 // beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
 // (x, z). on: what it stands against; why: the reason it is there.
 export const ROCKS = [
-  // the south bank on the stone's side, on its big lobe at the pond: three blocks stepping down to the right from a tall crown, a gold shoulder at the water, a low silver stone before it
-  {id: 'pond-stone', x: -112, z: 127, scale: 1.1,
+  // the south bank on the stone's side, on its big lobe at the pond: bedded layers, each lower and wider than the one behind it, olive, gold, silver, and a low olive foot
+  {id: 'pond-stone', x: -112, z: 127, scale: 1.55,
     crags: [
       {seed: 4, blocks: [
-        {mat: 'olive', ridge: [[-10, -5, 13, 6], [-4, -8, 21, 6.5], [3, -5, 15, 6], [9, -2, 10, 5]], strata: {ang: .4, period: 4.2, amp: .6, w: 1.1}},
-        {mat: 'gold', ridge: [[-17, 0, 9, 5], [-13, -3, 11, 4.5]], strata: {ang: -1.1, period: 3.6, amp: .45, w: 1}},
-        {mat: 'silver', ridge: [[0, 4, 8, 5.5], [8, 5, 7, 5]], q: .85},
-        {mat: 'olive', ridge: [[-8, 6, 5, 4], [-3, 7, 6, 3.6]]},
-      ], grooves: [{p: [[-5, -10], [-4, -3], [-6, 3]], w: 2.4, depth: 3}]},
-      {at: [26, 5], blocks: [{mat: 'silver', ridge: [[0, 0, 6, 4], [3, 1, 5, 3.4]]}]},
+        {mat: 'olive', ridge: [[-8, -9, 26, 6], [0, -10, 28, 5.5]], top: .55, strata: {ang: 1.55, period: 4.2, amp: .9, w: 1.4}},
+        {mat: 'gold', ridge: [[-13, -3, 19, 6.5], [-3, -4, 20, 6.5]], top: .55, strata: {ang: 1.5, period: 3.6, amp: .8, w: 1.3}},
+        {mat: 'silver', ridge: [[-9, 3, 12, 6.5], [3, 3, 12, 6]], q: .8, top: .55},
+        {mat: 'olive', ridge: [[-5, 9, 6, 5], [8, 9, 6, 4.5]]},
+      ], grooves: [{p: [[-5, -13], [-4, -6], [-5, 0]], w: 2.4, depth: 3}]},
+      {at: [-26, 5], blocks: [{mat: 'olive', ridge: [[0, 0, 7, 4.5], [3, 1, 5, 3.6]]}]},
     ],
-    lines: [[[-4, -8], [-6, -3], [-7, 2], [-9, 6]], [[3, -6], [5, -1], [7, 4]], [[-11, -3], [-14, 1], [-16, 4]], [[9, -2], [11, 2]], [[-1, 5], [3, 7], [7, 7]]],
-    kiri: [{at: [-12, -2], cols: 2, rows: 2, turn: .15}],
-    pebbles: [[-22, 8, 3, 1.8, .8, .2, 'silver'], [8, 12, 3.4, 2, .9, -.2, 'olive'], [18, 9, 2.2, 1.5, .6, .3, 'silver'], [-28, -1, 2, 1.4, .6, 0, 'olive']],
+    lines: [[[-8, -9], [-9, -4], [-10, 1]], [[0, -10], [0, -5]], [[-13, -3], [-14, 1]], [[3, 3], [6, 6]], [[-3, 4], [-6, 6]]],
+    kiri: [{at: [-3, -4], cols: 2, rows: 2, turn: .1}],
+    pebbles: [[-18, 12, 3, 1.8, .8, .2, 'silver'], [12, 12, 3.4, 2, .9, -.2, 'olive'], [20, 4, 2.2, 1.5, .6, .3, 'silver'], [-36, 0, 2, 1.4, .6, 0, 'olive']],
     on: 'the south bank on the stone\'s side, on its big lobe at the pond\'s edge', why: 'the pond\'s stone: the water of the pond is the water the stone is set against'},
 ];
 

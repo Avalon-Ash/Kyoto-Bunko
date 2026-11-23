@@ -64,47 +64,46 @@ const SHORES = [
 // beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
 // (x, z). on: what it stands against; why: the reason it is there.
 export const ROCKS = [
-  // the first east tongue: a high back crown that leans toward the water, a pale gold step at its water side, a silver shoulder in front
-  {id: 'stream-east', x: 62, z: 62, scale: 1.1,
+  // the first east tongue: a pair that face each other across a gap: a big olive boulder with a silver shoulder, and a small gold one that stands off to its right
+  {id: 'stream-east', x: 62, z: 62, scale: 1.25,
     crags: [
       {seed: 3, blocks: [
-        {mat: 'olive', ridge: [[-12, -5, 12, 6.5], [-5, -8, 19, 7], [3, -6, 15, 6], [9, -4, 10, 5]], strata: {ang: .5, period: 4.2, amp: .6, w: 1.1}},
-        {mat: 'gold', ridge: [[-17, 1, 8, 5], [-11, 0, 11, 5]], strata: {ang: -.8, period: 3.6, amp: .45, w: 1}},
-        {mat: 'silver', ridge: [[2, 3, 8, 5.5], [10, 2, 11, 5]], q: .85},
-        {mat: 'olive', ridge: [[-4, 6, 5, 4], [3, 7, 6, 4]]},
-      ], grooves: [{p: [[-4, -10], [-3, -3], [-4, 3]], w: 2.4, depth: 2.4}]},
-      {at: [28, 4], blocks: [{mat: 'gold', ridge: [[0, 0, 7, 4.5], [4, 2, 5, 3.6]]}]},
+        {mat: 'olive', ridge: [[-6, -4, 19, 6.5], [0, -6, 24, 6], [5, -3, 18, 5.5]], top: .5, strata: {ang: .5, period: 4.2, amp: .6, w: 1.1}},
+        {mat: 'silver', ridge: [[-12, 3, 9, 5], [-5, 5, 11, 4.5]], q: .85},
+        {mat: 'olive', ridge: [[-2, 8, 5, 4], [5, 8, 6, 3.6]]},
+      ], grooves: [{p: [[-2, -10], [-1, -3], [-2, 3]], w: 2.4, depth: 2.6}]},
+      {at: [21, 3], blocks: [{mat: 'gold', ridge: [[0, 0, 11, 4.5], [3, 1, 8, 3.8]]}, {mat: 'silver', ridge: [[-2, 4, 4.5, 3.2]]}]},
     ],
-    lines: [[[-5, -9], [-6, -4], [-8, 1], [-10, 5]], [[3, -7], [4, -2], [6, 3]], [[-12, -4], [-15, 0], [-16, 4]], [[9, -4], [11, 0], [12, 4]], [[0, 5], [4, 7], [8, 6]]],
-    kiri: [{at: [-8, -1], cols: 2, rows: 2, turn: .15}],
-    pebbles: [[-20, 9, 3, 1.8, .8, .2, 'silver'], [8, 12, 3.4, 2, .9, -.2, 'olive'], [20, 8, 2.2, 1.5, .6, .3, 'silver'], [-26, -2, 2, 1.4, .6, 0, 'olive']],
+    lines: [[[0, -6], [-1, -1], [-2, 4]], [[5, -3], [6, 1]], [[-9, 3], [-11, 6]], [[21, 0], [22, 4]]],
+    kiri: [{at: [-2, -1], cols: 2, rows: 2, turn: .15}],
+    pebbles: [[-17, 10, 3, 1.8, .8, .2, 'silver'], [8, 12, 3.4, 2, .9, -.2, 'olive'], [30, 8, 2.2, 1.5, .6, .3, 'silver'], [-22, -2, 2, 1.4, .6, 0, 'olive']],
     on: 'the first east tongue, on the water side of the stream', why: 'a stone the bank keeps for the water: the stream is held on this side by it'},
-  // the west near arm along the stream: a pale silver stone, a gold stair of three steps falling to the left, a tall thin lean at the back
-  {id: 'stream-west', x: -44, z: 112, scale: 1.05,
+  // the west near arm along the stream: a thin tall silver needle with a twin back slab, a gold step at its left foot
+  {id: 'stream-west', x: -44, z: 112, scale: 1.1,
     crags: [
       {seed: 8, blocks: [
-        {mat: 'olive', ridge: [[2, -7, 15, 5.5], [6, -10, 21, 5.5], [9, -6, 14, 5]], strata: {ang: 1.1, period: 4, amp: .55, w: 1}},
-        {mat: 'silver', ridge: [[-8, -2, 13, 6.5], [-2, -3, 16, 6], [3, -1, 11, 5]], q: .88},
-        {mat: 'gold', ridge: [[-16, 3, 8, 5], [-11, 2, 10, 4.5]], strata: {ang: .3, period: 3.4, amp: .45, w: 1}},
-        {mat: 'silver', ridge: [[-2, 6, 7, 5], [6, 6, 8, 4.5]], q: .8},
-      ], grooves: [{p: [[-3, -8], [-2, -2], [-4, 4]], w: 2.2, depth: 2.8}]},
-      {at: [22, 8], blocks: [{mat: 'olive', ridge: [[0, 0, 6, 4], [3, 1, 4, 3]]}, {mat: 'silver', ridge: [[-3, 3, 3.5, 3]]}]},
+        {mat: 'olive', ridge: [[-9, -8, 12, 5], [-6, -10, 17, 4.5]], strata: {ang: 1.1, period: 4, amp: .55, w: 1}},
+        {mat: 'silver', ridge: [[0, -5, 15, 4.8], [2, -8, 28, 3.6], [3, -5, 18, 4]], q: .92},
+        {mat: 'gold', ridge: [[-10, 2, 8, 4.5], [-5, 3, 10, 4]], strata: {ang: .3, period: 3.4, amp: .45, w: 1}},
+        {mat: 'olive', ridge: [[5, 4, 4.5, 3.6], [9, 5, 4, 3.2]]},
+      ], grooves: [{p: [[3, -9], [2, -3], [3, 2]], w: 1.6, depth: 2.4}]},
     ],
-    lines: [[[6, -10], [5, -5], [4, 0]], [[-2, -5], [-5, -1], [-7, 4]], [[-8, 0], [-11, 3], [-14, 6]], [[3, 0], [5, 4]], [[-14, 3], [-16, 6]]],
-    pebbles: [[-20, 9, 3.2, 1.9, .8, -.2, 'silver'], [2, 11, 2.6, 1.7, .7, .3, 'olive'], [14, 11, 3, 1.8, .8, .1, 'silver']],
+    lines: [[[2, -8], [1, -3], [0, 3]], [[-6, -10], [-7, -5]], [[-9, 3], [-11, 6]], [[3, -5], [4, -1]]],
+    pebbles: [[-18, 9, 3.2, 1.9, .8, -.2, 'silver'], [4, 12, 2.6, 1.7, .7, .3, 'olive'], [14, 10, 3, 1.8, .8, .1, 'silver']],
     on: 'the west near arm, at the stream\'s edge', why: 'the stone the water turns against, where the arm of the shore meets it'},
-  // the near left bank of the pagoda's shore: one steep spine that rises from the left to a blunt crown and falls away in two steps to the right, a gold lobe in front
-  {id: 'pagoda-bank', x: 48, z: 178, scale: 1.15,
+  // the near left bank of the pagoda's shore: a low wide sprawl of two shallow humps with a saddle between, a gold lobe and a silver lobe in front
+  {id: 'pagoda-bank', x: 48, z: 178, scale: 1.5,
     crags: [
       {seed: 6, blocks: [
-        {mat: 'olive', ridge: [[-18, 0, 9, 7], [-10, -4, 16, 7.5], [-3, -6, 20, 6.5], [4, -4, 17, 5.5], [10, 0, 11, 5], [15, 4, 6, 4]], strata: {ang: -.2, period: 4.4, amp: .6, w: 1.1}},
-        {mat: 'silver', ridge: [[-22, 5, 6, 5], [-14, 7, 8, 5]], q: .85},
-        {mat: 'gold', ridge: [[-4, 4, 8, 5.5], [3, 6, 7, 4.5]], strata: {ang: 1.2, period: 3.4, amp: .45, w: 1}},
-      ], grooves: [{p: [[-6, -10], [-5, -3], [-7, 2]], w: 2.6, depth: 3}]},
+        {mat: 'olive', ridge: [[-18, -2, 13, 7], [-10, -5, 19, 7], [-2, -3, 11, 6.5], [7, -5, 21, 7], [16, -2, 13, 6]], strata: {ang: -.2, period: 4.4, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[-12, 5, 9, 6], [-4, 7, 10, 5.5]], strata: {ang: 1.2, period: 3.4, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[8, 6, 8, 6], [16, 5, 6, 5]], q: .85},
+        {mat: 'olive', ridge: [[-22, 3, 6, 4.5], [-18, 5, 5, 4]]},
+      ], grooves: [{p: [[-2, -9], [-2, -3], [-3, 2]], w: 2.6, depth: 3}]},
     ],
-    lines: [[[-3, -9], [-5, -4], [-7, 1], [-9, 5]], [[3, -7], [5, -2], [7, 3]], [[-12, -6], [-14, -1], [-16, 3]], [[10, -1], [12, 3]], [[-2, 5], [2, 7], [6, 7]]],
-    kiri: [{at: [-12, -3], cols: 2, rows: 3, turn: .3}],
-    pebbles: [[-27, 10, 2.8, 1.7, .7, .2, 'silver'], [10, 11, 3.2, 1.9, .8, -.1, 'olive'], [-4, 13, 2.2, 1.4, .6, .3, 'silver'], [20, 8, 2, 1.4, .6, 0, 'olive']],
+    lines: [[[-10, -6], [-11, -1], [-13, 4]], [[7, -6], [8, -1], [9, 4]], [[-2, -4], [-1, 1]], [[16, -2], [17, 3]], [[-4, 7], [0, 9], [4, 8]]],
+    kiri: [{at: [-9, -3], cols: 2, rows: 3, turn: .3}],
+    pebbles: [[-27, 10, 2.8, 1.7, .7, .2, 'silver'], [4, 14, 3.4, 2, .8, -.2, 'olive'], [22, 11, 2.4, 1.6, .7, .3, 'silver'], [-9, 14, 2, 1.4, .6, 0, 'olive']],
     on: 'the near left bank of the pagoda\'s shore, a way west of the pagoda', why: 'the pagoda stands on a rise of the bank; this is the stone it came out of'},
 ];
 

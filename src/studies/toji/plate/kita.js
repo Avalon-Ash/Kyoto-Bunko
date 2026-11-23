@@ -49,32 +49,34 @@ const SHORE = [
 // beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
 // (x, z). on: what it stands against; why: the reason it is there.
 export const ROCKS = [
-  // the north bank's west end, where it turns down into the west crescent: two crowns of unequal height with a deep notch, silver at the water side
-  {id: 'shore-west', x: -246, z: 18, scale: 1.1,
+  // the north bank's west end: four blocks stepping down from the back, each lower than the one behind it, olive then gold then silver then a low olive foot
+  {id: 'shore-west', x: -246, z: 18, scale: 1.2,
     crags: [
       {seed: 5, blocks: [
-        {mat: 'olive', ridge: [[-13, -3, 14, 6.5], [-7, -7, 20, 6.5], [-2, -4, 13, 5]], strata: {ang: .9, period: 4.2, amp: .6, w: 1.1}},
-        {mat: 'gold', ridge: [[7, -5, 16, 6], [13, -1, 11, 5.5]], strata: {ang: -.4, period: 3.8, amp: .5, w: 1}},
-        {mat: 'silver', ridge: [[-14, 4, 8, 5.5], [-6, 6, 9, 5]], q: .85},
-        {mat: 'olive', ridge: [[2, 4, 8, 5], [9, 5, 7, 4.5]]},
-      ], grooves: [{p: [[0, -11], [1, -4], [0, 2]], w: 3, depth: 3.6}]},
-      {at: [-30, 6], blocks: [{mat: 'silver', ridge: [[0, 0, 6, 4], [4, 1, 4.5, 3.2]]}]},
+        {mat: 'olive', ridge: [[-6, -9, 22, 6.5], [2, -10, 25, 6]], strata: {ang: .9, period: 4.2, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[-8, -3, 16, 6], [2, -4, 17, 5.5]], strata: {ang: -.4, period: 3.8, amp: .5, w: 1}},
+        {mat: 'silver', ridge: [[-8, 3, 10, 5.5], [1, 4, 11, 5]], q: .85},
+        {mat: 'olive', ridge: [[-4, 9, 5, 4.5], [4, 9, 5, 4]]},
+      ], grooves: [{p: [[-2, -12], [-2, -5], [-3, 1]], w: 2.2, depth: 3}]},
+      {at: [-30, 8], blocks: [{mat: 'silver', ridge: [[0, 0, 6, 4], [4, 1, 4.5, 3.2]]}]},
     ],
-    lines: [[[-7, -8], [-8, -3], [-10, 2], [-12, 6]], [[-2, -6], [-1, -1], [0, 4]], [[8, -6], [10, -1], [12, 3]], [[14, -2], [15, 2]], [[-4, 5], [0, 7], [5, 7]]],
-    kiri: [{at: [10, -3], cols: 2, rows: 2, turn: .25}],
-    pebbles: [[-21, 10, 3, 1.8, .8, .2, 'silver'], [6, 12, 3.4, 2, .9, -.2, 'olive'], [20, 8, 2.2, 1.5, .6, .3, 'silver'], [-34, 0, 2, 1.4, .6, 0, 'olive']],
+    lines: [[[-6, -9], [-6, -4], [-7, 1]], [[2, -9], [2, -3]], [[-8, -3], [-9, 2], [-9, 6]], [[0, 4], [3, 7]]],
+    kiri: [{at: [-2, -2], cols: 2, rows: 2, turn: .25}],
+    pebbles: [[-16, 11, 3, 1.8, .8, .2, 'silver'], [10, 13, 3.4, 2, .9, -.2, 'olive'], [-24, -2, 2.2, 1.5, .6, .3, 'silver'], [-34, 0, 2, 1.4, .6, 0, 'olive']],
     on: 'the west end of the north bank, at the corner where it turns into the west crescent', why: 'a stone at a corner of the shore: where the bank turns, the water is held by a stone'},
-  // the island: a pale silver stone, a low spine from the left with one tall thin crown at its right end, a gold step in front
-  {id: 'island', x: 204, z: 134, scale: 1.1,
+  // the island: a long slab that leans to the left, low at the right foot and steep at its high back-left end, a silver fin behind it and a gold lobe in front
+  {id: 'island', x: 214, z: 138, scale: 1.5,
     crags: [
       {seed: 8, blocks: [
-        {mat: 'silver', ridge: [[-16, -1, 9, 7], [-9, -4, 13, 6.5], [-2, -3, 10, 6]], q: .9},
-        {mat: 'olive', ridge: [[6, -6, 15, 5], [9, -9, 21, 4.8], [12, -5, 13, 4.6]], strata: {ang: 1.35, period: 4, amp: .55, w: 1}},
-        {mat: 'gold', ridge: [[-6, 4, 7, 5.5], [2, 5, 9, 5], [8, 3, 6, 4]], strata: {ang: .1, period: 3.4, amp: .45, w: 1}},
-      ], grooves: [{p: [[4, -9], [3, -3], [4, 2]], w: 2.2, depth: 2.6}]},
+        {mat: 'silver', ridge: [[-2, -9, 14, 4.5], [-8, -12, 19, 4.2]], q: .9},
+        {mat: 'olive', ridge: [[14, 6, 6, 5], [6, 2, 12, 5.5], [-2, -3, 20, 5.2], [-10, -8, 27, 4.5], [-14, -11, 30, 4]], strata: {ang: -.6, period: 4, amp: .55, w: 1}},
+        {mat: 'silver', ridge: [[-14, 0, 9, 5.5], [-6, -2, 12, 5.5]], q: .88},
+        {mat: 'gold', ridge: [[4, 8, 7, 5.5], [12, 9, 5, 4.5]], strata: {ang: .1, period: 3.4, amp: .45, w: 1}},
+      ], grooves: [{p: [[-8, -10], [-5, -5], [-3, 0]], w: 2, depth: 2.8}]},
     ],
-    lines: [[[9, -9], [8, -4], [7, 1], [6, 5]], [[-9, -4], [-11, 0], [-13, 4]], [[-3, -3], [-4, 2], [-5, 6]], [[12, -5], [14, 0]], [[-1, 5], [4, 7], [9, 6]]],
-    pebbles: [[-21, 7, 3.2, 1.9, .8, .1, 'silver'], [-4, 12, 2.4, 1.6, .7, -.3, 'olive'], [16, 9, 3, 1.8, .8, .2, 'silver'], [22, 1, 2, 1.4, .6, 0, 'silver']],
+    lines: [[[-14, -11], [-8, -6], [-2, -1], [4, 4]], [[-10, -8], [-14, -3]], [[8, 4], [12, 7]], [[-8, -12], [-4, -8]]],
+    kiri: [{at: [-4, -3], cols: 2, rows: 2, turn: -.5}],
+    pebbles: [[-19, 9, 3, 1.8, .8, .1, 'silver'], [-4, 13, 2.6, 1.7, .7, -.3, 'olive'], [20, 10, 3, 1.8, .8, .2, 'silver']],
     on: 'the front edge of the thin gold tongue that carries the island pine, below the pine, at the lid (the tongue ends just behind it)', why: 'the island pine roots in a stone; this is the stone at the near end of its tongue'},
 ];
 

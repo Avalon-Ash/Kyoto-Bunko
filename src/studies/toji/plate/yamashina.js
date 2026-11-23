@@ -36,33 +36,31 @@ const BANKS = [
 // beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
 // (x, z). on: what it stands against; why: the reason it is there.
 export const ROCKS = [
-  // below the west maple's tongue, where its leaves lie: one broad crown with a shorter second crown behind it, a silver lobe and a gold step in front
-  {id: 'west-stone', x: -231, z: 185, scale: 1.1,
+  // below the west maple's tongue, where its leaves lie: a low wide sprawl of three humps of nearly one height, a gold step at the left and a silver lobe in front
+  {id: 'west-stone', x: -231, z: 185, scale: 1.5,
     crags: [
       {seed: 5, blocks: [
-        {mat: 'olive', ridge: [[-6, -6, 17, 7], [0, -9, 20, 6.5], [7, -5, 12, 5]], strata: {ang: -.6, period: 4.2, amp: .6, w: 1.1}},
-        {mat: 'gold', ridge: [[-16, -1, 9, 5], [-11, -3, 12, 4.8]], strata: {ang: .7, period: 3.6, amp: .45, w: 1}},
-        {mat: 'silver', ridge: [[2, 3, 8, 5.5], [9, 3, 10, 5]], q: .85},
-        {mat: 'olive', ridge: [[-8, 5, 6, 4.5], [-2, 7, 5, 4]]},
-      ], grooves: [{p: [[0, -10], [-1, -3], [0, 3]], w: 2.2, depth: 2.8}]},
-      {at: [-29, 5], blocks: [{mat: 'gold', ridge: [[0, 0, 6, 4.4], [4, 1, 4, 3.2]]}]},
+        {mat: 'olive', ridge: [[-15, -5, 14, 7], [-7, -7, 17, 6.5], [1, -5, 13, 6.5], [9, -6, 16, 6.5], [16, -3, 10, 5]], strata: {ang: -.6, period: 4.2, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[-21, 2, 8, 5], [-15, 3, 10, 4.8]], strata: {ang: .7, period: 3.6, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[0, 5, 7, 5.5], [8, 5, 8, 5]], q: .85},
+      ], grooves: [{p: [[-3, -10], [-3, -4], [-4, 1]], w: 2.2, depth: 2.4}]},
     ],
-    lines: [[[0, -9], [-1, -4], [-3, 1], [-4, 5]], [[-6, -6], [-8, -1], [-10, 4]], [[7, -5], [9, 0], [10, 4]], [[-14, -3], [-16, 1]], [[3, 4], [7, 6], [11, 5]]],
-    pebbles: [[-20, 8, 3, 1.8, .8, .2, 'silver'], [-2, 12, 3.4, 2, .9, -.2, 'olive'], [14, 9, 2.2, 1.5, .6, .3, 'silver'], [-34, 0, 2, 1.4, .6, 0, 'olive']],
+    lines: [[[-7, -7], [-8, -2], [-10, 3]], [[9, -6], [10, -1], [11, 4]], [[1, -5], [2, 0]], [[-19, 2], [-20, 5]], [[2, 5], [6, 7], [10, 6]]],
+    pebbles: [[-24, 10, 3, 1.8, .8, .2, 'silver'], [-2, 12, 3.4, 2, .9, -.2, 'olive'], [20, 9, 2.2, 1.5, .6, .3, 'silver'], [-18, 12, 2, 1.4, .6, 0, 'olive']],
     on: 'the ground below the west maple, at the lower end of its fallen leaves', why: 'the stone the leaves are swept to; the maple\'s leaves lie against it'},
-  // below the east maple: pale silver, a thin tall spire at the left, the rest falling in three steps to the right, no gold
-  {id: 'east-stone', x: 272, z: 178, scale: 1.05,
+  // below the east maple: pale silver, one thin needle at the left, an olive step and a gold step falling to a low silver foot at the right
+  {id: 'east-stone', x: 272, z: 178, scale: 1.1,
     crags: [
       {seed: 7, blocks: [
-        {mat: 'silver', ridge: [[-12, -5, 14, 4.8], [-9, -9, 21, 4.4], [-5, -5, 13, 4.6]], q: .9},
-        {mat: 'olive', ridge: [[0, -4, 15, 6], [6, -2, 11, 5.5], [11, 1, 7, 5]], strata: {ang: .5, period: 4, amp: .55, w: 1}},
+        {mat: 'silver', ridge: [[-9, -6, 16, 4], [-7, -9, 27, 3.4], [-5, -6, 18, 3.8]], q: .92},
+        {mat: 'olive', ridge: [[0, -3, 13, 5.5], [5, -1, 10, 5]], strata: {ang: .5, period: 4, amp: .55, w: 1}},
         {mat: 'gold', ridge: [[-6, 4, 7, 5], [2, 5, 8, 4.5]], strata: {ang: -.9, period: 3.4, amp: .45, w: 1}},
-        {mat: 'silver', ridge: [[9, 5, 5, 4], [15, 4, 4, 3.4]], q: .8},
-      ], grooves: [{p: [[3, -8], [3, -2], [4, 3]], w: 2, depth: 2.6}]},
+        {mat: 'silver', ridge: [[10, 5, 5, 4], [16, 4, 4, 3.4]], q: .8},
+      ], grooves: [{p: [[-6, -10], [-6, -4], [-5, 1]], w: 1.6, depth: 2.4}]},
     ],
-    lines: [[[-9, -9], [-10, -4], [-11, 1], [-12, 5]], [[0, -4], [1, 1], [2, 5]], [[6, -2], [8, 2]], [[-5, -5], [-4, 0]], [[-4, 5], [0, 7], [5, 6]]],
+    lines: [[[-7, -9], [-8, -4], [-9, 1], [-9, 5]], [[0, -3], [1, 1], [2, 5]], [[5, -1], [7, 3]], [[-5, -6], [-4, -1]], [[-4, 5], [0, 7], [5, 6]]],
     kiri: [{at: [3, -1], cols: 2, rows: 2, turn: .2}],
-    pebbles: [[-18, 8, 3.2, 1.9, .8, .1, 'silver'], [2, 12, 2.4, 1.6, .7, -.3, 'olive'], [16, 9, 3, 1.8, .8, .2, 'silver'], [21, 1, 2, 1.4, .6, 0, 'olive']],
+    pebbles: [[-18, 8, 3.2, 1.9, .8, .1, 'silver'], [2, 12, 2.4, 1.6, .7, -.3, 'olive'], [18, 9, 3, 1.8, .8, .2, 'silver'], [22, 1, 2, 1.4, .6, 0, 'olive']],
     on: 'the ground below the east maple, at the lower end of its fallen leaves', why: 'the pair to the west stone: the two stones stand at the foot of the two maples'},
 ];
 

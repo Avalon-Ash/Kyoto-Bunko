@@ -53,33 +53,32 @@ const SHORES = [
 // beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
 // (x, z). on: what it stands against; why: the reason it is there.
 export const ROCKS = [
-  // the dragon stone on the north crescent, at its west lobe: the tallest of the garden's stones, a broad base with two peaks of very different height, one leaning to the water
-  {id: 'dragon-stone', x: 65, z: -55, scale: 1.2,
+  // the dragon stone on the north crescent, at its west lobe: the tallest of the garden's stones, a very tall standing peak and a lower gold peak beside it, a pale silver slab at its water side
+  {id: 'dragon-stone', x: 60, z: -55, scale: 1.5,
     crags: [
       {seed: 3, blocks: [
-        {mat: 'olive', ridge: [[-8, -6, 14, 7], [0, -9, 21, 7], [6, -6, 14, 6]], strata: {ang: -1.0, period: 4.4, amp: .65, w: 1.1}},
-        {mat: 'gold', ridge: [[9, -3, 16, 5], [13, 0, 12, 4.5]], strata: {ang: .5, period: 3.6, amp: .5, w: 1}},
-        {mat: 'silver', ridge: [[-16, 0, 10, 5.5], [-12, -4, 13, 5]], q: .85},
-        {mat: 'olive', ridge: [[-5, 3, 9, 5.5], [3, 4, 10, 5]], strata: {ang: .3, period: 3.4, amp: .45, w: 1}},
-        {mat: 'silver', ridge: [[-9, 8, 4, 4], [2, 9, 5, 4.5]], q: .8},
+        {mat: 'olive', ridge: [[-6, -5, 22, 6], [0, -9, 31, 5.2], [3, -6, 22, 5.5]], strata: {ang: -1.0, period: 4.4, amp: .65, w: 1.1}},
+        {mat: 'gold', ridge: [[10, -4, 19, 4.5], [13, -2, 13, 4]], strata: {ang: .5, period: 3.6, amp: .5, w: 1}},
+        {mat: 'silver', ridge: [[-14, 0, 12, 5], [-10, -3, 17, 4.5]], q: .85},
+        {mat: 'olive', ridge: [[-5, 3, 10, 5.5], [2, 4, 11, 5]], strata: {ang: .3, period: 3.4, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[-8, 8, 4, 4], [2, 9, 5, 4.5]], q: .8},
       ], grooves: [{p: [[3, -11], [3, -4], [2, 2]], w: 2.6, depth: 3.4}]},
-      {at: [-27, 3], blocks: [{mat: 'gold', ridge: [[0, 0, 6, 4.5], [4, 1, 5, 3.4]]}]},
     ],
-    lines: [[[0, -9], [-1, -4], [-3, 1], [-4, 5]], [[5, -7], [7, -2], [9, 3]], [[-4, -7], [-8, -3], [-10, 2]], [[-13, -4], [-15, 1]], [[9, -3], [12, 1], [13, 5]], [[-2, 4], [2, 6], [6, 6]]],
-    kiri: [{at: [10, -2], cols: 2, rows: 3, turn: .2}],
-    pebbles: [[-14, 12, 3.4, 2, .9, .2, 'silver'], [6, 12, 2.4, 1.6, .7, -.3, 'olive'], [18, 8, 3, 1.9, .8, .1, 'silver'], [-33, 1, 2.2, 1.5, .6, 0, 'olive']],
+    lines: [[[0, -9], [-1, -4], [-3, 1], [-4, 5]], [[3, -6], [5, -1], [6, 3]], [[-6, -5], [-8, -1], [-10, 3]], [[-12, -3], [-14, 1]], [[10, -4], [12, 1], [13, 4]], [[-2, 4], [2, 6], [6, 6]]],
+    kiri: [{at: [10, -1], cols: 2, rows: 3, turn: .2}],
+    pebbles: [[-18, 11, 3.4, 2, .9, .2, 'silver'], [6, 12, 2.4, 1.6, .7, -.3, 'olive'], [16, 9, 3, 1.9, .8, .1, 'silver'], [-24, 2, 2.2, 1.5, .6, 0, 'olive']],
     on: 'the west lobe of the north crescent, at the pond\'s back', why: 'the standing stone of the garden, the dragon gate the pond is laid out to face'},
-  // the stone at the water's edge, beside the silver waterline: a pale spine that rises from the left in steps to one steep crown, a short gold lobe in front
-  {id: 'shore-stone', x: 140, z: -48, scale: 1.1,
+  // the stone at the water's edge, beside the silver waterline: a long low pale stone laid along the shore, one small crown at the right and a gold lobe in front
+  {id: 'shore-stone', x: 148, z: -48, scale: 1.15,
     crags: [
       {seed: 7, blocks: [
-        {mat: 'silver', ridge: [[-18, 0, 7, 6], [-11, -3, 11, 6.5], [-4, -5, 16, 6]], q: .9},
-        {mat: 'olive', ridge: [[1, -6, 20, 5], [6, -4, 17, 5.5], [11, -1, 10, 4.5]], strata: {ang: .85, period: 4, amp: .6, w: 1}},
-        {mat: 'gold', ridge: [[-8, 4, 7, 5], [-1, 6, 8, 4.5]], strata: {ang: -.7, period: 3.4, amp: .45, w: 1}},
-      ], grooves: [{p: [[-1, -9], [-2, -3], [-1, 2]], w: 2, depth: 2.6}]},
+        {mat: 'silver', ridge: [[-22, 0, 6, 6], [-12, -2, 10, 6.5], [-2, -2, 8, 6], [8, 0, 11, 5.5], [18, 2, 6, 5]], q: .9},
+        {mat: 'olive', ridge: [[2, -6, 15, 5], [6, -5, 14, 5]], strata: {ang: .85, period: 4, amp: .6, w: 1}},
+        {mat: 'gold', ridge: [[-8, 5, 6, 5], [0, 6, 7, 4.5]], strata: {ang: -.7, period: 3.4, amp: .45, w: 1}},
+      ], grooves: [{p: [[-3, -4], [-3, 0], [-3, 3]], w: 1.6, depth: 1.8}]},
     ],
-    lines: [[[1, -8], [0, -3], [-1, 2], [-2, 6]], [[-7, -5], [-9, 0], [-11, 4]], [[6, -4], [8, 0], [9, 4]], [[-16, 0], [-17, 3]], [[-5, 6], [0, 8], [5, 7]]],
-    pebbles: [[-22, 7, 3, 1.8, .8, .2, 'silver'], [4, 11, 3.2, 1.9, .8, -.2, 'olive'], [14, 8, 2.2, 1.5, .6, .3, 'silver']],
+    lines: [[[2, -7], [1, -2], [0, 3]], [[-12, -3], [-13, 1]], [[8, 0], [9, 4]], [[-20, 0], [-21, 3]], [[-5, 6], [0, 8], [5, 7]]],
+    pebbles: [[-24, 8, 3, 1.8, .8, .2, 'silver'], [4, 11, 3.2, 1.9, .8, -.2, 'olive'], [20, 8, 2.2, 1.5, .6, .3, 'silver']],
     on: 'the north crescent, at its lower edge beside the silver waterline', why: 'the stone at the water\'s edge: the shore keeps its line by it'},
 ];
 

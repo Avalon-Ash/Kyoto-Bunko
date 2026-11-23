@@ -52,33 +52,31 @@ const BANKS = [
 // beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
 // (x, z). on: what it stands against; why: the reason it is there.
 export const ROCKS = [
-  // the foot of the stage's lattice, at its left posts: one tall thin spire with a lower crown beside it, a gold step and a silver shoulder low in front
+  // the foot of the stage's lattice, at its left posts: two thin spires of unequal height standing close, a gold step at their feet and a silver shoulder low in front
   {id: 'butai-foot', x: -10, z: 150, scale: 1.1,
     crags: [
       {seed: 9, blocks: [
-        {mat: 'olive', ridge: [[-2, -5, 13, 5.5], [3, -9, 21, 5], [7, -5, 15, 5]], strata: {ang: 1.4, period: 4.2, amp: .6, w: 1.1}},
-        {mat: 'gold', ridge: [[-14, -1, 10, 6], [-8, -3, 12, 5.5]], strata: {ang: -.5, period: 3.6, amp: .45, w: 1}},
-        {mat: 'silver', ridge: [[-12, 5, 6, 5], [-4, 7, 7, 4.5]], q: .85},
-        {mat: 'olive', ridge: [[6, 4, 7, 5], [13, 2, 9, 4.5]]},
-      ], grooves: [{p: [[-3, -4], [-5, 0], [-4, 4]], w: 2, depth: 2.8}]},
-      {at: [26, 7], blocks: [{mat: 'gold', ridge: [[0, 0, 6, 4], [3, 2, 4, 3]]}]},
+        {mat: 'olive', ridge: [[-7, -7, 12, 3.8], [-5, -10, 22, 3.3]], strata: {ang: 1.4, period: 4, amp: .5, w: 1}},
+        {mat: 'olive', ridge: [[1, -5, 14, 4.2], [4, -8, 26, 3.6], [6, -5, 16, 4]], strata: {ang: 1.2, period: 4.2, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[-13, 0, 8, 5], [-7, 1, 10, 4.5]], strata: {ang: -.5, period: 3.6, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[2, 5, 6, 4.5], [9, 5, 7, 4]], q: .85},
+      ], grooves: [{p: [[-1, -9], [-1, -3], [0, 2]], w: 1.8, depth: 2.4}]},
     ],
-    lines: [[[3, -9], [2, -4], [1, 1], [0, 5]], [[7, -6], [8, -1], [9, 3]], [[-8, -4], [-11, 0], [-13, 4]], [[-14, -1], [-16, 3]], [[7, 4], [11, 4], [14, 2]]],
-    pebbles: [[-20, 8, 3, 1.8, .8, .2, 'silver'], [0, 12, 2.4, 1.6, .7, -.3, 'olive'], [16, 10, 3.2, 1.9, .8, .1, 'silver'], [-26, -1, 2, 1.4, .6, 0, 'olive']],
+    lines: [[[4, -8], [3, -3], [2, 2]], [[-5, -10], [-6, -5]], [[6, -5], [7, 0]], [[-10, 0], [-12, 4]], [[3, 5], [8, 6]]],
+    pebbles: [[-19, 8, 3, 1.8, .8, .2, 'silver'], [-2, 11, 2.4, 1.6, .7, -.3, 'olive'], [15, 9, 3.2, 1.9, .8, .1, 'silver'], [-24, -1, 2, 1.4, .6, 0, 'olive']],
     on: 'the foot of the stage\'s lattice, at its left posts, on the front of the stage bank', why: 'the posts of the stage are set in stone: the rock at their foot is what the lattice stands on'},
-  // the east bank under the maple: a long low spine falling from a high crown at the left to the water at the right, with one blunt shoulder, silver lobe in front
-  {id: 'east-bank', x: 262, z: 176, scale: 1.15,
+  // the east bank under the maple: a long low sprawl of three unequal humps that falls to the water at the right, a gold lobe at the left and a silver lobe in front
+  {id: 'east-bank', x: 262, z: 176, scale: 1.4,
     crags: [
       {seed: 7, blocks: [
-        {mat: 'olive', ridge: [[-14, -4, 18, 7], [-7, -7, 20, 6], [1, -4, 14, 6.5], [9, -1, 8, 5], [15, 3, 5, 4]], strata: {ang: .15, period: 4.4, amp: .6, w: 1.1}},
-        {mat: 'gold', ridge: [[-20, 2, 9, 5], [-14, 3, 11, 5]], strata: {ang: 1, period: 3.6, amp: .45, w: 1}},
-        {mat: 'silver', ridge: [[-4, 5, 8, 5.5], [4, 7, 9, 5]], q: .88},
+        {mat: 'olive', ridge: [[-22, -3, 12, 7], [-14, -6, 20, 7], [-4, -4, 13, 7], [6, -3, 18, 6.5], [16, 0, 10, 6], [22, 3, 6, 5]], strata: {ang: .15, period: 4.4, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[-26, 3, 8, 5.5], [-19, 4, 9, 5]], strata: {ang: 1, period: 3.6, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[-6, 5, 7, 5.5], [3, 6, 8, 5]], q: .88},
       ], grooves: [{p: [[-9, -9], [-8, -3], [-10, 2]], w: 2.4, depth: 2.6}]},
-      {at: [-30, 6], blocks: [{mat: 'olive', ridge: [[0, 0, 5, 4], [3, 1, 4, 3.4]]}]},
     ],
-    lines: [[[-7, -7], [-9, -2], [-11, 3]], [[-14, -3], [-16, 1], [-18, 5]], [[1, -4], [3, 0], [4, 4]], [[10, -1], [12, 2]], [[-3, 6], [1, 8], [6, 8]]],
-    kiri: [{at: [-11, -2], cols: 3, rows: 2, turn: .2}],
-    pebbles: [[-24, 9, 3, 1.8, .8, .2, 'silver'], [10, 10, 3.4, 2, .9, -.2, 'olive'], [18, 8, 2.2, 1.5, .6, .4, 'silver']],
+    lines: [[[-14, -6], [-16, -1], [-17, 4]], [[6, -4], [8, 1], [9, 5]], [[-4, -4], [-3, 1]], [[16, 0], [18, 3]], [[-4, 6], [0, 8], [5, 8]]],
+    kiri: [{at: [-14, -2], cols: 3, rows: 2, turn: .2}],
+    pebbles: [[-30, 9, 3, 1.8, .8, .2, 'silver'], [10, 11, 3.4, 2, .9, -.2, 'olive'], [24, 9, 2.2, 1.5, .6, .4, 'silver'], [-12, 12, 2.2, 1.5, .6, 0, 'olive']],
     on: 'the east bank, at the water side of the maple', why: 'the maple roots in the stone of its bank, and the bank ends in the stone'},
 ];
 
