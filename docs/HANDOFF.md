@@ -1,6 +1,6 @@
 # 京都專案交接入口
 
-更新：2026-11-23。這是**唯一的目前狀態入口**；各輪細節在 `agent-runs/`，舊狀態以 Git 歷史為準，不在文件頂端堆疊「最新狀態」。新對話依序讀 `../AGENTS.md`、本檔（**先看 §4**）、[`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md)（目前的開案書：積壓總表與第二條長鏈）。上一份 [`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) 是體檢與第一條鏈的紀錄。架構決策在 [`adr/`](adr/README.md)，動結構前先查。蒔繪盤的畫法在 skill `makie-painting`（§4.4）。
+更新：2026-11-24。這是**唯一的目前狀態入口**；各輪細節在 `agent-runs/`，舊狀態以 Git 歷史為準，不在文件頂端堆疊「最新狀態」。新對話依序讀 `../AGENTS.md`、本檔（**先看 §4**）、[`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md)（目前的開案書：積壓總表與第二條長鏈）。上一份 [`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) 是體檢與第一條鏈的紀錄。架構決策在 [`adr/`](adr/README.md)，動結構前先查。蒔繪盤的畫法在 skill `makie-painting`（§4.4）。
 
 ## 1. Git 狀態
 
@@ -40,19 +40,20 @@ npm run dev -- --host 127.0.0.1 --strictPort
 | 歲時記 | 只有[計畫](SEASONAL_PLAN.md)；首頁入口已移除。使用者 2026-11-22：擱到體質與畫面收完 |
 | 文箱架構 | `study.js`（`mountBunko`：手勢、移光、縮放、換函、開蓋）、`renderer.js`（選 three 或靜態圖）、`plate/three-renderer.js`＋`three-pack.js`、`plate/static-plate.js`、`plate/parts.js`＋`vocab.js`＋`mat.js`＋`<區>.js`（構圖資料）、`plate/creature-mesh.js`／`crag-mesh.js`／`architecture-mesh.js` 等（網格）、`backdrop.js`＋`ward-art.js`（背景） |
 
-## 3. 最近一次驗收（2026-11-23 晚，分支 `claude/cleanup-1123`，base `6ef5f01`）
+## 3. 最近一次驗收（2026-11-24 清晨，分支 `claude/chain-1124`，第二條長鏈）
 
 | 檢查 | 結果 |
 |---|---|
-| `npm run lint` | exit 0（`tsc --noEmit`、JS 的 JSDoc 型別檢查、ESLint、ADR 21 份） |
+| `npm run lint` | exit 0（`tsc --noEmit`、JS 的 JSDoc 型別檢查、ESLint、ADR 22 份） |
 | `npx --no-install tsx validate_data.js --strict` | ERROR 0、WARN 0，734 筆 |
-| `npm test` | `scripts/*.test.mjs` 154／154（刪了 3 個只測 `rock()` 的）、`src/lib/*.test.ts` 27／27 |
-| `npm run build` | exit 0；`three-renderer` 808.47 kB（gzip 230.68）、`main` 362.56 kB（gzip 117.49）、`ClusterMap` 205.87 kB（gzip 61.42） |
-| `npm run smoke` | 通過（three.js 畫出、console 無錯） |
-| 部件雜湊 | `plate-parts-hash --check` 11／11 相同（刪的程式沒有區在用，十一區的部件一個位元都沒變；所以這次沒有拍圖、沒跑 `plate-clip`） |
-| 部署 | 上一次是 `73ac948`（長鏈，2026-11-23 部署成功）；這個分支還沒合併 |
+| `npm test` | `scripts/*.test.mjs` 162／162、`src/lib/*.test.ts` 29／29（`npm test` 失敗時完整輸出存到 `.shots/test-fail/`） |
+| `npm run build` | exit 0；`three-renderer` 807.75 kB（gzip 230.95）、`main` 362.58 kB（gzip 117.49）、`ClusterMap` 205.95 kB（gzip 61.44）；`dist` 沒有 `probe-*.js` |
+| `npm run smoke` | 一般：three.js 畫出、console 無錯；`node scripts/smoke.mjs --allow-static --query=plate=shaderfail`：著色器失敗時退回降級圖（ADR 0022） |
+| 部件雜湊、穿插 | `plate-parts-hash --check` 11／11（基準在 V1、V2、V5 之後重寫）；`plate-clip` findings 0 |
+| 像素證明 | F、H1、V7 沒改到靜止畫面（開案書 §8.1–§8.2）；拍圖每輪自己會在 1–5 個像素上跳 1 級，比對時改前改後各拍兩輪 |
+| 終審 | Fable 5.2（API 點數 $2.43）：可以合併；應修 3 條已修（開案書 §8.3） |
 
-以上是主代理 11/23 晚在主資料夾跑的（`claude/cleanup-1123`）。11/22 那天沒有拍圖；最近一次蓋面矩陣是 11/20 的 `plate-matrix.sh`（25 張 0 差異，[`plans/2026-11-20-next.md`](plans/2026-11-20-next.md)）。穿插檢查用 `node scripts/plate-clip.mjs <out.json>`，上次跑是 11/23 的長鏈整合（`c19e02f`，findings 0）。
+以上是主代理 11/24 清晨在主資料夾跑的（`claude/chain-1124`）。11/22 那天沒有拍圖；最近一次蓋面矩陣是 11/20 的 `plate-matrix.sh`（25 張 0 差異，[`plans/2026-11-20-next.md`](plans/2026-11-20-next.md)）。穿插檢查用 `node scripts/plate-clip.mjs <out.json>`，上次跑是 11/23 的長鏈整合（`c19e02f`，findings 0）。
 
 **沒人驗過的**：11/16 之後上線的畫面與效能，沒有人在手機實機上看過或量過；所有截圖與量測都是這台機器的無頭 Chrome（桌機 GPU）。使用者 2026-11-22 決定不看實機、畫面由主代理全權決定（§4.1）；所以報告裡不要寫「實機看過」。
 
@@ -70,6 +71,8 @@ npm run dev -- --host 127.0.0.1 --strictPort
 之後使用者要求把工作排成一條長鏈、對齊一次、做完才合回主線（開案書 §8；回主線前分支自由開，技術上的取捨由主代理定）。使用者事先同意了：全鏈 A–E、解耦提案 (a)(b)、新增 ESLint、刪 `.shots` 舊批次、驗收過就合併 `main` 並 push。
 
 **長鏈做到哪裡**（已全部合併 `main` 並部署，2026-11-23；細節在開案書 §9）：階段 A（工程體質）完成：JavaScript 型別檢查與 ESLint 接進 `npm run lint`（ADR 0021）、區的順序與拍圖腳本環境只定義一處、`study.js` 的係數命名、測試拆成行為與圍欄、冒煙測試 `npm run smoke`、依賴補丁版。11/23 晚由 Opus 主席接手（Fable 週額度用完）：階段 B 完成，只量不改，數字在開案書 §9.10，量測腳本是 `scripts/perf-home.mjs`。階段 C 的資料未結項完成（`817dfc2` 與後續修正；報告 `agent-runs/2026-11-23-data-open-items.md`），門面做了 meta description 與 favicon；OG 圖與 README 的八張截圖（都是 11/13 舊管線）等階段 D 做完再拍。lib 測試 27 個、README 與 `DEVELOPMENT.md` 的修正也進了整合分支。階段 D：八項逐項決定，只改了「岩」：九區 17 顆舊圓岩換成伏見、中京的尖岩簇，其餘七項不改，理由在開案書 §9.11–§9.12。README 的八張圖與 OG 圖已重拍（§9.13）。階段 E：Fable 終審（API 點數）結論「可以合併」，應修的已修（§9.14）。**全部完成**：合併 `main`、push、部署成功，工作分支已刪；`.shots` 只刪了沒被任何文件、skill、記憶或程式引用的 19 項（約 139 MB），被引用的舊批次都留著。**11/23 晚的收尾**（開案書 §9.15）：使用者要 NK-084、NK-085 重查一輪、不合規範就拿掉；重查時 Tabelog 沒有出現安全驗證，兩頁都開得到原文、沒有閉店標示，內容與現有資料相符，兩筆保留。使用者同意刪沒人用的程式：`rock()`／`rock-mesh.js`（連同只有它讀的 `ROCK_LOOK`）與 `MAKIE_LANDMARKS` 的 `title`／`shape` 已刪。**下一步**：積壓已收成一張總表，第二條長鏈（F 體質、G 資料、H 穩健、I 畫面、J 收尾）排在 [`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md)；開跑前的十個問題使用者 11/24 已回答（該檔 §5.1），可以開跑。
+
+**第二條長鏈（2026-11-24）**：使用者 11/24 凌晨說「長鏈開跑」，睡前說「還有長鏈可跑就安排，有問題問顧問」。F 體質（拍圖腳本步數一處、`feel.js`、`ward-keys.ts`、刪 `muraSilver`、測試失敗存檔、建置套件搬 dev）、G 資料（安祥寺、真如堂加國寶與座標）、H1 著色器失敗退回降級圖（ADR 0022，Codex 實作）、I 畫面（鳳凰頭、草葦加寬、霞避盒重算、部件跟著年代、**年代拖桿**、九區岩重畫）都做完，Fable 終審可以合併。沒做的（V6 盒內色紙、金草對比、README 重拍等）在開案書 §8.3 的積壓。
 
 誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與目前開案書（`plans/2026-11-24-chain-2.md`）§1 的額度表、§3 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
 
