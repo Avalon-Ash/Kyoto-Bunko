@@ -408,18 +408,35 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
     },
   );
 
-  const physical = (spec, extra = {}) => {
-    const m = new THREE.MeshPhysicalMaterial({
-      color: spec.color, metalness: spec.metalness, roughness: spec.roughness, clearcoat: spec.clearcoat, clearcoatRoughness: spec.clearcoatRoughness,
-      side: THREE.DoubleSide, shadowSide: THREE.DoubleSide, ...extra,
-    });
-    // The coat is one lacquer on everything: no surface sits below COAT.shine of clearcoat, and a glossy-but-not-mirror one takes the shared roughness.
+  /**
+   * The values of a surface that age moves (agedSpec, mat.js `aged`): set when the material is made and again when the lid's age
+   * changes (setAge below). The coat is one lacquer on everything: no surface sits below COAT.shine of clearcoat, and a
+   * glossy-but-not-mirror one takes the shared roughness.
+   */
+  const setLook = (m, spec) => {
+    m.color.set(spec.color); m.metalness = spec.metalness; m.roughness = spec.roughness;
+    m.clearcoat = spec.clearcoat; m.clearcoatRoughness = spec.clearcoatRoughness;
     if (COAT_ON > 0 && spec.shine && !spec.glow) {
       m.clearcoat = Math.max(m.clearcoat, COAT.shine * COAT_ON);
       if (spec.clearcoat <= .6) m.clearcoatRoughness = THREE.MathUtils.lerp(spec.clearcoatRoughness, COAT.shineRough, COAT_ON);
     }
-    if (spec.emissive) { m.emissive.set(spec.emissive); m.emissiveIntensity = 1; }
     if (spec.envMapIntensity) m.envMapIntensity = spec.envMapIntensity;
+  };
+  /** Materials whose look ages ({material, spec} with spec.aged), re-set by setAge when a frame carries another age (chain-2 V7). */
+  const ageing = [];
+  let shownAge = shared.uAge.value;
+  /** @param {number} age */
+  const setAge = age => {
+    if (age === shownAge) return;
+    shownAge = age;
+    for (const {material, spec} of ageing) setLook(material, agedSpec(spec, age));
+  };
+  /** A physical material for `spec` at the lid's current age; it keeps ageing with the lid when the spec has `aged` values. */
+  const physical = (spec, extra = {}) => {
+    const m = new THREE.MeshPhysicalMaterial({side: THREE.DoubleSide, shadowSide: THREE.DoubleSide, ...extra});
+    setLook(m, agedSpec(spec, shared.uAge.value));
+    if (spec.aged) ageing.push({material: m, spec});
+    if (spec.emissive) { m.emissive.set(spec.emissive); m.emissiveIntensity = 1; }
     if (spec.iridescence) { m.iridescence = spec.iridescence; m.iridescenceIOR = spec.iridescenceIOR; m.iridescenceThicknessRange = [...spec.iridescenceThicknessRange]; }
     if (spec.flake) { m.normalMap = flake; m.normalScale.set(spec.flake, spec.flake); }
     return own(m);
@@ -477,7 +494,7 @@ void main() {`)
   let boxVertices = box.lidTop;
   for (const [id, slice] of sliceBox(box.data, box.lidTop, box.opaque)) {
     if (!BOX_MATERIALS[id]) throw new Error(`three renderer: no material for box id ${id}`);
-    const spec = agedSpec(BOX_MATERIALS[id], shared.uAge.value);
+    const spec = BOX_MATERIALS[id];
     // The cords are drawn live; the fixed geometry here never carries id 27 (they come from cordTube), but guard anyway.
     const boxMaterial = patchMaterial(physical(spec), spec, BOX_MOTION_GLSL, 'kyotoBox');
     if (spec.nashijiSide) {
@@ -540,7 +557,7 @@ void main() {`)
       if (!cache.has(mat)) {
         const spec = MATERIALS[mat];
         if (!spec) throw new Error(`three renderer: no material for MAT ${mat}`);
-        cache.set(mat, patch(physical(agedSpec(spec, shared.uAge.value), extra), spec));
+        cache.set(mat, patch(physical(spec, extra), spec));
       }
       return cache.get(mat);
     };
@@ -999,6 +1016,7 @@ void main() {`)
     shared.uNight.value = night ? 1 : 0;
     // A frame may carry the lid's age in years (the demonstration runs it from new to the Hatsune set's age); without one, the age it was made with.
     shared.uAge.value = f.years == null ? ageValue : ageFromYears(f.years);
+    setAge(shared.uAge.value);
     shared.uPresence.value = presence.x;
     shared.uPx.value = unitsPerPx;
     for (let i = 0; i < 20; i++) {
