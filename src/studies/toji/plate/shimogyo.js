@@ -1,7 +1,8 @@
 // Unequal twin roofs share a long baseline and a small connecting gallery, answered by a great fan-leaved tree.
 // The foreground between ginkgo and pine is an unpainted court; the back wall supplies a quiet horizontal limit.
-import {MAT, hall, corridor, branchGinkgo as ginkgo, fallenFans, branchPine as pine, bird, rock, suyari, lantern} from './vocab.js';
+import {hall, corridor, branchGinkgo as ginkgo, fallenFans, branchPine as pine, bird, suyari, lantern} from './vocab.js';
 import {tongues} from './doha.js';
+import {meshCrag} from './crag-mesh.js';
 
 // The ground (doha.js) is drawn piece by piece, every outline written here as control points. There is no mountain in this ward.
 //   the bank  one long, shallow bank across the near end of the lid, in three pieces, each lying over the end of the one before: the ginkgo stands at its
@@ -26,6 +27,42 @@ const BANK = [
   {p: [[188, 186], [192, 164], [206, 152], [228, 146], [250, 138], [262, 134], [278, 140], [292, 148], [300, 142], [312, 144], [322, 152], [334, 164], [342, 180], [340, 196], [330, 208], [316, 215],
     [296, 219], [274, 221], [256, 215], [240, 221], [220, 219], [204, 213], [192, 204], [188, 194]], tone: 'gold', seed: 83},
 ];
+// Rocks (docs/plans/2026-11-16-doha.md §15.1, §18.1): the crag, the same upright sharp cluster as Fushimi and Nakagyo. A cluster is one large
+// crag of three or four blocks (a ridge each: [dx, dz, height, radius]; a block listed later lies in front of the one before), one small crag
+// beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
+// (x, z). on: what it stands against; why: the reason it is there.
+export const ROCKS = [
+  // where the left piece of the bank runs under the middle one, in the lee of the fallen fans: a pale silver pair of crowns, a tall olive thorn behind, a gold step between
+  {id: 'ginkgo-stone', x: -104, z: 206, scale: 1.05,
+    crags: [
+      {seed: 4, blocks: [
+        {mat: 'olive', ridge: [[2, -6, 14, 5], [5, -10, 21, 4.8], [9, -6, 13, 4.6]], strata: {ang: 1.3, period: 4, amp: .55, w: 1}},
+        {mat: 'silver', ridge: [[-14, -2, 12, 6.5], [-8, -5, 16, 6]], q: .9},
+        {mat: 'gold', ridge: [[-2, 2, 8, 5], [5, 3, 10, 4.5]], strata: {ang: -.4, period: 3.4, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[-12, 6, 6, 4.5], [-5, 8, 5, 4]], q: .8},
+      ], grooves: [{p: [[-3, -8], [-3, -2], [-4, 3]], w: 2.2, depth: 2.6}]},
+      {at: [24, 7], blocks: [{mat: 'olive', ridge: [[0, 0, 5, 4], [3, 2, 4, 3]]}]},
+    ],
+    lines: [[[5, -10], [4, -5], [3, 0], [2, 4]], [[-8, -5], [-10, 0], [-12, 4]], [[9, -6], [10, -1]], [[-14, -2], [-16, 2]], [[-1, 3], [3, 5], [7, 4]]],
+    pebbles: [[-20, 9, 3, 1.8, .8, .2, 'silver'], [2, 12, 3.2, 1.9, .8, -.2, 'olive'], [15, 9, 2.2, 1.5, .6, .3, 'silver']],
+    on: 'the near edge of the bank, at the join of its left and middle pieces, beyond the fallen fans', why: 'the stone the fans drift to and lie against: the leaves of the ginkgo stop at it'},
+  // the right end of the middle piece, before the east pine: a long spine that rises from the right and breaks at a notch, a silver crown behind, a gold lobe in front
+  {id: 'east-stone', x: 173, z: 178, scale: 1.1,
+    crags: [
+      {seed: 7, blocks: [
+        {mat: 'olive', ridge: [[14, -2, 9, 6.5], [8, -5, 14, 7], [1, -7, 19, 6]], strata: {ang: .1, period: 4.4, amp: .6, w: 1.1}},
+        {mat: 'silver', ridge: [[-8, -5, 17, 5.5], [-13, -2, 12, 5]], q: .88},
+        {mat: 'gold', ridge: [[6, 4, 8, 5.5], [-1, 5, 6, 4.5]], strata: {ang: .9, period: 3.4, amp: .45, w: 1}},
+        {mat: 'olive', ridge: [[-12, 5, 6, 4.5], [-6, 7, 5, 4]]},
+      ], grooves: [{p: [[-4, -10], [-4, -3], [-5, 3]], w: 2.4, depth: 3}]},
+      {at: [-30, 4], blocks: [{mat: 'silver', ridge: [[0, 0, 6, 4.2], [4, 1, 4.5, 3.2]]}]},
+    ],
+    lines: [[[1, -7], [2, -2], [3, 3], [4, 6]], [[-8, -5], [-9, 0], [-11, 4]], [[8, -4], [10, 0], [12, 4]], [[-13, -2], [-15, 2]], [[-2, 5], [3, 7], [8, 6]]],
+    kiri: [{at: [7, -2], cols: 2, rows: 2, turn: .3}],
+    pebbles: [[-20, 9, 3, 1.8, .8, .2, 'silver'], [8, 12, 3.4, 2, .9, -.2, 'olive'], [20, 7, 2.2, 1.5, .6, .3, 'silver'], [-34, -2, 2, 1.4, .6, 0, 'olive']],
+    on: 'the right end of the bank\'s middle piece, a way before the east pine', why: 'the stone that stands between the Goei-do\'s court and the pine: where the bank passes to the pine\'s ground'},
+];
+
 /** The clusters, for the measuring and checking scripts. */
 const PIECES = {BANK};
 export {PIECES};
@@ -46,8 +83,7 @@ export function shimogyo() {
     ...fallenFans('ginkgo-fall', -170, 190, 150, 32, 42, 6, {size: 12}),
     ...ginkgo('great-ginkgo', -224, 198, 139),
     ...pine('east-pine', 284, 201, 112, -12, 6),
-    ...rock('ginkgo-stone', -104, 206, 21, 17, 4),
-    ...rock('east-stone', 173, 178, 23, 16, 7, {mat: MAT.kirigin}),
+    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
     ...bird('uguisu', [[263.10, 155.00, -1, 'east-pine', 10], [-192.73, 129.80, 1, 'great-ginkgo', 21]]),
   ];
 }

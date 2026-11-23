@@ -1,7 +1,8 @@
 // Two textures face each other: dark timber over a small pond, silver raked sand with a single level-topped cone.
 // The pavilion stays at the far left, the cone at the near right; an open lower-left wedge separates them.
-import {MAT, blob, pond, sandGarden, sandCone, moonBowl, storey, roof, hall, branchPine as pine, bird, rock, suyari, grassTufts, daimonji} from './vocab.js';
+import {MAT, blob, pond, sandGarden, sandCone, moonBowl, storey, roof, hall, branchPine as pine, bird, suyari, grassTufts, daimonji} from './vocab.js';
 import {mountain, tongues} from './doha.js';
+import {meshCrag} from './crag-mesh.js';
 
 // The outline pond() draws for 'kinkyo' (same arguments): the grass is set on it.
 const POND = [-182, 36, 112, 67, 5];
@@ -47,6 +48,28 @@ const SHORES = [
   {p: [[-212, 100], [-190, 104], [-168, 105], [-146, 102], [-128, 98], [-112, 91], [-96, 82], [-84, 70],
     [-72, 86], [-72, 102], [-80, 118], [-96, 130], [-118, 136], [-126, 128], [-134, 134], [-144, 140], [-156, 134], [-162, 128], [-174, 132], [-192, 130], [-206, 118]], tone: 'gold', seed: 64},
 ];
+// Rocks (docs/plans/2026-11-16-doha.md §15.1, §18.1): the crag, the same upright sharp cluster as Fushimi and Nakagyo. A cluster is one large
+// crag of three or four blocks (a ridge each: [dx, dz, height, radius]; a block listed later lies in front of the one before), one small crag
+// beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
+// (x, z). on: what it stands against; why: the reason it is there.
+export const ROCKS = [
+  // the south bank on the stone's side, on its big lobe at the pond: three blocks stepping down to the right from a tall crown, a gold shoulder at the water, a low silver stone before it
+  {id: 'pond-stone', x: -112, z: 127, scale: 1.1,
+    crags: [
+      {seed: 4, blocks: [
+        {mat: 'olive', ridge: [[-10, -5, 13, 6], [-4, -8, 21, 6.5], [3, -5, 15, 6], [9, -2, 10, 5]], strata: {ang: .4, period: 4.2, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[-17, 0, 9, 5], [-13, -3, 11, 4.5]], strata: {ang: -1.1, period: 3.6, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[0, 4, 8, 5.5], [8, 5, 7, 5]], q: .85},
+        {mat: 'olive', ridge: [[-8, 6, 5, 4], [-3, 7, 6, 3.6]]},
+      ], grooves: [{p: [[-5, -10], [-4, -3], [-6, 3]], w: 2.4, depth: 3}]},
+      {at: [26, 5], blocks: [{mat: 'silver', ridge: [[0, 0, 6, 4], [3, 1, 5, 3.4]]}]},
+    ],
+    lines: [[[-4, -8], [-6, -3], [-7, 2], [-9, 6]], [[3, -6], [5, -1], [7, 4]], [[-11, -3], [-14, 1], [-16, 4]], [[9, -2], [11, 2]], [[-1, 5], [3, 7], [7, 7]]],
+    kiri: [{at: [-12, -2], cols: 2, rows: 2, turn: .15}],
+    pebbles: [[-22, 8, 3, 1.8, .8, .2, 'silver'], [8, 12, 3.4, 2, .9, -.2, 'olive'], [18, 9, 2.2, 1.5, .6, .3, 'silver'], [-28, -1, 2, 1.4, .6, 0, 'olive']],
+    on: 'the south bank on the stone\'s side, on its big lobe at the pond\'s edge', why: 'the pond\'s stone: the water of the pond is the water the stone is set against'},
+];
+
 /** The clusters, for the measuring and checking scripts. */
 const PIECES = {HEADS, SHORES};
 export {PIECES};
@@ -66,7 +89,7 @@ export function sakyo() {
     ...moonBowl('moon', 190, 98, 'kogetsudai'),
     ...suyari('mist-west', -336, -213, -37, 12, 6),
     ...suyari('mist-east', 59, 331, -198, 13, 11),
-    ...rock('pond-stone', -112, 127, 25, 18, 4, {mat: MAT.kirikane}),
+    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
     ...storey('ginkaku-lower', -163, -88, -57, 64, {group: 'ginkaku', bays: 5}),
     ...roof('ginkaku-eave', -163, -90, 85, 27, {group: 'ginkaku', order: 1, mat: MAT.lacquer, ridgeHalf: 40, motionWith: 'ginkaku-lower'}),
     ...storey('ginkaku-upper', -163, -138, -113, 46, {group: 'ginkaku', order: 2, windowMat: MAT.lacquer}),

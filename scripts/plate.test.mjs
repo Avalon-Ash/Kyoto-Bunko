@@ -1225,14 +1225,29 @@ test('D3 density field falls from 1 on a part to 0 beyond the falloff, smoothly 
   assert.ok(densityFromMask(new Float32Array(w * h), w, h, 60).every(v => v === 0), 'no parts, no density');
 });
 
-test('T4a rock() produces valid closed rock meshes and kirikane/kirigin foil chunks across all wards', () => {
+// The seventeen foil rocks the nine wards drew with rock() until 2026-11-23, when they changed to crags (meshCrag, plan
+// 2026-11-22 §9.11). rock() is still the vocabulary's foil rock, so its tests keep exactly these inputs; the first five are the
+// Minami and Kita rocks the hover test sampled. [ward, id, cx, cz, w, h, seed, mat]
+const FORMER_WARD_ROCKS = [
+  ['W_MINAMI', 'rock-a', 62, 62, 34, 22, 3], ['W_MINAMI', 'rock-b', -44, 112, 27, 18, 8, MAT.kirigin], ['W_MINAMI', 'rock-c', 48, 178, 38, 24, 6],
+  ['W_KITA', 'shore-stone', -246, 18, 29, 20, 5], ['W_KITA', 'island-stone', 204, 134, 30, 18, 8, MAT.kirigin],
+  ['W_HIGASHIYAMA', 'rock-a', -10, 150, 30, 20, 5], ['W_HIGASHIYAMA', 'rock-b', 262, 176, 34, 22, 7, MAT.kirigin],
+  ['W_KAMIGYO', 'west-stone', -320, 159, 18, 15, 6], ['W_KAMIGYO', 'east-stone', 308, 162, 21, 16, 2, MAT.kirigin],
+  ['W_NISHIKYO', 'east-stone', 312, 182, 22, 17, 7, MAT.kirikane], ['W_SAKYO', 'pond-stone', -112, 127, 25, 18, 4, MAT.kirikane],
+  ['W_SHIMOGYO', 'ginkgo-stone', -104, 206, 21, 17, 4], ['W_SHIMOGYO', 'east-stone', 173, 178, 23, 16, 7, MAT.kirigin],
+  ['W_UKYO', 'dragon-stone', 65, -55, 38, 22, 3], ['W_UKYO', 'shore-stone', 140, -48, 24, 20, 7, MAT.kirigin],
+  ['W_YAMASHINA', 'west-stone', -231, 185, 27, 20, 5], ['W_YAMASHINA', 'east-stone', 272, 178, 24, 18, 7, MAT.kirigin],
+];
+const formerRocks = list => list.map(([ward, id, cx, cz, w, h, seed, mat]) => {
+  const {parts, errors} = preparePlate(rock(id, cx, cz, w, h, seed, mat === undefined ? {} : {mat}));
+  assert.deepEqual(errors, [], `${ward}/${id} preparePlate errors`);
+  return {ward, rock: parts[0]};
+});
+
+test('T4a rock() produces valid closed rock meshes and kirikane/kirigin foil chunks', () => {
   let rockCount = 0;
-  for (const [ward, build] of Object.entries(PLATES)) {
-    const {parts, errors} = preparePlate(build());
-    assert.deepEqual(errors, [], `${ward} preparePlate errors`);
-    // rock() parts use kirikane or kirigin; moatWall (ishigaki, MAT.mura) shares KIND.rock and is not part of T4a.
-    const rocks = parts.filter(p => p.kind === KIND.rock && (p.mat === MAT.kirikane || p.mat === MAT.kirigin));
-    for (const r of rocks) {
+  for (const {ward, rock: r} of formerRocks(FORMER_WARD_ROCKS)) {
+    {
       rockCount++;
       assert.equal(r.thick, 0, `${ward}/${r.id} thick is 0`);
       assert.equal(r.layer, 1, `${ward}/${r.id} layer preserved`);
@@ -1244,17 +1259,16 @@ test('T4a rock() produces valid closed rock meshes and kirikane/kirigin foil chu
       assert.equal(r.mesh[1].mat, r.mat, `${ward}/${r.id} tile chunk keeps part material`);
     }
   }
-  // The pilot wards' rocks are powder rocks (MAT.rockGold/rockSilver), not foil rocks, and are checked by the doha tests below.
-  assert.ok(rockCount >= 17, `verified ${rockCount} rocks across all wards`);
+  // The wards' rocks are crags now (MAT.rockGold/rockSilver and the crag blocks), checked by the doha tests below.
+  assert.equal(rockCount, 17, `verified ${rockCount} rocks`);
 });
 
 test('T4a kirikane/kirigin tiles hover 0.05-0.2 above the rock surface with positive gaps between tiles', () => {
   const [goldRock] = rock('rock-gold', 0, 0, 34, 24, 1);
   const [silverRock] = rock('rock-silver', 10, -10, 26, 20, 7, {mat: MAT.kirigin});
-  const minamiRocks = preparePlate(PLATES.W_MINAMI()).parts.filter(p => p.kind === KIND.rock);
-  const kitaRocks = preparePlate(PLATES.W_KITA()).parts.filter(p => p.kind === KIND.rock);
+  const wardRocks = formerRocks(FORMER_WARD_ROCKS.slice(0, 5)).map(({rock: r}) => r);
 
-  for (const r of [goldRock, silverRock, ...minamiRocks, ...kitaRocks]) {
+  for (const r of [goldRock, silverRock, ...wardRocks]) {
     const body = r.mesh[0].vertices;
     const tiles = r.mesh[1].vertices;
     assert.equal(tiles.length % 288, 0, `${r.id}: each foil tile emits 36 vertices (288 floats)`);

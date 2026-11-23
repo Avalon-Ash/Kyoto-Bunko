@@ -7,8 +7,9 @@
 //   the banks    a scalloped bank the lattice stands on, an arm of it following the Otowa water down to the left, an arm
 //                on the right under the maple; a thin silver ribbon under the front of the stage bank.
 // The mist across the lattice's middle is what makes it hang: the ground is behind it, far below.
-import {MAT, stream, suyari, rock, hall, bird, shell, kakezukuri, stampedMaple as maple, fallenLeaves, farPagoda} from './vocab.js';
+import {stream, suyari, hall, bird, shell, kakezukuri, stampedMaple as maple, fallenLeaves, farPagoda} from './vocab.js';
 import {mountain, tongues} from './doha.js';
+import {meshCrag} from './crag-mesh.js';
 
 // Toyama maki-e: each head is one smooth arc, [x, z] from its left foot to its right: a main peak and a shoulder or two, never the
 // same either side. Far to near. Why: the Otowa hill is what the stage is built against; its crest is the brightest line on the lid.
@@ -46,6 +47,41 @@ const BANKS = [
   {p: [[226, 110], [240, 104], [258, 100], [276, 102], [296, 96], [318, 98], [338, 94], [358, 100],
     [358, 146], [342, 152], [324, 148], [306, 156], [288, 162], [270, 172], [254, 176], [240, 166], [228, 158], [222, 144], [220, 126]], tone: 'gold', seed: 64},
 ];
+// Rocks (docs/plans/2026-11-16-doha.md §15.1, §18.1): the crag, the same upright sharp cluster as Fushimi and Nakagyo. A cluster is one large
+// crag of three or four blocks (a ridge each: [dx, dz, height, radius]; a block listed later lies in front of the one before), one small crag
+// beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
+// (x, z). on: what it stands against; why: the reason it is there.
+export const ROCKS = [
+  // the foot of the stage's lattice, at its left posts: one tall thin spire with a lower crown beside it, a gold step and a silver shoulder low in front
+  {id: 'butai-foot', x: -10, z: 150, scale: 1.1,
+    crags: [
+      {seed: 9, blocks: [
+        {mat: 'olive', ridge: [[-2, -5, 13, 5.5], [3, -9, 21, 5], [7, -5, 15, 5]], strata: {ang: 1.4, period: 4.2, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[-14, -1, 10, 6], [-8, -3, 12, 5.5]], strata: {ang: -.5, period: 3.6, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[-12, 5, 6, 5], [-4, 7, 7, 4.5]], q: .85},
+        {mat: 'olive', ridge: [[6, 4, 7, 5], [13, 2, 9, 4.5]]},
+      ], grooves: [{p: [[-3, -4], [-5, 0], [-4, 4]], w: 2, depth: 2.8}]},
+      {at: [26, 7], blocks: [{mat: 'gold', ridge: [[0, 0, 6, 4], [3, 2, 4, 3]]}]},
+    ],
+    lines: [[[3, -9], [2, -4], [1, 1], [0, 5]], [[7, -6], [8, -1], [9, 3]], [[-8, -4], [-11, 0], [-13, 4]], [[-14, -1], [-16, 3]], [[7, 4], [11, 4], [14, 2]]],
+    pebbles: [[-20, 8, 3, 1.8, .8, .2, 'silver'], [0, 12, 2.4, 1.6, .7, -.3, 'olive'], [16, 10, 3.2, 1.9, .8, .1, 'silver'], [-26, -1, 2, 1.4, .6, 0, 'olive']],
+    on: 'the foot of the stage\'s lattice, at its left posts, on the front of the stage bank', why: 'the posts of the stage are set in stone: the rock at their foot is what the lattice stands on'},
+  // the east bank under the maple: a long low spine falling from a high crown at the left to the water at the right, with one blunt shoulder, silver lobe in front
+  {id: 'east-bank', x: 262, z: 176, scale: 1.15,
+    crags: [
+      {seed: 7, blocks: [
+        {mat: 'olive', ridge: [[-14, -4, 18, 7], [-7, -7, 20, 6], [1, -4, 14, 6.5], [9, -1, 8, 5], [15, 3, 5, 4]], strata: {ang: .15, period: 4.4, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[-20, 2, 9, 5], [-14, 3, 11, 5]], strata: {ang: 1, period: 3.6, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[-4, 5, 8, 5.5], [4, 7, 9, 5]], q: .88},
+      ], grooves: [{p: [[-9, -9], [-8, -3], [-10, 2]], w: 2.4, depth: 2.6}]},
+      {at: [-30, 6], blocks: [{mat: 'olive', ridge: [[0, 0, 5, 4], [3, 1, 4, 3.4]]}]},
+    ],
+    lines: [[[-7, -7], [-9, -2], [-11, 3]], [[-14, -3], [-16, 1], [-18, 5]], [[1, -4], [3, 0], [4, 4]], [[10, -1], [12, 2]], [[-3, 6], [1, 8], [6, 8]]],
+    kiri: [{at: [-11, -2], cols: 3, rows: 2, turn: .2}],
+    pebbles: [[-24, 9, 3, 1.8, .8, .2, 'silver'], [10, 10, 3.4, 2, .9, -.2, 'olive'], [18, 8, 2.2, 1.5, .6, .4, 'silver']],
+    on: 'the east bank, at the water side of the maple', why: 'the maple roots in the stone of its bank, and the bank ends in the stone'},
+];
+
 /** The clusters, for the measuring and checking scripts. */
 const PIECES = {OTOWA, WEST, BANKS};
 export {PIECES};
@@ -66,8 +102,7 @@ export function higashiyama() {
     ...suyari('mist-under', -150, 290, 50, 17, 5),
     ...suyari('mist-west', -352, -176, -88, 11, 11),
     ...suyari('mist-hall', 210, 352, -70, 12, 8),
-    ...rock('rock-a', -10, 150, 30, 20, 5),
-    ...rock('rock-b', 262, 176, 34, 22, 7, {mat: MAT.kirigin}),
+    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
     // Slot 2: the stage. Lattice, deck, hall and roof are one solid standing on the lattice's foot.
     ...kakezukuri('butai', -40, 252, -8, 104, {posts: 8}),
     ...hall('hondo', 106, -44, 132, 60, {wallH: 33, bays: 9, group: 'butai', order: 2}),

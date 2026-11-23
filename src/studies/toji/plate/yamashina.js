@@ -1,7 +1,8 @@
 // An axial ascent: stone treads lead through an open gate to the hall, held between two large maple crests.
 // The lower outer corners are empty ground; the mist cuts across the ridge rather than across the stair.
-import {MAT, hall, sanmon, stoneSteps, lantern, branchMaple as maple, fallenLeaves, bird, rock, suyari, grassTufts} from './vocab.js';
+import {hall, sanmon, stoneSteps, lantern, branchMaple as maple, fallenLeaves, bird, suyari, grassTufts} from './vocab.js';
 import {mountain, tongues} from './doha.js';
+import {meshCrag} from './crag-mesh.js';
 
 // The ground (doha.js) is drawn piece by piece, every outline written here as control points:
 //   the mountain   one body of three rounded heads behind the hall: a pale blue-gold one at the far left under the mist, the tallest with its peak to the
@@ -30,6 +31,41 @@ const BANKS = [
   // under the east maple: a lower, longer tongue that runs back toward the stair's east bank
   {p: [[222, 104], [232, 90], [252, 84], [274, 88], [296, 80], [316, 90], [326, 104], [322, 118], [308, 128], [292, 126], [284, 134], [266, 124], [248, 130], [232, 124]], tone: 'gold', seed: 74},
 ];
+// Rocks (docs/plans/2026-11-16-doha.md §15.1, §18.1): the crag, the same upright sharp cluster as Fushimi and Nakagyo. A cluster is one large
+// crag of three or four blocks (a ridge each: [dx, dz, height, radius]; a block listed later lies in front of the one before), one small crag
+// beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
+// (x, z). on: what it stands against; why: the reason it is there.
+export const ROCKS = [
+  // below the west maple's tongue, where its leaves lie: one broad crown with a shorter second crown behind it, a silver lobe and a gold step in front
+  {id: 'west-stone', x: -231, z: 185, scale: 1.1,
+    crags: [
+      {seed: 5, blocks: [
+        {mat: 'olive', ridge: [[-6, -6, 17, 7], [0, -9, 20, 6.5], [7, -5, 12, 5]], strata: {ang: -.6, period: 4.2, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[-16, -1, 9, 5], [-11, -3, 12, 4.8]], strata: {ang: .7, period: 3.6, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[2, 3, 8, 5.5], [9, 3, 10, 5]], q: .85},
+        {mat: 'olive', ridge: [[-8, 5, 6, 4.5], [-2, 7, 5, 4]]},
+      ], grooves: [{p: [[0, -10], [-1, -3], [0, 3]], w: 2.2, depth: 2.8}]},
+      {at: [-29, 5], blocks: [{mat: 'gold', ridge: [[0, 0, 6, 4.4], [4, 1, 4, 3.2]]}]},
+    ],
+    lines: [[[0, -9], [-1, -4], [-3, 1], [-4, 5]], [[-6, -6], [-8, -1], [-10, 4]], [[7, -5], [9, 0], [10, 4]], [[-14, -3], [-16, 1]], [[3, 4], [7, 6], [11, 5]]],
+    pebbles: [[-20, 8, 3, 1.8, .8, .2, 'silver'], [-2, 12, 3.4, 2, .9, -.2, 'olive'], [14, 9, 2.2, 1.5, .6, .3, 'silver'], [-34, 0, 2, 1.4, .6, 0, 'olive']],
+    on: 'the ground below the west maple, at the lower end of its fallen leaves', why: 'the stone the leaves are swept to; the maple\'s leaves lie against it'},
+  // below the east maple: pale silver, a thin tall spire at the left, the rest falling in three steps to the right, no gold
+  {id: 'east-stone', x: 272, z: 178, scale: 1.05,
+    crags: [
+      {seed: 7, blocks: [
+        {mat: 'silver', ridge: [[-12, -5, 14, 4.8], [-9, -9, 21, 4.4], [-5, -5, 13, 4.6]], q: .9},
+        {mat: 'olive', ridge: [[0, -4, 15, 6], [6, -2, 11, 5.5], [11, 1, 7, 5]], strata: {ang: .5, period: 4, amp: .55, w: 1}},
+        {mat: 'gold', ridge: [[-6, 4, 7, 5], [2, 5, 8, 4.5]], strata: {ang: -.9, period: 3.4, amp: .45, w: 1}},
+        {mat: 'silver', ridge: [[9, 5, 5, 4], [15, 4, 4, 3.4]], q: .8},
+      ], grooves: [{p: [[3, -8], [3, -2], [4, 3]], w: 2, depth: 2.6}]},
+    ],
+    lines: [[[-9, -9], [-10, -4], [-11, 1], [-12, 5]], [[0, -4], [1, 1], [2, 5]], [[6, -2], [8, 2]], [[-5, -5], [-4, 0]], [[-4, 5], [0, 7], [5, 6]]],
+    kiri: [{at: [3, -1], cols: 2, rows: 2, turn: .2}],
+    pebbles: [[-18, 8, 3.2, 1.9, .8, .1, 'silver'], [2, 12, 2.4, 1.6, .7, -.3, 'olive'], [16, 9, 3, 1.8, .8, .2, 'silver'], [21, 1, 2, 1.4, .6, 0, 'olive']],
+    on: 'the ground below the east maple, at the lower end of its fallen leaves', why: 'the pair to the west stone: the two stones stand at the foot of the two maples'},
+];
+
 /** The clusters, for the measuring and checking scripts. */
 const PIECES = {MOUNTAIN, BANKS};
 export {PIECES};
@@ -53,8 +89,7 @@ export function yamashina() {
     ...lantern('east-lantern', 154, 151, .9),
     ...maple('west-maple', -252, 113, 135, 10, 2),
     ...maple('east-maple', 274, 89, 111, -8, 9),
-    ...rock('west-stone', -231, 185, 27, 20, 5),
-    ...rock('east-stone', 272, 178, 24, 18, 7, {mat: MAT.kirigin}),
+    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
     ...bird('uguisu', [[-220.07, 46.60, 1, 'west-maple', 12], [302.47, 33.39, -1, 'east-maple', 12]]),
   ];
 }

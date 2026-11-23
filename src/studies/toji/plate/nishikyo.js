@@ -6,8 +6,9 @@
 //               north-east (under the new shoin, round the pond's east end and out to the far pine), south-west (stepping stones and
 //               the near pine), south-east (the lantern and the east stone). The pond's south edge between the two south pieces is open.
 //   behind the shoin  bare lacquer and the mist: nothing is laid there.
-import {MAT, pond, hall, moonDeck, moon, steppingStones, lantern, branchPine as pine, bird, rock, suyari, bambooFence} from './vocab.js';
+import {pond, hall, moonDeck, moon, steppingStones, lantern, branchPine as pine, bird, suyari, bambooFence} from './vocab.js';
 import {tongues} from './doha.js';
+import {meshCrag} from './crag-mesh.js';
 
 /// The shores, far to near (a later piece lies over an earlier one). Each outline is written as a few broad lobes (a big lobe 40-70 wide,
 /// a small one 15-25) with bays of different depths between, the lobes toward the water.
@@ -32,6 +33,28 @@ const SHORES = [
   {p: [[186, 128], [198, 120], [206, 118], [214, 111], [222, 108], [228, 102], [236, 98], [252, 92], [268, 98], [284, 92], [300, 100], [314, 98], [324, 108], [340, 112], [350, 128], [352, 146],
     [346, 168], [350, 186], [338, 204], [316, 212], [290, 214], [262, 208], [240, 214], [216, 210], [196, 200], [186, 178], [181, 165], [187, 142]], tone: 'gold', seed: 65},
 ];
+// Rocks (docs/plans/2026-11-16-doha.md §15.1, §18.1): the crag, the same upright sharp cluster as Fushimi and Nakagyo. A cluster is one large
+// crag of three or four blocks (a ridge each: [dx, dz, height, radius]; a block listed later lies in front of the one before), one small crag
+// beside it, fine grain lines, flat pebbles at the foot, and on a few of them a small group of cut-gold squares. Everything is relative to
+// (x, z). on: what it stands against; why: the reason it is there.
+export const ROCKS = [
+  // east of the shore lantern, on the south-east shore: a high crown with a notch behind a second, shorter crown, a gold step at the right and a silver shoulder at the left
+  {id: 'east-stone', x: 326, z: 182, scale: .95,
+    crags: [
+      {seed: 7, blocks: [
+        {mat: 'olive', ridge: [[-12, -5, 14, 6.5], [-6, -8, 20, 6.5], [-1, -5, 13, 5]], strata: {ang: -.8, period: 4.2, amp: .6, w: 1.1}},
+        {mat: 'gold', ridge: [[7, -6, 15, 5.5], [13, -3, 10, 5], [17, 1, 6, 4]], strata: {ang: .6, period: 3.6, amp: .5, w: 1}},
+        {mat: 'silver', ridge: [[-17, 1, 8, 5.5], [-10, 3, 10, 5]], q: .85},
+        {mat: 'olive', ridge: [[-2, 4, 8, 5], [5, 5, 7, 4.5]]},
+      ], grooves: [{p: [[1, -11], [1, -4], [2, 2]], w: 2.8, depth: 3.4}]},
+      {at: [-29, 6], blocks: [{mat: 'olive', ridge: [[0, 0, 6, 4.2], [4, 1, 4.5, 3.2]]}, {mat: 'silver', ridge: [[-2, 4, 3.5, 3]]}]},
+    ],
+    lines: [[[-6, -8], [-7, -3], [-9, 2], [-11, 6]], [[-1, -6], [0, -1], [1, 4]], [[8, -6], [10, -1], [12, 3]], [[15, -2], [17, 2]], [[-15, 1], [-17, 5]], [[-1, 5], [3, 7], [7, 6]]],
+    kiri: [{at: [10, -3], cols: 2, rows: 3, turn: .25}],
+    pebbles: [[-22, 10, 3, 1.8, .8, .2, 'silver'], [6, 12, 3.4, 2, .9, -.2, 'olive'], [21, 8, 2.2, 1.5, .6, .3, 'silver'], [-33, 0, 2, 1.4, .6, 0, 'olive']],
+    on: 'the south-east shore, east of the stone lantern at the water\'s edge', why: 'the lantern has a stone to lean its light toward; the garden\'s east edge is closed by it'},
+];
+
 /** The clusters, for the measuring and checking scripts. */
 const PIECES = {SHORES};
 export {PIECES};
@@ -45,7 +68,7 @@ export function nishikyo() {
     ...suyari('mist-sky', -300, -72, -201, 13, 9),
     // Behind the new shoin, between it and the far pine: the last roof of the line rises out of the mist.
     ...suyari('mist-bank', 96, 320, -86, 12, 3),
-    ...rock('east-stone', 312, 182, 22, 17, 7, {mat: MAT.kirikane}),
+    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
     ...hall('old-shoin', -205, -99, 80, 33, {wallH: 27, group: 'old-shoin'}),
     ...hall('middle-shoin', -18, -65, 75, 31, {wallH: 25}),
     ...hall('new-shoin', 144, -29, 62, 29, {wallH: 24}),

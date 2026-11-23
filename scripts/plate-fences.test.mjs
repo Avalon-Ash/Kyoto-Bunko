@@ -9,7 +9,7 @@ import {dohaWards, nineWards, flatWards} from './lib/plate-test-helpers.mjs';
 import {measureDoha} from './plate-doha-measure.mjs';
 
 // Doha (docs/plans/2026-11-16-doha.md §4.3, §10): the pieces of the two pilot wards stay inside the plan's numbers. Range fences; they move when the plan does.
-const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5], W_HIGASHIYAMA: [2, 2], W_KITA: [0, 0], W_MINAMI: [3, 3], W_UKYO: [0, 0], W_SAKYO: [0, 0], W_YAMASHINA: [0, 0], W_NISHIKYO: [0, 0], W_KAMIGYO: [0, 0], W_SHIMOGYO: [0, 0]}; // Kita's two rocks are not named rock-*, so the measure does not count them
+const rockTotals = {W_FUSHIMI: [3, 5], W_NAKAGYO: [3, 5], W_HIGASHIYAMA: [2, 2], W_KITA: [2, 2], W_MINAMI: [3, 3], W_UKYO: [2, 2], W_SAKYO: [1, 1], W_YAMASHINA: [2, 2], W_NISHIKYO: [1, 1], W_KAMIGYO: [2, 2], W_SHIMOGYO: [2, 2]}; // since 2026-11-23 every ward's rocks are crags named rock-* (plan 2026-11-22 §9.11), so the measure counts them all
 for (const ward of dohaWards) test(`doha: ${ward} pieces keep the composition numbers`, () => {
   const m = measureDoha(ward);
   // Nakagyo is one shore of four long banks (plan §11.2): the cluster, piece-count, size and straight-run ranges are for the scattered wards.
