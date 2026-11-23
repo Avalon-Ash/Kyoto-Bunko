@@ -40,17 +40,19 @@ npm run dev -- --host 127.0.0.1 --strictPort
 | 歲時記 | 只有[計畫](SEASONAL_PLAN.md)；首頁入口已移除。使用者 2026-11-22：擱到體質與畫面收完 |
 | 文箱架構 | `study.js`（`mountBunko`：手勢、移光、縮放、換函、開蓋）、`renderer.js`（選 three 或靜態圖）、`plate/three-renderer.js`＋`three-pack.js`、`plate/static-plate.js`、`plate/parts.js`＋`vocab.js`＋`mat.js`＋`<區>.js`（構圖資料）、`plate/creature-mesh.js`／`rock-mesh.js`／`architecture-mesh.js` 等（網格）、`backdrop.js`＋`ward-art.js`（背景） |
 
-## 3. 最近一次驗收（2026-11-22，`main` @ `b61314c`）
+## 3. 最近一次驗收（2026-11-23，整合分支 `claude/chain-1122` @ `c19e02f`）
 
 | 檢查 | 結果 |
 |---|---|
-| `npm run lint` | exit 0（`tsc --noEmit`；ADR 20 份通過） |
+| `npm run lint` | exit 0（`tsc --noEmit`、JS 的 JSDoc 型別檢查、ESLint、ADR 21 份） |
 | `npx --no-install tsx validate_data.js --strict` | ERROR 0、WARN 0，734 筆 |
-| `npm test` | `scripts/*.test.mjs` 155／155、`src/lib/*.test.ts` 17／17 |
-| `npm run build` | exit 0；`three-renderer` 802.79 kB（gzip 230.69）、`main` 362.69 kB（gzip 117.52）、`ClusterMap` 205.87 kB（gzip 61.42） |
-| 部署 | `b61314c` 已部署（重跑成功，§1） |
+| `npm test` | `scripts/*.test.mjs` 157／157、`src/lib/*.test.ts` 27／27 |
+| `npm run build` | exit 0；`three-renderer` 809.24 kB（gzip 230.76）、`main` 362.56 kB（gzip 117.49）、`ClusterMap` 205.87 kB（gzip 61.42） |
+| `npm run smoke` | 通過（three.js 畫出、console 無錯） |
+| 穿插、部件雜湊 | `plate-clip` findings 0；`plate-parts-hash --check` 11／11（基準已更新成換岩之後） |
+| 部署 | 整合分支還沒合併 `main`；`main` 的 `b61314c` 已部署 |
 
-以上是主代理 11/22 在主資料夾重跑的。這一天沒有拍圖；最近一次蓋面矩陣是 11/20 的 `plate-matrix.sh`（25 張 0 差異，[`plans/2026-11-20-next.md`](plans/2026-11-20-next.md)）。穿插檢查用 `node scripts/plate-clip.mjs <out.json>`，上次量是 11/17（十一區 0）。
+以上是主代理 11/23 在主資料夾跑的（整合分支）。11/22 那天沒有拍圖；最近一次蓋面矩陣是 11/20 的 `plate-matrix.sh`（25 張 0 差異，[`plans/2026-11-20-next.md`](plans/2026-11-20-next.md)）。穿插檢查用 `node scripts/plate-clip.mjs <out.json>`，上次量是 11/17（十一區 0）。
 
 **沒人驗過的**：11/16 之後上線的畫面與效能，沒有人在手機實機上看過或量過；所有截圖與量測都是這台機器的無頭 Chrome（桌機 GPU）。使用者 2026-11-22 決定不看實機、畫面由主代理全權決定（§4.1）；所以報告裡不要寫「實機看過」。
 
@@ -147,7 +149,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 | 文件 | 現在的用途 |
 |---|---|
 | [`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) | **目前的開案書**：體檢的弱點、積壓工作、下一批的拆包與順序、使用者 11/22 的四個決定 |
-| [`adr/`](adr/README.md) | 架構決策紀錄（20 份）；`npm run adr:check` |
+| [`adr/`](adr/README.md) | 架構決策紀錄（21 份）；`npm run adr:check` |
 | [`plans/2026-11-18-material-table.md`](plans/2026-11-18-material-table.md) | 材質表解耦與冷編譯的提案與執行紀錄；§8 有拍圖比對與編譯量測的做法 |
 | [`plans/2026-11-20-next.md`](plans/2026-11-20-next.md)、[`plans/2026-11-18-data-next.md`](plans/2026-11-18-data-next.md)、[`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md)、[`plans/2026-11-16-roadmap.md`](plans/2026-11-16-roadmap.md) | 做完的批次的開案書與結果（§4.3）；裡面的待辦已收進目前的開案書 |
 | `plans/2026-11-16-*.md` | 11/16 各包的開案書與結果：`patina`（作舊）、`clip`（穿插）、`technique-stack`、`roof-makie`、`doha`（疊坡，§10–§18 是遠山與岩的規則與歷次失敗）、`ground-tone`、`coat`（包漿）、`nine-wards`（九區，§9 是總結）、`lighting-research`、`r10-map-evaluation` |
