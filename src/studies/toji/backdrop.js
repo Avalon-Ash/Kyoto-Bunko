@@ -5,15 +5,16 @@ import {project} from './geometry.js';
 import {MOTIFS, WARD_ART, wardSeed} from './ward-art.js';
 
 /**
- * World-space vertices whose projection is the convex silhouette of every cabinet under the fixed home camera. Fitted to the old
- * relief mesh and its box; the three.js box is a little wider at the rim and foot (see the known gap in scripts/ui-renewal.test.mjs).
+ * World-space vertices whose projection is the convex silhouette of every cabinet under the fixed home camera: the convex hull, in
+ * the camera's view plane, of the three.js box (plate/box.js buildBox, without its ground shadow) and every plate mesh, together
+ * with the old hull's three top points, kept so mist stays clear of parts that stand up when they wake (2026-11-24, chain-2 V4).
  * The camera is orthographic with a fixed direction, so this hull holds at any aspect.
  * Regenerate if geometry or the camera eye changes; scripts/ui-renewal.test.mjs checks the lid and every plate mesh vertex against it.
  */
 export const CABINET_SILHOUETTE = [
-  [-371.3, .6, 240], [-370, -32, 240], [-360, -88, 230], [360, -88, 230], [360, -88, -230], [370, -32, -240],
-  [371.3, .6, -240], [370.9, 1.5, -240], [370, 1.5, -240.9], [163, 138.7, -114.9], [72, 241, 23.4],
-  [-163, 138.7, -114.9], [-370, 1.5, -240.9], [-370.9, 1.5, -240], [-370.9, 1.5, 240],
+  [-373.5, -37.5, 243.5], [-365, -94, 235], [365, -94, 235], [365, -94, -235], [373.5, -37.5, -243.5], [373.5, -33, -243.5],
+  [372.6, -3, -242.6], [370, 1.5, -240.9], [163, 138.7, -114.9], [72, 241, 23.4], [-163, 138.7, -114.9], [-370, 1.5, -240.9],
+  [-370.9, 1.5, -240], [-370.9, 1.5, 240], [-372.6, -3, 242.6], [-373.5, -33, 243.5],
 ];
 export const BACKDROP_DPR_MAX = 1.5;
 /** Share of the silhouette width, centred, that mist may never pass behind (the bands may tuck behind the box ends). */

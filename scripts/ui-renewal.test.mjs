@@ -22,12 +22,11 @@ const inside = (poly, [x, y]) => {
 };
 
 // The plate renderer (three.js and the still picture) draws the box and, standing on its lid, the meshes of each ward.
-// (Until 2026-11-16 this covered the old relief mesh, buildScene.) KNOWN GAP: CABINET_SILHOUETTE was fitted to that mesh's box, which
-// is up to 3 px (at 1440x820) narrower than the three.js box at its chamfer and up to 7 px at the silver rim, foot and cord rings, so the
-// box is checked on its lid top only. Regenerating the hull re-lays the mist, so it is left to a change of its own.
-test('silhouette encloses the lid and every vertex of all eleven plate meshes', () => {
+// (Until 2026-11-16 this covered the old relief mesh, buildScene; until 2026-11-24 only the box's lid top, as the hull was fitted to
+// the old box. chain-2 V4 refitted it to the three.js box, so the whole box is checked now, all but its ground shadow.)
+test('silhouette encloses the whole box and every vertex of all eleven plate meshes', () => {
   const box = buildBox(), vertices = [];
-  for (let i = 0; i < box.lidTop; i++) vertices.push(['box', i, box.data[i * 10], box.data[i * 10 + 1], box.data[i * 10 + 2]]);
+  for (let i = 0; i < box.opaque; i++) vertices.push(['box', i, box.data[i * 10], box.data[i * 10 + 1], box.data[i * 10 + 2]]);
   for (const ward of Object.keys(PLATES)) {
     for (const part of preparePlate(PLATES[ward]()).parts) for (const chunk of part.mesh ?? []) {
       for (let i = 0; i < chunk.vertices.length; i += 8) vertices.push([ward, i / 8, chunk.vertices[i], chunk.vertices[i + 1], chunk.vertices[i + 2]]);
