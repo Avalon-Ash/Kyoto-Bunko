@@ -7,7 +7,7 @@
 //                  north waterline, a thin gold tongue from the south-east that carries the island pine.
 import {MAT, blob, pond, phoenix, storey, roof, branchPine as pine, bird, suyari, grassTufts} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {meshCrag} from './crag-mesh.js';
+import {crags} from './crag-mesh.js';
 
 // The outline pond() draws for 'kyoko' (same arguments): the reeds are set on its north-west bank.
 const POND = [-5, 68, 244, 82, 3];
@@ -100,7 +100,7 @@ export function kita() {
     ...grassTufts('kyoko-reeds', [reed(45, 30, 6), reed(47, 40, 7), reed(49, 46, 7), reed(51, 32, 6)], {on: 'kyoko', mat: MAT.hyomonSilver, seed: 5, w: 1.3, spread: .13}),
     ...suyari('mist-west', -350, -196, -98, 10, 2),
     ...suyari('mist-east', 232, 352, -84, 10, 7),
-    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
+    ...crags(ROCKS),
     ...pavilion,
     ...phoenix('ho-o', -85, -168, 1.25, {group: 'kinkaku', order: 6}).map(p => ({...p, motionWith: 'kinkaku-wall-2'})),
     ...pine('island-pine', 171, 97, 124, -15, 6),

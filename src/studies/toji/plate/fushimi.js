@@ -9,7 +9,7 @@
 //   the rocks     only in the near land, each against something: see ROCKS.
 import {suyari, branchPine as pine, bird, shell, torii, romon, fox, pawPrints, steppingStones, lantern} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {meshCrag} from './crag-mesh.js';
+import {crags} from './crag-mesh.js';
 
 /** Five gates up the slope, each smaller than the one before and clear of its neighbours. */
 function climb() {
@@ -122,7 +122,7 @@ export function fushimi() {
     ...suyari('mist-sky', -372, -128, -222, 15, 6),
     ...suyari('mist-gate', -372, -190, -40, 13, 12),
     ...suyari('mist-foot', 78, 336, 92, 14, 4),
-    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
+    ...crags(ROCKS),
     // Slot 2: the gates, the fox and the trunks. These stand up from the lid.
     ...torii('torii', -232, 204, 1.22, {cap: true}),
     // A stone lantern at the great torii's west foot, outside the post: the way in. Only this side has room: between the

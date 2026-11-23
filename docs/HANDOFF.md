@@ -67,7 +67,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 之後使用者要求把工作排成一條長鏈、對齊一次、做完才合回主線（開案書 §8；回主線前分支自由開，技術上的取捨由主代理定）。使用者事先同意了：全鏈 A–E、解耦提案 (a)(b)、新增 ESLint、刪 `.shots` 舊批次、驗收過就合併 `main` 並 push。
 
-**長鏈做到哪裡**（整合分支 `claude/chain-1122`，還沒合併 `main`；細節在開案書 §9）：階段 A（工程體質）完成：JavaScript 型別檢查與 ESLint 接進 `npm run lint`（ADR 0021）、區的順序與拍圖腳本環境只定義一處、`study.js` 的係數命名、測試拆成行為與圍欄、冒煙測試 `npm run smoke`、依賴補丁版。11/23 晚由 Opus 主席接手（Fable 週額度用完）：階段 B 完成，只量不改，數字在開案書 §9.10，量測腳本是 `scripts/perf-home.mjs`。階段 C 的資料未結項完成（`817dfc2` 與後續修正；報告 `agent-runs/2026-11-23-data-open-items.md`），門面做了 meta description 與 favicon；OG 圖與 README 的八張截圖（都是 11/13 舊管線）等階段 D 做完再拍。lib 測試 27 個、README 與 `DEVELOPMENT.md` 的修正也進了整合分支。剩下 D（畫面收尾）、E（Fable API 終審、合併、push、清理）。工作樹都已拆。
+**長鏈做到哪裡**（整合分支 `claude/chain-1122`，還沒合併 `main`；細節在開案書 §9）：階段 A（工程體質）完成：JavaScript 型別檢查與 ESLint 接進 `npm run lint`（ADR 0021）、區的順序與拍圖腳本環境只定義一處、`study.js` 的係數命名、測試拆成行為與圍欄、冒煙測試 `npm run smoke`、依賴補丁版。11/23 晚由 Opus 主席接手（Fable 週額度用完）：階段 B 完成，只量不改，數字在開案書 §9.10，量測腳本是 `scripts/perf-home.mjs`。階段 C 的資料未結項完成（`817dfc2` 與後續修正；報告 `agent-runs/2026-11-23-data-open-items.md`），門面做了 meta description 與 favicon；OG 圖與 README 的八張截圖（都是 11/13 舊管線）等階段 D 做完再拍。lib 測試 27 個、README 與 `DEVELOPMENT.md` 的修正也進了整合分支。階段 D：八項逐項決定，只改了「岩」：九區 17 顆舊圓岩換成伏見、中京的尖岩簇，其餘七項不改，理由在開案書 §9.11–§9.12。README 的八張圖與 OG 圖已重拍（§9.13）。階段 E：Fable 終審（API 點數）結論「可以合併」，應修的已修（§9.14）。**剩下：使用者同意後合併 `main`、push、確認部署、刪 `.shots` 舊批次、刪 `claude/docs-1122` 與整合分支。**
 
 誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與開案書 §4 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
 

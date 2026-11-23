@@ -442,3 +442,33 @@ dev server 的數字（同腳本，四種條件，含 CPU ×1 的 375 px）溫�
 - README 引用的八張圖（`docs/images/*.webp`）全部重拍：原本是 11/13 舊管線的畫面，寫著 809 筆和舊短句。新圖用一次性腳本走首頁拍，腳本在 scratchpad，不提交：dev server、共用的無頭 Chrome、1440×900，手機 390×844 ×2。取景沿用舊圖：左京夜（中、日介面各一）、北日、左京開蓋（按 Enter 後 350 ms，蓋正掀起，看得到盒內的料紙與卷）、左京卷的列表與地圖、手機的首頁與卷。拼成一張逐張核對過（`.shots/chain/readme/sheet.png`）。README 的替代文字仍然符合，沒改。
 - OG：`public/og.jpg`（1200×630，從左京夜那張裁的），`index.html` 加 `og:type`、`og:title`、`og:url`、`og:image`（GitHub Pages 的絕對網址）與 `twitter:card`。`og:description` 不另寫，預覽會讀 `meta description`，同一段字只寫一處。
 - 建置後 `dist/index.html` 的 icon 是 `./favicon.svg`，`og.jpg` 也在 `dist/` 裡。線上的連結預覽要等部署後才看得到。
+
+### 9.14 階段 E：Fable 終審與修正（2026-11-23）
+
+**終審**：Fable 5.2，經 Console API 點數（`api-call` skill，single 模式），$2.82。附件：`AGENTS.md`、本檔、ADR 0021，以及 `git diff main...claude/chain-1122`（不含 docs、鎖檔與圖檔）。派工單與回覆在 `.claude/dispatch/final-review.*`（不提交）。結論「可以合併」，沒有擋合併的項目；列了 6 條應修、8 條小事、10 個要主席自己查的問題。
+
+**修了的**
+- NK-084：拿掉「（預約制）」。Tabelog 的「お席のご予約は承っておりません。「芳香炉」のご予約のみ」是說只有芳香炉可以預約，不是必須預約，之前讀錯了。「附近的」也一起拿掉（條目裡沒有舊址可以當參照）。NK-085 的「三種の付けダレ」是離れ店那頁的原文（「オリジナルスープと3種の付けダレ」），保留。
+- 冒煙測試：畫面落到降級圖（`static`）時算失敗；要測降級圖就加 `--allow-static`。
+- 岩的相似度：九區原本被豁免，理由是「rocks not yet redone」，這次岩已經重做，豁免拿掉。`plate-doha-similar` 九區每一對的距離 0.12–0.21，都在門檻（0.06–0.113）以上。
+- 新測試：十一區所有 `rock-*` 部件都是 `KIND.rock`，網格通過 `assertValidMeshChunks`。T4a 的註解改成實際涵蓋的範圍。
+- 耦合：`ROCKS.flatMap(… meshCrag(\`rock-${id}\` …))` 原本在十一個構圖檔各寫一份（九份是這次新加的），收成 `crag-mesh.js` 的 `crags(rocks)`，`rock-` 前綴只寫在那裡。部件雜湊 11／11 相同。
+- `perf-home.mjs`：9379 埠已經有 Chrome 時直接報錯結束，不然會連到舊的 Chrome，把溫快取量成冷快取。
+- 部件雜湊基準（`docs/plans/material-table/parts-hash-baseline.json`）更新成九區的新值。
+
+**主席自己查的**
+- CI：`deploy.yml` 用 Node 24，ESLint 10 可以跑。新的 `npm run lint`（含 JS 型別檢查與 ESLint）還沒在 Linux 上跑過，第一次就是合併後的那次部署；失敗只會讓部署停下，線上維持舊版。
+- 區的順序：`wards.ts` 的 `WARD_KEYS` 和被刪掉的 `ALL_WARD_KEYS` 逐字相同。
+- CSS：`main` 用自己的依賴（工作樹裡 `npm ci`）建置，和本分支逐檔比：`ClusterMap`、`theme`、`toji` 三個 CSS 相同；`main` 的 CSS 差在 tailwind 4.3.5 換了預設的 sans 字體堆疊，並多了一個 `.collapse` 工具類。站上沒有元素用 `collapse` 這個 class，`.kyoto-app` 自己設了 serif 字體，所以畫面不受影響。
+- 換岩之後重量（dev，CPU ×1）：冷快取 9,159 ms、溫快取 812／797 ms，換岩前是 9,611 與 1,086／923，同一量級。
+- 375 px（南、北夜、東山）與光移到盤外（南、右京、下京夜）各拍了一張（`.shots/chain/d-after/`）：岩在手機上小但讀得出，不搶戲；光移開時地仍是最深的一層。
+- `LID_HALF_X`／`LID_HALF_Z`（370、240）和 `PLATE`（360、230）不是同一個量（蓋與盤面），不算重複。
+
+**留到積壓（這次不做）**
+- 拍圖腳本裡「向頁面要區的順序、算步數」寫了三份（`plate-shot.mjs`、`plate-fallback-shots.mjs`、`smoke.mjs`），步數規則還有兩種。這是階段 A2 留下的，應收進 `plate-env.mjs`。
+- `study.js` 的 `FEEL`：三組只寫在註解裡的關係（`settleMs`、`demoDurationSec`、`liftEmbedded + idleLiftAmp = 1`），以及表外還沒命名的兩個裸數字 `.985` 與 `700`。
+- `connectCdp` 的 `logs` 沒有區分 error 與 warning；`plate-env.mjs` 的 Chrome 路徑寫死 Windows（應先讀 `CHROME_PATH`）；檔頭註解寫「兩個埠」，實際有三個。
+- `useKyotoEngine.ts` 的 `WARD_KEYS as WardKey[]` 是型別轉型。
+- `rock()`／`meshRock` 已經沒有任何區在用，只剩測試；提案 (c) 的 `MAKIE_LANDMARKS.title`／`shape` 也沒有讀者。兩者都等使用者同意再刪。
+- 資料：SK-038 的停止參拜到 2028-01 為止，2028 年要回頭改；NK-014 名稱仍是泛稱，導航可能落在寺町京極那一段。
+- 載入：`setWard` 改成非同步、烘焙搬進 Worker（§9.10）。岩：簇偏小、17 簇有一家人的相似感（§9.12）。

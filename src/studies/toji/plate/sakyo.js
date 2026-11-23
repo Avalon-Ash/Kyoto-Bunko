@@ -2,7 +2,7 @@
 // The pavilion stays at the far left, the cone at the near right; an open lower-left wedge separates them.
 import {MAT, blob, pond, sandGarden, sandCone, moonBowl, storey, roof, hall, branchPine as pine, bird, suyari, grassTufts, daimonji} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {meshCrag} from './crag-mesh.js';
+import {crags} from './crag-mesh.js';
 
 // The outline pond() draws for 'kinkyo' (same arguments): the grass is set on it.
 const POND = [-182, 36, 112, 67, 5];
@@ -89,7 +89,7 @@ export function sakyo() {
     ...moonBowl('moon', 190, 98, 'kogetsudai'),
     ...suyari('mist-west', -336, -213, -37, 12, 6),
     ...suyari('mist-east', 59, 331, -198, 13, 11),
-    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
+    ...crags(ROCKS),
     ...storey('ginkaku-lower', -163, -88, -57, 64, {group: 'ginkaku', bays: 5}),
     ...roof('ginkaku-eave', -163, -90, 85, 27, {group: 'ginkaku', order: 1, mat: MAT.lacquer, ridgeHalf: 40, motionWith: 'ginkaku-lower'}),
     ...storey('ginkaku-upper', -163, -138, -113, 46, {group: 'ginkaku', order: 2, windowMat: MAT.lacquer}),

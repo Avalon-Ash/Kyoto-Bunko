@@ -1259,8 +1259,22 @@ test('T4a rock() produces valid closed rock meshes and kirikane/kirigin foil chu
       assert.equal(r.mesh[1].mat, r.mat, `${ward}/${r.id} tile chunk keeps part material`);
     }
   }
-  // The wards' rocks are crags now (MAT.rockGold/rockSilver and the crag blocks), checked by the doha tests below.
+  // The wards' rocks are crags now: their meshes are checked by the next test, their shapes by the doha similarity test.
   assert.equal(rockCount, 17, `verified ${rockCount} rocks`);
+});
+
+test('every ward draws its rocks as crags with valid closed meshes', () => {
+  for (const [ward, build] of Object.entries(PLATES)) {
+    const {parts, errors} = preparePlate(build());
+    assert.deepEqual(errors, [], `${ward} preparePlate errors`);
+    // Crags are named rock-<id> by each ward's ROCKS; Kyoto's stone walls (ishigaki) are rocks of another kind.
+    const crags = parts.filter(p => p.id.startsWith('rock-'));
+    assert.ok(crags.length >= 1, `${ward} has rocks`);
+    for (const r of crags) {
+      assert.equal(r.kind, KIND.rock, `${ward}/${r.id} is a rock`);
+      assertValidMeshChunks(r.mesh);
+    }
+  }
 });
 
 test('T4a kirikane/kirigin tiles hover 0.05-0.2 above the rock surface with positive gaps between tiles', () => {
@@ -1483,7 +1497,7 @@ test('roof faces are gold powder; gold leaf stays on small parts and carries a g
 test('doha: no piece or rock of a pilot ward is a copy of another (plate-doha-similar.mjs)', async () => {
   for (const ward of dohaWards) {
     const r = await similar(ward);
-    for (const kind of nineWards.has(ward) ? ['tongues', 'banks'] : ['tongues', 'banks', 'rocks']) if (r[kind]) assert.ok(r[kind].d >= r.threshold[kind], `${ward} ${kind}: ${r[kind].a} and ${r[kind].b} differ by ${r[kind].d.toFixed(3)}, under ${r.threshold[kind]}`);
+    for (const kind of ['tongues', 'banks', 'rocks']) if (r[kind]) assert.ok(r[kind].d >= r.threshold[kind], `${ward} ${kind}: ${r[kind].a} and ${r[kind].b} differ by ${r[kind].d.toFixed(3)}, under ${r.threshold[kind]}`);
   }
 });
 test('doha: a hand-drawn outline is only shaken by the jitter; a ridge sinks at both ends', () => {

@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {PERF_DEBUG_PORT, DEV_HOME_URL, launchChrome, waitForChrome, connectCdp, sleep} from './lib/plate-env.mjs';
+import {PERF_DEBUG_PORT, DEV_HOME_URL, launchChrome, waitForChrome, isChromeAlive, connectCdp, sleep} from './lib/plate-env.mjs';
 
 const arg = (name, fallback) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : fallback; };
 const CPU_RATE = Number(arg('cpu', '1'));
@@ -55,6 +55,8 @@ const PROBE = `(() => {
   requestAnimationFrame(tick);
 })();`;
 
+// A Chrome left on the port would answer instead of ours, with a warm cache: the cold row would be wrong without a sign.
+if (await isChromeAlive(PERF_DEBUG_PORT)) { console.error(`Port ${PERF_DEBUG_PORT} already has a Chrome; close it first.`); process.exit(2); }
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'kyoto-perf-'));
 const chrome = launchChrome({port: PERF_DEBUG_PORT, profileDir: profile, width: WIDTH, height: HEIGHT});
 const results = [];

@@ -8,7 +8,7 @@
 //                maple; a thin silver waterline laid over the north crescent.
 import {pond, hall, branchPine as pine, branchMaple as maple, fallenLeaves, bird, suyari} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {meshCrag} from './crag-mesh.js';
+import {crags} from './crag-mesh.js';
 
 // Arashiyama, far to near. Why: the mountain is what the garden borrows; the farthest head is the paler, the tallest stands behind the pond.
 const ARASHIYAMA = [
@@ -97,7 +97,7 @@ export function ukyo() {
     ...suyari('mist-ridge', -350, -190, -122, 12, 4),
     ...suyari('mist-pond', 130, 330, -112, 12, 8),
     ...suyari('mist-near', -310, -115, 157, 14, 3),
-    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
+    ...crags(ROCKS),
     ...hall('hojo', -164, 48, 128, 54, {wallH: 34, bays: 9}),
     ...pine('west-pine', -289, -61, 104, 12, 2),
     ...pine('ridge-pine', 263, -67, 98, -12, 6),

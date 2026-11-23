@@ -2,7 +2,7 @@
 // The lower outer corners are empty ground; the mist cuts across the ridge rather than across the stair.
 import {hall, sanmon, stoneSteps, lantern, branchMaple as maple, fallenLeaves, bird, suyari, grassTufts} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {meshCrag} from './crag-mesh.js';
+import {crags} from './crag-mesh.js';
 
 // The ground (doha.js) is drawn piece by piece, every outline written here as control points:
 //   the mountain   one body of three rounded heads behind the hall: a pale blue-gold one at the far left under the mist, the tallest with its peak to the
@@ -89,7 +89,7 @@ export function yamashina() {
     ...lantern('east-lantern', 154, 151, .9),
     ...maple('west-maple', -252, 113, 135, 10, 2),
     ...maple('east-maple', 274, 89, 111, -8, 9),
-    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
+    ...crags(ROCKS),
     ...bird('uguisu', [[-220.07, 46.60, 1, 'west-maple', 12], [302.47, 33.39, -1, 'east-maple', 12]]),
   ];
 }

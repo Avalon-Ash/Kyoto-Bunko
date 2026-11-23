@@ -8,7 +8,7 @@
 //   behind the shoin  bare lacquer and the mist: nothing is laid there.
 import {pond, hall, moonDeck, moon, steppingStones, lantern, branchPine as pine, bird, suyari, bambooFence} from './vocab.js';
 import {tongues} from './doha.js';
-import {meshCrag} from './crag-mesh.js';
+import {crags} from './crag-mesh.js';
 
 /// The shores, far to near (a later piece lies over an earlier one). Each outline is written as a few broad lobes (a big lobe 40-70 wide,
 /// a small one 15-25) with bays of different depths between, the lobes toward the water.
@@ -68,7 +68,7 @@ export function nishikyo() {
     ...suyari('mist-sky', -300, -72, -201, 13, 9),
     // Behind the new shoin, between it and the far pine: the last roof of the line rises out of the mist.
     ...suyari('mist-bank', 96, 320, -86, 12, 3),
-    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
+    ...crags(ROCKS),
     ...hall('old-shoin', -205, -99, 80, 33, {wallH: 27, group: 'old-shoin'}),
     ...hall('middle-shoin', -18, -65, 75, 31, {wallH: 25}),
     ...hall('new-shoin', 144, -29, 62, 29, {wallH: 24}),

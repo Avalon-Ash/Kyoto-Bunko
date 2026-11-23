@@ -1,5 +1,5 @@
 // Smoke test for the home entrance flow: home load -> cabinet switch -> open volume -> return home -> console check.
-// Usage: node scripts/smoke.mjs   (or: npm run smoke)
+// Usage: node scripts/smoke.mjs [--allow-static]   (or: npm run smoke). Fails on the still picture unless --allow-static.
 // Prerequisite: dev server running at http://127.0.0.1:3000 (npm run dev -- --host 127.0.0.1 --strictPort).
 // Reuses the shared headless Chrome on port 9377 via scripts/lib/plate-env.mjs; closes its own tab on exit, keeps Chrome alive.
 // Checks: #scene reaches 'three' or 'static', ArrowRight advances to the next ward in window.__kyotoCabinetIds,
@@ -229,6 +229,9 @@ try {
   ws.close();
 }
 
+// The still picture (no WebGL2, three.js failed) passes only with --allow-static: by default the smoke test is that three.js draws.
+const ALLOW_STATIC = process.argv.includes('--allow-static');
+if (!failed && renderer !== 'three' && !ALLOW_STATIC) failed = 'renderer';
 const ok = failed === null && errors.length === 0;
 emit({ok, steps, failed, renderer, errors, warnings});
 process.exitCode = ok ? 0 : 1;

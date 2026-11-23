@@ -2,7 +2,7 @@
 // The foreground between ginkgo and pine is an unpainted court; the back wall supplies a quiet horizontal limit.
 import {hall, corridor, branchGinkgo as ginkgo, fallenFans, branchPine as pine, bird, suyari, lantern} from './vocab.js';
 import {tongues} from './doha.js';
-import {meshCrag} from './crag-mesh.js';
+import {crags} from './crag-mesh.js';
 
 // The ground (doha.js) is drawn piece by piece, every outline written here as control points. There is no mountain in this ward.
 //   the bank  one long, shallow bank across the near end of the lid, in three pieces, each lying over the end of the one before: the ginkgo stands at its
@@ -83,7 +83,7 @@ export function shimogyo() {
     ...fallenFans('ginkgo-fall', -170, 190, 150, 32, 42, 6, {size: 12}),
     ...ginkgo('great-ginkgo', -224, 198, 139),
     ...pine('east-pine', 284, 201, 112, -12, 6),
-    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
+    ...crags(ROCKS),
     ...bird('uguisu', [[263.10, 155.00, -1, 'east-pine', 10], [-192.73, 129.80, 1, 'great-ginkgo', 21]]),
   ];
 }

@@ -3,7 +3,7 @@
 // There is no ground laid outside the galleries (no shore, no bank, no mountain): the court is already a floor of silver, and the Gosho is
 // meant to be flat and still. Outside the galleries is bare lacquer and nashiji, and three bands of mist (behind the hall, left and right).
 import {MAT, hall, sandGarden, corridor, branchCourtTree as courtTree, petals, fruits, branchPine as pine, bird, suyari, grassTufts} from './vocab.js';
-import {meshCrag} from './crag-mesh.js';
+import {crags} from './crag-mesh.js';
 
 // Rocks (docs/plans/2026-11-16-doha.md §15.1, §18.1): the crag, the same upright sharp cluster as Fushimi and Nakagyo. A cluster is one large
 // crag of three or four blocks (a ridge each: [dx, dz, height, radius]; a block listed later lies in front of the one before), one small crag
@@ -50,7 +50,7 @@ export function kamigyo() {
     ...suyari('mist-west', -338, -185, -199, 12, 3),
     ...suyari('mist-back', -118, 122, -183, 12, 5),
     ...suyari('mist-east', 157, 337, -177, 13, 8),
-    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
+    ...crags(ROCKS),
     ...hall('shishinden', 0, -106, 153, 59, {wallH: 38, bays: 9}),
     ...corridor('west-gallery', -293, -181, 44, {height: 27}),
     ...corridor('east-gallery', 181, 293, 44, {height: 27}),

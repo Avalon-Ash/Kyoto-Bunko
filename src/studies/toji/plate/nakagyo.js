@@ -5,7 +5,7 @@
 // the forecourt of the gate, the east pine, the west pine. A few rocks, each against something: see ROCKS.
 import {hall, karamon, moatWall, branchPine as pine, bird, suyari} from './vocab.js';
 import {tongues} from './doha.js';
-import {meshCrag} from './crag-mesh.js';
+import {crags} from './crag-mesh.js';
 
 // The ground is one shore (岸) along the moat and the stone wall, laid as a gold bank over a thin silver ribbon over a front gold
 // bank, with a long gold arm up the east side to the pine. Their outlines are the scalloped waves of a Shioyama-style suhama: a
@@ -85,7 +85,7 @@ export function nakagyo() {
     ...suyari('mist-far', -358, 40, -118, 13, 3),
     ...suyari('mist-near', -90, 358, 62, 13, 5),
     ...moatWall('ishigaki', -333, 333, 201, 218, 232),
-    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
+    ...crags(ROCKS),
     ...rooms.flatMap(([x, z, w], i) => hall(`ninomaru-${i}`, x, z, w, 22, {wallH: 22, bays: 5})),
     ...karamon('karamon', -172, 184, 69),
     ...pine('west-pine', -305, 62, 99, 12, 2),

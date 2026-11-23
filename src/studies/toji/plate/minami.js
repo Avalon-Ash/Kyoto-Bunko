@@ -6,7 +6,7 @@
 //                on the east, each reaching to the water; a thin silver ribbon lies along the waterline on each side.
 import {stream, streamEdge, suyari, pagoda, hall, stampedPine as pine, bird, shell, grassTufts, silverPlum} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {meshCrag} from './crag-mesh.js';
+import {crags} from './crag-mesh.js';
 
 // The stream's own points and widths, kept here so its banks can be found again for the grass.
 const STREAM = [[[-8, -150], [22, -70], [-30, 20], [14, 110], [-26, 232]], [7, 11, 17, 25, 36]];
@@ -127,7 +127,7 @@ export function minami() {
     ...suyari('mist-hall', -360, -18, -34, 17, 5),
     ...suyari('mist-sky', 196, 372, -186, 15, 9),
     ...suyari('mist-far', -372, -250, -118, 13, 14),
-    ...ROCKS.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec)),
+    ...crags(ROCKS),
     // Slot 2: the hall, the pagoda and the trunks. These stand up from the lid.
     ...hall('kondo', -150, -72, 104, 44),
     ...pagoda('pagoda', 176, 128),

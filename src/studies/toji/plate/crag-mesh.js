@@ -164,6 +164,13 @@ function scaled(spec) {
 }
 
 /**
+ * A ward's rocks: its ROCKS table ({id, x, z, ...spec} per cluster) drawn as crags. The part id is `rock-<id>`: the tests, the
+ * clip probe and the doha measure find a ward's rocks by that prefix, so it is written here only.
+ * @param {Array<{id: string, x: number, z: number} & Record<string, any>>} rocks
+ */
+export const crags = rocks => rocks.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec));
+
+/**
  * A crag cluster. spec:
  *   crags    [{at: [dx, dz], blocks: [{mat: 'olive' | 'gold' | 'silver', ridge: [[dx, dz, height, radius]...], q?, top?}], grooves?: [{p: [[dx, dz]...], w, depth}]}]
  *            listed far to near; a crag's blocks likewise (a later block lies in front)
