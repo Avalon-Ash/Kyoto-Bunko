@@ -91,3 +91,4 @@
 - [0019 著色器先用 mSetLightAt 設好光與位置，再呼叫 mNashiji、mMetal](0019-shaders-set-light-and-position-once.md)：兩者只跟位置與光有關的部分每個像素算一次，地著色器冷編譯 9–11 秒 → 約 5 秒。
 - [0020 鄰盒的預覽只畫背景已建好的區，沒好就淡出淡入](0020-neighbour-pictures-only-from-prefetch.md)：畫預覽圖不再同步建鄰區（換函後 285–600 ms 的卡頓 → ≤77 ms），來不及預建時換函改淡出淡入。
 - [0021 JavaScript 也做型別檢查，ESLint 只管正確性](0021-javascript-type-check-and-correctness-lint.md)：`tsconfig.js.json` 用 JSDoc 檢查全部 JavaScript、關卡是 0 個錯誤、只用 JSDoc 修；ESLint 只開正確性規則，兩者都接在 `npm run lint`。
+- [0022 著色器編譯或連結失敗時退回降級圖](0022-shader-failure-falls-back-to-still-picture.md)：`three-renderer.js` 的 `reportFailure` 是唯一的失敗通知，`renderer.js` 的 `fallback` 換成同區同日夜的降級圖；`?plate=shaderfail`（只在開發時）可重現。

@@ -1,5 +1,6 @@
 // Smoke test for the home entrance flow: home load -> cabinet switch -> open volume -> return home -> console check.
-// Usage: node scripts/smoke.mjs [--allow-static]   (or: npm run smoke). Fails on the still picture unless --allow-static.
+// Usage: node scripts/smoke.mjs [--allow-static] [--query=<a=b&c=d>]   (or: npm run smoke). Fails on the still picture unless
+// --allow-static. --query is added to the home URL, e.g. --query=plate=shaderfail (dev only: a shader fails on purpose).
 // Prerequisite: dev server running at http://127.0.0.1:3000 (npm run dev -- --host 127.0.0.1 --strictPort).
 // Reuses the shared headless Chrome on port 9377 via scripts/lib/plate-env.mjs; closes its own tab on exit, keeps Chrome alive.
 // Checks: #scene reaches 'three' or 'static', ArrowRight advances to the next ward in window.__kyotoCabinetIds,
@@ -7,6 +8,10 @@
 // on that same ward, and console has zero errors or uncaught exceptions (warnings are listed without failing).
 // Does not check: pixel rendering, mobile layout, drag/pinch gestures, map view, theme/language/motion toggles, or tag/area modes.
 import {SHARED_DEBUG_PORT, DEV_HOME_URL, ensureSharedChrome, connectCdp, sleep} from './lib/plate-env.mjs';
+
+const QUERY = process.argv.find(a => a.startsWith('--query='))?.slice('--query='.length) ?? '';
+/** The page the run opens: the home page, with --query when given. */
+const HOME_URL = QUERY ? `${DEV_HOME_URL}?${QUERY}` : DEV_HOME_URL;
 
 const VIEWPORT_WIDTH = 1440;
 const VIEWPORT_HEIGHT = 900;
@@ -93,7 +98,7 @@ try {
     deviceScaleFactor: 1,
     mobile: false,
   });
-  await send('Page.navigate', {url: DEV_HOME_URL});
+  await send('Page.navigate', {url: HOME_URL});
   /** @type {{renderer: 'three' | 'static', ward: string, ids: string[]} | null} */
   const home = await waitFor(() => evalJs(`(() => {
     const scene = document.querySelector('#scene');
