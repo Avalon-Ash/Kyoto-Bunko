@@ -67,7 +67,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 之後使用者要求把工作排成一條長鏈、對齊一次、做完才合回主線（開案書 §8；回主線前分支自由開，技術上的取捨由主代理定）。使用者事先同意了：全鏈 A–E、解耦提案 (a)(b)、新增 ESLint、刪 `.shots` 舊批次、驗收過就合併 `main` 並 push。
 
-**長鏈做到哪裡**（整合分支 `claude/chain-1122`，還沒合併 `main`；細節在開案書 §9）：階段 A（工程體質）完成：JavaScript 型別檢查與 ESLint 接進 `npm run lint`（ADR 0021）、區的順序與拍圖腳本環境只定義一處、`study.js` 的係數命名、測試拆成行為與圍欄、冒煙測試 `npm run smoke`、依賴補丁版。剩下階段 B（量測與載入）、C（資料未結項與門面；資料查核做了一部分，在工作樹 `C:Git_wt_kyoto_data`，沒審）、D（畫面收尾）、E（合併、push、清理）。
+**長鏈做到哪裡**（整合分支 `claude/chain-1122`，還沒合併 `main`；細節在開案書 §9）：階段 A（工程體質）完成：JavaScript 型別檢查與 ESLint 接進 `npm run lint`（ADR 0021）、區的順序與拍圖腳本環境只定義一處、`study.js` 的係數命名、測試拆成行為與圍欄、冒煙測試 `npm run smoke`、依賴補丁版。11/23 晚由 Opus 主席接手（Fable 週額度用完）：階段 B 完成，只量不改，數字在開案書 §9.10，量測腳本是 `scripts/perf-home.mjs`。階段 C 的資料未結項完成（`817dfc2` 與後續修正；報告 `agent-runs/2026-11-23-data-open-items.md`），門面做了 meta description 與 favicon；OG 圖與 README 的八張截圖（都是 11/13 舊管線）等階段 D 做完再拍。lib 測試 27 個、README 與 `DEVELOPMENT.md` 的修正也進了整合分支。剩下 D（畫面收尾）、E（Fable API 終審、合併、push、清理）。工作樹都已拆。
 
 誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與開案書 §4 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
 
@@ -103,7 +103,8 @@ npm run dev -- --host 127.0.0.1 --strictPort
 - 量測：`node scripts/plate-doha-measure.mjs <區…>`（佔比、留白、直線）、`plate-doha-similar.mjs`（形的相似度）、`plate-clip.mjs <out.json>`（穿插）。降級圖：`node scripts/plate-fallback-shots.mjs`（22 張；只改了幾區就把其餘 `git checkout` 還原）。
 - **冒煙測試**：`npm run smoke`（首頁 → 換函 → 開蓋進卷 → 返回，console 無錯；約 5 秒；要 dev server 與 GPU，不在 `npm test` 裡）。改了文箱或首頁的流程就跑一次。
 - **拍圖 job 可以直接寫區名**（`kita`、`W_KITA`），步數的寫法照舊能用；腳本的 dev 位址、埠與 Chrome 啟動都在 `scripts/lib/plate-env.mjs`。
-- **有幾個像素會自己跳 1 級**：南區 (448,261)、中京 (755–757, 387–392)、伏見兩個點（1440×900 的圖）。逐像素比對只在這些位置差 1 級時，重拍那一張再比；和任何一次改前的拍攝相同就不算差異（開案書 §9.4、§9.5）。
+- **有幾個像素會自己跳 1 級**：南區 (448,261)、中京 (755–757, 387–392)、伏見兩個點、下京夜 (634,360)、西京日 (488–681, 219–264 之間的三點)（1440×900 的圖）。逐像素比對只在這些位置差 1 級時，重拍那一張再比；和任何一次改前的拍攝相同就不算差異（開案書 §9.4、§9.5、§9.9）。
+- **量第一次載入與換函**：`node scripts/perf-home.mjs [--cpu 4] [--size 375x812 --mobile] [--url …] [--compile]`（用法在檔頭；自己開、自己關一個 9379 埠的 Chrome）。要量正式建置就 `vite build` 到別處再 `vite preview`，用 `--url` 指過去；dev server 沒打包，JS 載入會被高估。
 - **不要在拍圖用的 Chrome 開著時跑 `npm ci`**：`node_modules/.cache/chrome-profile` 被它鎖住，`npm ci` 會刪到一半以 EBUSY 中斷。要乾淨安裝就在工作樹裝，或先關掉自己啟動的那個 Chrome（開案書 §9.6）。
 - **要證明一個修改沒有動到畫面**：`bash scripts/plate-matrix.sh <資料夾>` 拍改前與改後（固定時鐘、只拍盤），`node scripts/plate-diff.mjs <改前>/<組> <改後>/<組>` 逐像素比。改前與改後要在同一次開機、同一個 dev server 裡拍（跨一次重開機會差 1–2 級）；有差異的那一張要重拍，重現才算。拍圖進行中不改 `src/`。細節在材質表提案 §8.2、§8.7、§8.8。拍圖腳本的檢查偶爾會讀早了、對某一張報 WRONG 而圖本身是對的（`plans/2026-11-20-next.md` N5）：以比對結果為準並重拍那一張。
 - **加材質**：在 `mat.js` 的 `MAT_LOOK` 加一列：地的欄與配方（`recipe`）、烘焙畫法（`fine`）、網格（`mesh`，`meshLook` 的欄）；地著色器不比材質編號、renderer 不比名字（測試會擋）。不要把上色搬進 GLSL 函式：冷編譯從十幾秒變成 32–49 秒（推測是共用的鋪粉被編譯器在每個配方裡各展開一份）。
