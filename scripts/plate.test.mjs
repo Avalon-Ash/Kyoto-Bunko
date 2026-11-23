@@ -1159,10 +1159,10 @@ test('R2: no part above layer 0 is left to be painted on the lid: each is a mesh
   }
 });
 
-test('silver rocks have their own body material (muraSilver), distinct from mist', () => {
-  assert.notEqual(MAT.muraSilver, MAT.kasumi);
+test('material ids are unique; id 16 (muraSilver, retired 2026-11-24) is not reused', () => {
   assert.equal(new Set(Object.values(MAT)).size, Object.keys(MAT).length, 'material ids are unique');
-  assert.equal(MATERIALS[MAT.muraSilver].rock, 'silver');
+  assert.ok(!Object.values(MAT).includes(16), 'retired ids stay retired');
+  assert.equal(MATERIALS[MAT.mura].rock, 'gold', 'the stone wall keeps its gold-foil body');
 });
 
 test('D3 density field falls from 1 on a part to 0 beyond the falloff, smoothly and in range', () => {

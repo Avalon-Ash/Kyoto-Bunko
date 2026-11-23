@@ -374,8 +374,7 @@ const float K_ROCK_FOOT_H=9., K_ROCK_FOOT_AMT=.6; // how high the ground's tone 
 vec3 kyotoAgedSilver(vec3 c,float k){return c*mix(vec3(1.),K_TARNISH,clamp(uAge*k,0.,1.));}
 const vec3 K_ROCK_BODY_GOLD=vec3(.45,.29,.09); // dark bronze ground between the gold foil on the lit face of a rock
 const vec3 K_ROCK_BODY_SHADE=vec3(.27,.27,.26); // the ground where the rock turns away from the light: oxidized silver, dark
-const vec3 K_ROCK_BODY_SILVER=vec3(.50,.51,.50); // the ground of a silver rock, lit
-const vec3 K_ROCK_FOIL_SILVER=vec3(.90,.91,.88); // kirigin foil on the lit face
+const vec3 K_ROCK_FOIL_SILVER=vec3(.90,.91,.88); // kirigin foil on the lit face (silver wood, three-renderer.js)
 const vec3 K_ROCK_FOIL_OXID=vec3(.60,.60,.57); // foil where it turns from the light: oxidized silver
 const float K_TRUNK_OXID_SCALE=.76; // oxidized silver brightness on shaded gold trunks relative to K_M_OXID
 const float K_TRUNK_OXID_STRENGTH=.4; // blend weight toward oxidized silver on shaded gold trunk faces

@@ -177,14 +177,15 @@ export function createThreeRenderer(gl, canvas, onReady) {
   const patchMaterial = (material, spec, glsl, call) => {
     const isPart = call === 'kyotoMotion';
     // The columns are the material's own (mat.js meshLook): this function reads them and decides nothing per material.
-    // Among 3D part meshes only materials with a `rock` column (mura: the stone wall; muraSilver: no part since rock() went, 2026-11-23) take the rock-foil branch.
-    const isRock = isPart && Boolean(spec.rock), isSilverRock = spec.rock === 'silver';
+    // Among 3D part meshes only materials with a `rock` column (mura: the stone wall) take the rock-foil branch. Its foil is gold:
+    // the silver rock and its body (muraSilver) went with rock() (2026-11-24, chain-2 F4).
+    const isRock = isPart && Boolean(spec.rock);
     const isLacq = isPart && spec.shinnuri;
     const isRockP = isPart && spec.rockPowder;
     const isCoat = COAT_ON > 0 && spec.coat !== 'none';
     const coatClass = MESH_COAT[spec.coat];
     const isPowder = isPart && spec.grain === 'powder', isLeaf = isPart && spec.grain === 'leaf', isGrain = isPowder || isLeaf;
-    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? `-rock-kiri-v5${isSilverRock ? 's' : ''}` : ''}${isLacq ? '-shinnuri' : ''}${isRockP ? '-rockp-v1' : ''}${isPowder ? '-powder-v1' : ''}${isLeaf ? '-leaf-v1' : ''}${isCoat ? '-coat-v1' : ''}`;
+    material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? '-rock-kiri-v6' : ''}${isLacq ? '-shinnuri' : ''}${isRockP ? '-rockp-v1' : ''}${isPowder ? '-powder-v1' : ''}${isLeaf ? '-leaf-v1' : ''}${isCoat ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
       shader.vertexShader = shader.vertexShader
@@ -192,7 +193,7 @@ export function createThreeRenderer(gl, canvas, onReady) {
         .replace('#include <beginnormal_vertex>', `vec3 kyotoP; vec3 objectNormal; ${call}(position, normal, kyotoP, objectNormal);`)
         .replace('#include <begin_vertex>', `vec3 transformed = kyotoP;${isRock || isRockP ? ' vRockUv = uv;' : ''}${isGrain ? ' vKyotoUv = uv; vKyotoRest = position;' : ''}`);
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', `#include <common>\nvarying float vGlow; uniform float uGlowBase, uGlowGain;${isCoat ? `\n${COAT_GLSL}` : ''}${isPart ? `\n${PART_LIGHT_GLSL}` : ''}${isGrain ? `\n${PART_POWDER_GLSL}` : ''}${isRockP ? '\nvarying vec2 vRockUv;' : ''}${isRock ? `\nuniform float uPx;\nvarying vec2 vRockUv;\nconst bool kyotoRockSilver = ${isSilverRock};\n${PART_KIRIKANE_GLSL}` : ''}`)
+        .replace('#include <common>', `#include <common>\nvarying float vGlow; uniform float uGlowBase, uGlowGain;${isCoat ? `\n${COAT_GLSL}` : ''}${isPart ? `\n${PART_LIGHT_GLSL}` : ''}${isGrain ? `\n${PART_POWDER_GLSL}` : ''}${isRockP ? '\nvarying vec2 vRockUv;' : ''}${isRock ? `\nuniform float uPx;\nvarying vec2 vRockUv;\n\n${PART_KIRIKANE_GLSL}` : ''}`)
         .replace('#include <normal_fragment_begin>', NORMAL_FIX)
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uGlowBase + vGlow * uGlowGain;');
       if (isRock) {
@@ -207,10 +208,10 @@ float kyotoRockRim = pow(1. - clamp(dot(normalize(vNormal), normalize(vViewPosit
 float kyotoRockAmt = smoothstep(K_ROCK_AMT_LO, K_ROCK_AMT_HI, kyotoRockNL) * mix(K_ROCK_LOW_AMT, 1., smoothstep(1.5, 12., vLift)) + kyotoRockRim * K_ROCK_RIM_AMT;
 vec2 kyotoRockTilt; float kyotoRockTone;
 float kyotoRockKiri = kyotoRockKiriPattern(kyotoRockXZ, kyotoRockAmt, uPx, kyotoRockTilt, kyotoRockTone);
-vec3 kyotoRockFoil = kyotoRockSilver ? kyotoAgedSilver(mix(K_ROCK_FOIL_OXID, K_ROCK_FOIL_SILVER, smoothstep(.15, .6, kyotoRockAmt)), mix(1., .35, smoothstep(.15, .6, kyotoRockAmt))) : mix(K_ROCK_FOIL_OXID, kyotoKiriGold(), smoothstep(.15, .6, kyotoRockAmt));
-// Old foil is uneven: some squares have dulled, more of them in silver than in gold.
-kyotoRockFoil *= mix(.9 + .2 * kyotoRockTone, kyotoRockSilver ? .62 + .62 * kyotoRockTone : .74 + .42 * kyotoRockTone, uAge);
-diffuseColor.rgb = mix(kyotoAgedSilver(K_ROCK_BODY_SHADE, 1.), kyotoRockSilver ? kyotoAgedSilver(K_ROCK_BODY_SILVER, .8) : K_ROCK_BODY_GOLD, kyotoRockLit);
+vec3 kyotoRockFoil = mix(K_ROCK_FOIL_OXID, kyotoKiriGold(), smoothstep(.15, .6, kyotoRockAmt));
+// Old foil is uneven: some squares have dulled.
+kyotoRockFoil *= mix(.9 + .2 * kyotoRockTone, .74 + .42 * kyotoRockTone, uAge);
+diffuseColor.rgb = mix(kyotoAgedSilver(K_ROCK_BODY_SHADE, 1.), K_ROCK_BODY_GOLD, kyotoRockLit);
 diffuseColor.rgb = mix(diffuseColor.rgb, kyotoRockFoil, kyotoRockKiri * K_ROCK_KIRI_COVER);
 // The mound rises out of the lid: at its foot it is still the ground's own tone, with no edge between them.
 diffuseColor.rgb = mix(diffuseColor.rgb, K_ROCK_FOOT, (1. - smoothstep(0., K_ROCK_FOOT_H, vLift)) * K_ROCK_FOOT_AMT * uAge);`)

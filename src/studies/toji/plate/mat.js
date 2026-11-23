@@ -1,9 +1,9 @@
 // Material ids of the plate. No imports: vocab.js and the mesh builders all need them, and vocab.js imports the builders.
-// muraSilver is the body of a silver rock (the shader lays silver foil on it); kasumi is mist, which is baked, not meshed.
+// kasumi is mist, which is baked, not meshed. Id 16 was muraSilver (the body of a silver rock), retired 2026-11-24; ids are not reused.
 // roofPowder is gold powder sprinkled on a roof face (takamakie); gold is leaf, kept for small parts.
 // coral is red coral inlay: the one colour that is not metal or shell, kept to a few small pieces (Hatsune: plum blossoms).
 export const MAT = {ground: 1, nashijiLight: 2, mura: 3, gyobu: 4, gold: 5, silver: 6, kirikane: 7, kirigin: 8, aogai: 9,
-  hyomonGold: 10, hyomonSilver: 11, water: 12, kasumi: 13, lacquer: 14, lamp: 15, muraSilver: 16, coral: 17,
+  hyomonGold: 10, hyomonSilver: 11, water: 12, kasumi: 13, lacquer: 14, lamp: 15, coral: 17,
   roofPowder: 18,
   // Doha: banks (a crisp ridge over a wedge that sinks into the ground) and suhama tongues (flat, with a rim). Gold or silver.
   bankGold: 19, bankSilver: 20, sandGold: 21, sandSilver: 22,
@@ -57,7 +57,8 @@ export const RECIPE = {lamp: 0, ground: 1, hill: 2, gyobu: 3, gold: 4, hirame: 5
  *              and a faint one as raised pieces (docs/plans/2026-11-18-material-table.md §6 item 3; to unify is the user's decision).
  *   shine      its clearcoat is raised to the shared coat's shine (three-pack.js COAT.shine). Not the paper or the cords.
  *   shinnuri   black lacquer polished to a dark mirror (walls, plinths).
- *   rock       the body of a cut-foil rock mound, and its foil: 'gold' or 'silver'; null otherwise.
+ *   rock       'gold': the body of a cut-foil mound (the stone wall), with gold foil; null otherwise. The silver kind went
+ *              with rock() (2026-11-24); three-renderer.js has no silver branch, and a fence test keeps the column gold or null.
  *   rockPowder a ward's crag (crag-mesh.js): fine pale powder in one raised form, no foil.
  *   grain      'powder' gold powder on a roof face, 'leaf' gold leaf laid on wood (three-pack.js PART_POWDER_GLSL); null none.
  *   wood       a tree's limbs in this material are 'silver' wood (Hatsune: silver wood under gold foliage) or 'gold'.
@@ -107,9 +108,6 @@ export const MAT_LOOK = Object.freeze({
   // T3: a paper window lit from inside is warm amber, not saturated orange.
   [MAT.lamp]: look({refColour: '#ff9a3c'},
     {name: 'lamp', color: '#2a1a0a', paint: '#f0b46a', metalness: 0, roughness: .6, clearcoat: 0, clearcoatRoughness: 0, flake: 0, emissive: '#f0b46a', glow: true}),
-  // Body of a silver (kirigin) rock: the shader lays silver foil on it. Mist (kasumi) is baked, so it has no mesh material of its own.
-  [MAT.muraSilver]: look({tone: 'silver'},
-    {name: 'muraSilver', rock: 'silver', color: '#d9b25a', paint: '#caa24a', metalness: .9, roughness: .3, clearcoat: 0, clearcoatRoughness: 0, flake: .2}),
   // Red coral, cut and polished: a soft sheen, no metal. It does not age.
   [MAT.coral]: look({coat: 'none', recipe: 'coral', refColour: '#b9412d'},
     {name: 'coral', color: '#a3341f', paint: '#b0402e', metalness: 0, roughness: .55, clearcoat: .25, clearcoatRoughness: .3, flake: 0, coat: 'faint'}),
