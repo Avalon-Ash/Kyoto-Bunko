@@ -11,7 +11,7 @@
 // the lid it covers with luminance above 75 (bright). Dev mask view 5 paints plain ground magenta, dense faces cyan, the rest green.
 import {writeFileSync, mkdirSync} from 'node:fs';
 import {join} from 'node:path';
-import {SHARED_DEBUG_PORT, ensureSharedChrome, connectCdp, studyUrl, sleep} from './lib/plate-env.mjs';
+import {SHARED_DEBUG_PORT, ensureSharedChrome, connectCdp, studyUrl, sleep, cabinetOrder, stepsTo, wardAfter} from './lib/plate-env.mjs';
 
 const [outDir, ...jobs] = process.argv.slice(2);
 mkdirSync(outDir, {recursive: true});
@@ -27,17 +27,9 @@ const shoot = async job => {
   for (let i = 0; i < 60 && !(await evalJs(`Boolean(document.querySelector('#scene')?.dataset.lift)`)); i++) await sleep(200);
   // The live plate, not the still picture shown while its shaders compile (src/studies/toji/renderer.js): data-renderer turns 'three' at its first frame.
   for (let i = 0; i < 150 && (await evalJs(`document.querySelector('#scene')?.dataset.renderer`)) !== 'three'; i++) await sleep(200);
-  const ids = await evalJs(`window.__kyotoCabinetIds`), startWard = await evalJs(`document.querySelector('#scene')?.dataset.ward`);
-  if (!Array.isArray(ids) || !ids.length || !ids.includes(startWard)) throw new Error(`missing cabinet order: ${JSON.stringify({ids, startWard})}`);
-  const startIdx = ids.indexOf(startWard), n = ids.length, order = [...ids.slice(startIdx), ...ids.slice(0, startIdx)];
-  let stepCount;
-  if (/^[+-]?\d+$/.test(stepSpec)) stepCount = Number(stepSpec);
-  else {
-    const upper = stepSpec.toUpperCase(), id = upper.startsWith('W_') ? upper : 'W_' + upper, idx = order.indexOf(id);
-    if (idx < 0) throw new Error(`unknown ward: ${stepSpec}`);
-    stepCount = idx <= Math.ceil(n / 2) ? idx : idx - n;
-  }
-  const want = order[((stepCount % n) + n) % n];
+  const {order, startWard} = await cabinetOrder(evalJs);
+  const stepCount = /^[+-]?\d+$/.test(stepSpec) ? Number(stepSpec) : stepsTo(order, startWard, stepSpec);
+  const want = wardAfter(order, startWard, stepCount);
   if (theme.endsWith('still')) { await evalJs(`document.querySelector('#motion').click()`); await sleep(200); }
   if (theme.startsWith('day')) { await evalJs(`document.querySelector('#night').click()`); await sleep(300); }
   for (let i = 0; i < Math.abs(stepCount); i++) {
@@ -149,6 +141,6 @@ const shoot = async job => {
 let failed = 0;
 for (const job of jobs) if (!await shoot(job) && !await shoot(job)) failed++;
 if (failed) { console.log('FAILED', failed, 'job(s)'); process.exitCode = 1; }
-if (logs.length) console.log('CONSOLE:', [...new Set(logs)].slice(0, 12).join('\n'));
+if (logs.length) console.log('CONSOLE:', [...new Set(logs.map(l => `${l.level}: ${l.text}`))].slice(0, 12).join('\n'));
 await send('Target.closeTarget', {targetId: target.id}).catch(() => {});
 ws.close();

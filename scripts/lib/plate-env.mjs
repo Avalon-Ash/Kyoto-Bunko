@@ -15,9 +15,10 @@ export function studyUrl(query) {
   return DEV_STUDY_URL + (qs ? '?' + qs : '');
 }
 
-export const CHROME_PATH = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+/** The CHROME_PATH environment variable when set, else the usual Windows install. */
+export const CHROME_PATH = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 
-// Two debugging ports so the two Chrome lifecycles never interfere with each other:
+// Three debugging ports so the three Chrome lifecycles never interfere with each other:
 // - SHARED_DEBUG_PORT (9377): shared persistent Chrome used by plate-shot.mjs and plate-clip.mjs,
 //   with its profile in node_modules/.cache/chrome-profile; kept running after each script exits.
 // - FALLBACK_DEBUG_PORT (9378): ephemeral Chrome spawned per run by plate-fallback-shots.mjs,
@@ -27,6 +28,41 @@ export const SHARED_DEBUG_PORT = 9377;
 export const FALLBACK_DEBUG_PORT = 9378;
 export const PERF_DEBUG_PORT = 9379;
 export const SHARED_CHROME_PROFILE = fileURLToPath(new URL('../../node_modules/.cache/chrome-profile', import.meta.url));
+
+/** Ward ids of the cabinet, in the page's own order (window.__kyotoCabinetIds, from WARD_KEYS in src/data/wards.ts): the only place scripts ask for it. */
+export const CABINET_IDS_EXPR = 'window.__kyotoCabinetIds';
+
+/**
+ * Asks the open study page for the cabinet's ward order and the ward it starts on.
+ * @param {(expression: string) => Promise<any>} evalJs
+ * @returns {Promise<{order: string[], startWard: string}>}
+ */
+export async function cabinetOrder(evalJs) {
+  const order = await evalJs(CABINET_IDS_EXPR), startWard = await evalJs(`document.querySelector('#scene')?.dataset.ward`);
+  if (!Array.isArray(order) || !order.length || !order.includes(startWard)) throw new Error(`missing cabinet order: ${JSON.stringify({order, startWard})}`);
+  return {order, startWard};
+}
+
+/** A ward given as 'kita', 'KITA' or 'W_KITA' as its id 'W_KITA'. @param {string} spec */
+export const wardId = spec => { const upper = String(spec).toUpperCase(); return upper.startsWith('W_') ? upper : 'W_' + upper; };
+
+/**
+ * Signed button presses from startWard to the target ward: positive is next, negative is previous. The shorter way round;
+ * a ward more than half the ring ahead (ceil(n / 2), so the tie of an even ring and the middle of an odd one) is reached forward.
+ * @param {string[]} order the cabinet order (cabinetOrder)
+ * @param {string} startWard
+ * @param {string} target ward id or name (wardId)
+ */
+export function stepsTo(order, startWard, target) {
+  const n = order.length, start = order.indexOf(startWard), id = wardId(target), at = order.indexOf(id);
+  if (start < 0) throw new Error(`unknown start ward: ${startWard}`);
+  if (at < 0) throw new Error(`unknown ward: ${target}`);
+  const idx = (at - start + n) % n;
+  return idx <= Math.ceil(n / 2) ? idx : idx - n;
+}
+
+/** The ward on screen after pressing steps times (signed) from startWard. */
+export const wardAfter = (order, startWard, steps) => order[(((order.indexOf(startWard) + steps) % order.length) + order.length) % order.length];
 
 /** @param {number} ms */
 export const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -85,13 +121,13 @@ export async function connectCdp(port, {throwOnException = false} = {}) {
   await new Promise(r => ws.addEventListener('open', r));
   let seq = 0;
   const pending = new Map();
-  /** @type {string[]} */
+  /** @type {{level: 'error' | 'warning' | 'exception', text: string}[]} */
   const logs = [];
   ws.addEventListener('message', e => {
     const m = JSON.parse(e.data);
     if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); }
-    if (m.method === 'Runtime.consoleAPICalled' && ['error', 'warning'].includes(m.params.type)) logs.push(m.params.args.map(a => a.value ?? a.description).join(' '));
-    if (m.method === 'Runtime.exceptionThrown') logs.push('EXC ' + m.params.exceptionDetails.text + ' ' + (m.params.exceptionDetails.exception?.description ?? ''));
+    if (m.method === 'Runtime.consoleAPICalled' && ['error', 'warning'].includes(m.params.type)) logs.push({level: m.params.type, text: m.params.args.map(a => a.value ?? a.description).join(' ')});
+    if (m.method === 'Runtime.exceptionThrown') logs.push({level: 'exception', text: (m.params.exceptionDetails.text + ' ' + (m.params.exceptionDetails.exception?.description ?? '')).trim()});
   });
   /**
    * @param {string} method

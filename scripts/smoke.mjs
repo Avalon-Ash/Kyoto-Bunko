@@ -73,23 +73,10 @@ if (!await isDevServerReachable()) {
 await ensureSharedChrome();
 const {target, ws, send, evalJs, logs} = await connectCdp(SHARED_DEBUG_PORT);
 
-/** @type {string[]} */
-const errors = [];
-/** @type {string[]} */
-const warnings = [];
-ws.addEventListener('message', event => {
-  const message = JSON.parse(String(event.data));
-  if (message.method === 'Runtime.consoleAPICalled') {
-    const text = (message.params.args ?? [])
-      .map((/** @type {{value?: unknown, description?: string}} */ arg) => arg.value ?? arg.description ?? '')
-      .join(' ');
-    if (message.params.type === 'error') errors.push(text);
-    else if (message.params.type === 'warning') warnings.push(text);
-  } else if (message.method === 'Runtime.exceptionThrown') {
-    const details = message.params.exceptionDetails;
-    errors.push(`EXC ${details.text} ${details.exception?.description ?? ''}`.trim());
-  }
-});
+// Console errors and uncaught exceptions fail the run; warnings are only listed (levels come from connectCdp's logs).
+// Read when reported, so a run that stops at an earlier step still lists what the console said up to then.
+const consoleErrors = () => logs.filter(l => l.level !== 'warning').map(l => l.level === 'exception' ? `EXC ${l.text}` : l.text);
+const consoleWarnings = () => logs.filter(l => l.level === 'warning').map(l => l.text);
 
 let steps = 0;
 /** @type {string | null} */
@@ -215,15 +202,11 @@ try {
     }
   }
 
-  // Step 5: Verify no console errors or uncaught exceptions occurred (reconciling with connectCdp's logs array).
-  const trackedCount = errors.length + warnings.length;
-  if (logs.length > trackedCount) {
-    for (const extra of logs.slice(0, logs.length - trackedCount)) errors.push(extra);
-  }
+  // Step 5: Verify no console errors or uncaught exceptions occurred (from connectCdp's logs array).
   steps++;
-  const consoleOk = errors.length === 0;
+  const consoleOk = consoleErrors().length === 0;
   if (!consoleOk && !failed) failed = 'console';
-  emit({step: 'console', ok: consoleOk, ms: 0, errors: errors.length, warnings: warnings.length});
+  emit({step: 'console', ok: consoleOk, ms: 0, errors: consoleErrors().length, warnings: consoleWarnings().length});
 } finally {
   await send('Target.closeTarget', {targetId: target.id}).catch(() => {});
   ws.close();
@@ -232,6 +215,7 @@ try {
 // The still picture (no WebGL2, three.js failed) passes only with --allow-static: by default the smoke test is that three.js draws.
 const ALLOW_STATIC = process.argv.includes('--allow-static');
 if (!failed && renderer !== 'three' && !ALLOW_STATIC) failed = 'renderer';
+const errors = consoleErrors(), warnings = consoleWarnings();
 const ok = failed === null && errors.length === 0;
 emit({ok, steps, failed, renderer, errors, warnings});
 process.exitCode = ok ? 0 : 1;

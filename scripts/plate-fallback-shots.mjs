@@ -10,7 +10,7 @@ import {writeFileSync, mkdirSync, mkdtempSync, rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
-import {FALLBACK_DEBUG_PORT, launchChrome, waitForChrome, connectCdp, studyUrl, sleep} from './lib/plate-env.mjs';
+import {FALLBACK_DEBUG_PORT, launchChrome, waitForChrome, connectCdp, studyUrl, sleep, cabinetOrder, stepsTo} from './lib/plate-env.mjs';
 
 const BUDGET = 150 * 1024, SCALE = 1;
 const [outArg, themeArg, wardArg] = process.argv.slice(2);
@@ -29,8 +29,7 @@ await send('Emulation.setDefaultBackgroundColorOverride', {color: {r: 0, g: 0, b
 
 await send('Page.navigate', {url: studyUrl()});
 for (let i = 0; i < 60 && !(await evalJs(`Boolean(document.querySelector('#scene')?.dataset.lift)`)); i++) await sleep(200);
-const allWards = await evalJs(`window.__kyotoCabinetIds`), startWard = await evalJs(`document.querySelector('#scene')?.dataset.ward`);
-if (!Array.isArray(allWards) || !allWards.length || !allWards.includes(startWard)) throw new Error(`missing cabinet order: ${JSON.stringify({allWards, startWard})}`);
+const {order: allWards, startWard} = await cabinetOrder(evalJs);
 const wards = wardArg ? wardArg.split(',') : allWards;
 
 for (const theme of themes) for (const ward of wards) {
@@ -38,9 +37,7 @@ for (const theme of themes) for (const ward of wards) {
   for (let i = 0; i < 60 && !(await evalJs(`Boolean(document.querySelector('#scene')?.dataset.lift)`)); i++) await sleep(200);
   await evalJs(`document.querySelector('#motion').click()`); await sleep(200);          // paused: light centred, no trails
   if (theme === 'day') { await evalJs(`document.querySelector('#night').click()`); await sleep(300); }
-  const idx = allWards.indexOf(ward);
-  if (idx < 0) throw new Error(`unknown ward: ${ward}`);
-  const steps = idx - allWards.indexOf(startWard);
+  const steps = stepsTo(allWards, startWard, ward);
   for (let i = 0; i < Math.abs(steps); i++) {
     await evalJs(`document.querySelector('#${steps < 0 ? 'previous' : 'next'}-cabinet').click()`);
     for (let k = 0; k < 40; k++) { await sleep(150); if (!(await evalJs(`document.querySelector('#next-cabinet').disabled`))) break; }

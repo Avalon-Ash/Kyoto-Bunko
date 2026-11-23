@@ -110,7 +110,7 @@ try {
           longTasks: sw.long.length, longestTaskMs: Math.round(Math.max(0, ...sw.long.map(([, d]) => d)))};
       }
       if (readyMs && COMPILE && load === LOADS) row.compile = await evalJs(COMPILE_BENCH);
-      const problems = logs.filter(l => !/^\[vite\]/.test(l));
+      const problems = logs.filter(l => !/^\[vite\]/.test(l.text)).map(l => `${l.level}: ${l.text}`);
       row.consoleErrors = problems.length;
       if (problems.length) row.console = problems.slice(0, 3).map(l => l.slice(0, 200));
       results.push(row);
