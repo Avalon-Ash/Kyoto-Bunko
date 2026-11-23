@@ -76,8 +76,8 @@ Built with React 19, Vite, TypeScript, Tailwind CSS 4, Leaflet and three.js.
 ## For contributors
 
 - [Development guide](docs/DEVELOPMENT.md) (in Chinese): architecture, data schema, tag registry and data-entry rules
-- [Current status and handoff](docs/HANDOFF.md)
-- [Agent contract](AGENTS.md)
+- [Current status and handoff](docs/HANDOFF.md) (in Chinese)
+- [Agent contract](AGENTS.md) (in Chinese)
 
 ## Credits
 
