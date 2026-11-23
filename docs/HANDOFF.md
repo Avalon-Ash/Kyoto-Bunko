@@ -1,6 +1,6 @@
 # 京都專案交接入口
 
-更新：2026-11-23。這是**唯一的目前狀態入口**；各輪細節在 `agent-runs/`，舊狀態以 Git 歷史為準，不在文件頂端堆疊「最新狀態」。新對話依序讀 `../AGENTS.md`、本檔（**先看 §4**）、[`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md)（目前的開案書：弱點、積壓工作、下一批的拆包）。架構決策在 [`adr/`](adr/README.md)，動結構前先查。蒔繪盤的畫法在 skill `makie-painting`（§4.4）。
+更新：2026-11-23。這是**唯一的目前狀態入口**；各輪細節在 `agent-runs/`，舊狀態以 Git 歷史為準，不在文件頂端堆疊「最新狀態」。新對話依序讀 `../AGENTS.md`、本檔（**先看 §4**）、[`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md)（目前的開案書：積壓總表與第二條長鏈）。上一份 [`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) 是體檢與第一條鏈的紀錄。架構決策在 [`adr/`](adr/README.md)，動結構前先查。蒔繪盤的畫法在 skill `makie-painting`（§4.4）。
 
 ## 1. Git 狀態
 
@@ -69,15 +69,15 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 之後使用者要求把工作排成一條長鏈、對齊一次、做完才合回主線（開案書 §8；回主線前分支自由開，技術上的取捨由主代理定）。使用者事先同意了：全鏈 A–E、解耦提案 (a)(b)、新增 ESLint、刪 `.shots` 舊批次、驗收過就合併 `main` 並 push。
 
-**長鏈做到哪裡**（已全部合併 `main` 並部署，2026-11-23；細節在開案書 §9）：階段 A（工程體質）完成：JavaScript 型別檢查與 ESLint 接進 `npm run lint`（ADR 0021）、區的順序與拍圖腳本環境只定義一處、`study.js` 的係數命名、測試拆成行為與圍欄、冒煙測試 `npm run smoke`、依賴補丁版。11/23 晚由 Opus 主席接手（Fable 週額度用完）：階段 B 完成，只量不改，數字在開案書 §9.10，量測腳本是 `scripts/perf-home.mjs`。階段 C 的資料未結項完成（`817dfc2` 與後續修正；報告 `agent-runs/2026-11-23-data-open-items.md`），門面做了 meta description 與 favicon；OG 圖與 README 的八張截圖（都是 11/13 舊管線）等階段 D 做完再拍。lib 測試 27 個、README 與 `DEVELOPMENT.md` 的修正也進了整合分支。階段 D：八項逐項決定，只改了「岩」：九區 17 顆舊圓岩換成伏見、中京的尖岩簇，其餘七項不改，理由在開案書 §9.11–§9.12。README 的八張圖與 OG 圖已重拍（§9.13）。階段 E：Fable 終審（API 點數）結論「可以合併」，應修的已修（§9.14）。**全部完成**：合併 `main`、push、部署成功，工作分支已刪；`.shots` 只刪了沒被任何文件、skill、記憶或程式引用的 19 項（約 139 MB），被引用的舊批次都留著。**11/23 晚的收尾**（開案書 §9.15）：使用者要 NK-084、NK-085 重查一輪、不合規範就拿掉；重查時 Tabelog 沒有出現安全驗證，兩頁都開得到原文、沒有閉店標示，內容與現有資料相符，兩筆保留。使用者同意刪沒人用的程式：`rock()`／`rock-mesh.js`（連同只有它讀的 `ROCK_LOOK`）與 `MAKIE_LANDMARKS` 的 `title`／`shape` 已刪。**下一步**：積壓在開案書 §3 與 §9.14、§9.15 的「留到積壓」。
+**長鏈做到哪裡**（已全部合併 `main` 並部署，2026-11-23；細節在開案書 §9）：階段 A（工程體質）完成：JavaScript 型別檢查與 ESLint 接進 `npm run lint`（ADR 0021）、區的順序與拍圖腳本環境只定義一處、`study.js` 的係數命名、測試拆成行為與圍欄、冒煙測試 `npm run smoke`、依賴補丁版。11/23 晚由 Opus 主席接手（Fable 週額度用完）：階段 B 完成，只量不改，數字在開案書 §9.10，量測腳本是 `scripts/perf-home.mjs`。階段 C 的資料未結項完成（`817dfc2` 與後續修正；報告 `agent-runs/2026-11-23-data-open-items.md`），門面做了 meta description 與 favicon；OG 圖與 README 的八張截圖（都是 11/13 舊管線）等階段 D 做完再拍。lib 測試 27 個、README 與 `DEVELOPMENT.md` 的修正也進了整合分支。階段 D：八項逐項決定，只改了「岩」：九區 17 顆舊圓岩換成伏見、中京的尖岩簇，其餘七項不改，理由在開案書 §9.11–§9.12。README 的八張圖與 OG 圖已重拍（§9.13）。階段 E：Fable 終審（API 點數）結論「可以合併」，應修的已修（§9.14）。**全部完成**：合併 `main`、push、部署成功，工作分支已刪；`.shots` 只刪了沒被任何文件、skill、記憶或程式引用的 19 項（約 139 MB），被引用的舊批次都留著。**11/23 晚的收尾**（開案書 §9.15）：使用者要 NK-084、NK-085 重查一輪、不合規範就拿掉；重查時 Tabelog 沒有出現安全驗證，兩頁都開得到原文、沒有閉店標示，內容與現有資料相符，兩筆保留。使用者同意刪沒人用的程式：`rock()`／`rock-mesh.js`（連同只有它讀的 `ROCK_LOOK`）與 `MAKIE_LANDMARKS` 的 `title`／`shape` 已刪。**下一步**：積壓已收成一張總表，第二條長鏈（F 體質、G 資料、H 穩健、I 畫面、J 收尾）排在 [`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md)；開跑前要對齊的十個問題在該檔 §5，使用者回答前不開跑。
 
-誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與開案書 §4 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
+誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與目前開案書（`plans/2026-11-24-chain-2.md`）§1 的額度表、§3 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
 
 ### 4.2 下一個工作階段照這樣開始
 
 1. 讀 `AGENTS.md`、本檔、開案書；專案記憶會自動載入。
 2. `git fetch --prune; git status -sb; git branch -a`，確認從最新的 `main` 開工作分支。
-3. 查額度（`quota` skill），照開案書 §4 選下一包與執行者。
+3. 查額度（`quota` skill），照目前開案書 §3 選下一包與執行者。
 4. 要動結構先查 [`adr/`](adr/README.md)；要動盤面先讀 skill `makie-painting`，並看參考圖與現況圖（都在本機 `.shots/`，不在 repo；雲端工作階段看不到）：`.shots/ref/`（初音、千代姬等實物照）、`.shots/polish/FINAL-day.png`、`FINAL-night.png`。
 5. 合併 `main`、push 分開問使用者；解耦提案（P3）、刪 `.shots` 也要問。
 
@@ -125,7 +125,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ### 4.6 待辦
 
-**待辦只在開案書維護**：[`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) §3（積壓工作 B1–B18）與 §4（拆包 P0–P9 與順序）。舊開案書（roadmap、finish、data-next、next）裡的待辦都已收進去，不再當待辦來源。這裡只留開案書各列會用到的細節：
+**待辦只在開案書維護**：[`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md) §2（積壓總表）與 §3（階段與順序）。舊開案書（roadmap、finish、data-next、next、health-and-backlog）裡的待辦都已收進去，不再當待辦來源。這裡只留開案書各列會用到的細節：
 
 - **資料（B6、B7）**：12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。沒有原文、留給日後的：FS-018 伏水酒蔵小路改不改成食處（Tabelog 頁打不開）、NK-014 寺町通商店街的身分、延暦寺根本中堂內部參拜、安祥寺與真如堂的國寶、清水寺等國寶指定頁的原文；出處在 `plans/2026-11-18-data-next.md` §3 與三份查核報告（[商店](agent-runs/2026-11-17-shop-audit.md)、[ACG 與寺社](agent-runs/2026-11-17-audit-acg-temples.md)、[自然、近代設施與交通](agent-runs/2026-11-17-audit-nature-modern.md)）。新 ID 一律用歷史上沒用過的號碼（`git log -p -- src/data/spots` 找最大號）。
 - **盤面小缺口（B10）**：鳳凰不放大時頭與喙偏小；細小的草、葦不放大時幾乎看不到；夜間濃梨子地與圖案差距小；`parts.js` 的 `act()` 會讓任何 `MAT.lamp` 的部件在游標停留時發橘光，所以小景不要用 `MAT.lamp`；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
@@ -148,7 +148,8 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 | 文件 | 現在的用途 |
 |---|---|
-| [`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) | **目前的開案書**：體檢的弱點、積壓工作、下一批的拆包與順序、使用者 11/22 的四個決定 |
+| [`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md) | **目前的開案書**：積壓總表、第二條長鏈的階段與執行者、開跑前要對齊的問題 |
+| [`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) | 體檢的弱點、第一條長鏈（A–E）的執行紀錄、使用者 11/22 的四個決定 |
 | [`adr/`](adr/README.md) | 架構決策紀錄（21 份）；`npm run adr:check` |
 | [`plans/2026-11-18-material-table.md`](plans/2026-11-18-material-table.md) | 材質表解耦與冷編譯的提案與執行紀錄；§8 有拍圖比對與編譯量測的做法 |
 | [`plans/2026-11-20-next.md`](plans/2026-11-20-next.md)、[`plans/2026-11-18-data-next.md`](plans/2026-11-18-data-next.md)、[`plans/2026-11-17-finish.md`](plans/2026-11-17-finish.md)、[`plans/2026-11-16-roadmap.md`](plans/2026-11-16-roadmap.md) | 做完的批次的開案書與結果（§4.3）；裡面的待辦已收進目前的開案書 |
