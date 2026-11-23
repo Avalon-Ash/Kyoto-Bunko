@@ -370,7 +370,7 @@ export function meshPhoenix(p, P) {
     chunks.push(strip(d, .7, surface, MAT.kirigin, {lift: .2}));
   }
   for (const dx of [-6, 6]) chunks.push(strip([P(dx, 4), P(dx * 1.1, 8.5)], 1.1, surface, MAT.kirikane, {lift: .2}));
-  chunks.push(dot(...P(4.6, -13.4), .95, surface, MAT.lacquer, {lift: .22}));
+  chunks.push(dot(...p.eye, .95, surface, MAT.lacquer, {lift: .22}));
   p.mesh = mergeChunks(chunks);
 }
 

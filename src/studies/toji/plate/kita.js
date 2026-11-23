@@ -5,7 +5,7 @@
 //                  between the two left heads so that its roofs and phoenix are read against the lacquer, not against powder.
 //   the suhama     the pond's shore: thick on the north (the pavilion stands on it) and the west, a thin silver ribbon along the
 //                  north waterline, a thin gold tongue from the south-east that carries the island pine.
-import {MAT, blob, pond, phoenix, storey, roof, branchPine as pine, bird, suyari, grassTufts} from './vocab.js';
+import {MAT, blob, pond, phoenix, storey, roof, branchPine as pine, bird, suyari, grassTufts, BLADE_W} from './vocab.js';
 import {mountain, tongues} from './doha.js';
 import {crags} from './crag-mesh.js';
 
@@ -97,7 +97,7 @@ export function kita() {
     ...pond('kyoko', -5, 68, 244, 82, 3, {reflection: {x: -85, z: 9, width: 78, height: 90}}),
     // Reeds in bright silver sheet on the north-west bank, from the pavilion's west foot toward the shore stone. Why sheet: silver powder
     // blades tarnish to the colour of the ground and were lost; the reeds are what say the pavilion stands at a water's edge.
-    ...grassTufts('kyoko-reeds', [reed(45, 30, 6), reed(47, 40, 7), reed(49, 46, 7), reed(51, 32, 6)], {on: 'kyoko', mat: MAT.hyomonSilver, seed: 5, w: 1.3, spread: .13}),
+    ...grassTufts('kyoko-reeds', [reed(45, 30, 6), reed(47, 40, 7), reed(49, 46, 7), reed(51, 32, 6)], {on: 'kyoko', mat: MAT.hyomonSilver, seed: 5, w: BLADE_W.reed, spread: .13}),
     ...suyari('mist-west', -350, -196, -98, 10, 2),
     ...suyari('mist-east', 232, 352, -84, 10, 7),
     ...crags(ROCKS),

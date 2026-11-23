@@ -52,6 +52,7 @@ const quad = (a, c, b, n = 10) => Array.from({length: n + 1}, (_, i) => {
  *   mountY?: number,
  *   motionWith?: string,
  *   rigidGroup?: boolean,
+ *   eye?: number[],
  * }} Part
  */
 
@@ -326,6 +327,8 @@ export function pond(id, cx, cz, rx, rz, seed, {reflection = null} = {}) {
  * 4 wing right, 5 wing left, 6 body, 7 neck, 8 head, 9 bill, 10 crest right, 11 crest left.
  * lines: 0..4 right wing feather lines, 5..9 left, 10..12 tail rachises, 13 right covert edge, 14 left covert edge.
  */
+/** How much larger than first drawn the phoenix's head, bill and eye are, and the point (bird units) they grow from: the neck. */
+const PHOENIX_HEAD = 1.3, PHOENIX_NECK = [-3, -11];
 export function phoenix(id, x, z, s = 1, {group = id, order = 0} = {}) {
   const p = part(id, KIND.tier, 2, MAT.hyomonGold, [x, z], {group, order, thick: 10, bias: 8.5}); // 8.5: sits in the ridge of the roof it crowns
   const P = (dx, dz) => [x + dx * s * .88, z + dz * s * .88];
@@ -347,13 +350,17 @@ export function phoenix(id, x, z, s = 1, {group = id, order = 0} = {}) {
   const wingR = [[5, -4], [11, -8], [19, -12], [27, -16], [33, -20], [35, -26], [31, -25], [31, -31], [26, -28], [25, -37], [21, -31], [19, -41], [15, -33], [12, -41], [9, -30], [6, -20]];
   const wingL = mirror(wingR);
   const body = Array.from({length: 18}, (_, i) => [Math.cos(i / 18 * 6.2832) * 8.2, -4 + Math.sin(i / 18 * 6.2832) * 11.5]);
+  // Head, bill and eye are drawn PHOENIX_HEAD times their first size, grown from where the neck meets the head, so the head still
+  // reads on the roof at the home page's zoom (chain-2 V1); the eye goes with them (p.eye, read by meshPhoenix).
+  const head = pts => pts.map(([a, b]) => [PHOENIX_NECK[0] + (a - PHOENIX_NECK[0]) * PHOENIX_HEAD, PHOENIX_NECK[1] + (b - PHOENIX_NECK[1]) * PHOENIX_HEAD]);
+  p.eye = P(...head([[4.6, -13.4]])[0]);
   const f = pts => ({d: poly(pts), soft: .1, crisp: .9});
   p.fills.push(
     f([[-11, -12], [11, -12], [13, -9], [13, 8], [10, 11], [-10, 11], [-13, 8], [-13, -9]]),
     f(tailC.pts), f(tailR.pts), f(tailL.pts), f(wingR), f(wingL), f(body),
     f(plume([3, 1], [-9, -3], [-4, -11], 5.6, 8, true).pts),
-    f([[-6, -13], [-2, -15.5], [3, -15.5], [7, -14], [10.5, -12.3], [6.5, -11.2], [2, -9.5], [-3, -9], [-6, -10]]),
-    f([[6, -14.2], [10.7, -12.3], [6.2, -11.3]]),
+    f(head([[-6, -13], [-2, -15.5], [3, -15.5], [7, -14], [10.5, -12.3], [6.5, -11.2], [2, -9.5], [-3, -9], [-6, -10]])),
+    f(head([[6, -14.2], [10.7, -12.3], [6.2, -11.3]])),
     f(plume([-3, -14], [-8, -19], [-9, -25], 3.8).pts),
     f(plume([-4.5, -12.5], [-11, -14], [-17, -19], 3.6).pts),
   );
@@ -508,6 +515,11 @@ export function streamEdge(points, widths, t, side) {
 }
 const five = (cx, cz, r, turn) => Array.from({length: 5}, (_, i) => blob(cx + Math.cos(turn + i * 1.2566) * r * .95, cz + Math.sin(turn + i * 1.2566) * r * .95, r * .8, r * .8, 1, 0, 9));
 /**
+ * Blade width at the root (plate units). At the home page's zoom one unit is about 1.5 px at 1440 wide, and a blade tapers to its tip:
+ * under about 2 units a blade is lost unless the lid is zoomed (chain-2 V2). Grass 3.2, reed (narrow silver) 2.2.
+ */
+export const BLADE_W = Object.freeze({grass: 3.2, reed: 2.2});
+/**
  * Tufts of grass or reed at the places given: [x, z, height, blades, lean?, flower?]. Blades fan from one root and curve
  * with the lean; a tuft with a flower carries one five-petalled silver blossom on its middle blade.
  * Gold mat = grass, silver mat = reed (narrow spread).  Each blade is a thin leaf inlaid flat, not a raised stalk.
@@ -515,7 +527,7 @@ const five = (cx, cz, r, turn) => Array.from({length: 5}, (_, i) => blob(cx + Ma
  * @param {Array<[number, number, number, number, number?, boolean?]>} spots
  * @param {{on?: string, mat?: number, seed?: number, w?: number, spread?: number}} [opts]
  */
-export function grassTufts(id, spots, {on, mat = MAT.gold, seed = 1, w = 2.6, spread = .42} = {}) {
+export function grassTufts(id, spots, {on, mat = MAT.gold, seed = 1, w = BLADE_W.grass, spread = .42} = {}) {
   need('grassTufts', id, on);
   if (!spots.length) throw new Error(`grassTufts(${id}): spots must not be empty`);
   const r = rand(seed), grass = part(id, KIND.still, 0, mat, spots[0].slice(0, 2), {reach: .5, on}), bloom = [];
