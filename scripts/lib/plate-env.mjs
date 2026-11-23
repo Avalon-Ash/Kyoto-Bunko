@@ -22,8 +22,10 @@ export const CHROME_PATH = 'C:/Program Files/Google/Chrome/Application/chrome.ex
 //   with its profile in node_modules/.cache/chrome-profile; kept running after each script exits.
 // - FALLBACK_DEBUG_PORT (9378): ephemeral Chrome spawned per run by plate-fallback-shots.mjs,
 //   with a temporary profile and killed on exit.
+// - PERF_DEBUG_PORT (9379): ephemeral Chrome spawned per run by perf-home.mjs (a fresh profile is a cold shader cache).
 export const SHARED_DEBUG_PORT = 9377;
 export const FALLBACK_DEBUG_PORT = 9378;
+export const PERF_DEBUG_PORT = 9379;
 export const SHARED_CHROME_PROFILE = fileURLToPath(new URL('../../node_modules/.cache/chrome-profile', import.meta.url));
 
 /** @param {number} ms */
