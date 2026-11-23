@@ -47,11 +47,14 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     loading = false;
     dropPlaceholder();
     plate?.dispose();
-    if (gl2 && !gl2.isContextLost()) {
-      // A failed frame may have left pixels over the CSS background or left GL state from a render pass.
-      gl2.disable(gl2.SCISSOR_TEST); gl2.colorMask(true, true, true, true); gl2.depthMask(true);
-      clear(canvas.width, canvas.height);
-    }
+    // A failed frame may have left pixels over the CSS background or left GL state from a render pass. This is the path taken when
+    // three.js could not start, so the context may be unusable: the picture is shown whether or not the canvas could be cleared.
+    try {
+      if (gl2 && !gl2.isContextLost()) {
+        gl2.disable(gl2.SCISSOR_TEST); gl2.colorMask(true, true, true, true); gl2.depthMask(true);
+        clear(canvas.width, canvas.height);
+      }
+    } catch { /* nothing to clear */ }
     plate = createStaticPlate(canvas, ready, night);
     canvas.dataset.renderer = 'static';
     setMesh(ward);

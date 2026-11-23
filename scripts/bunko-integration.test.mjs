@@ -78,7 +78,8 @@ test('the home stage carries no study controls, reader or search',t=>{
   const {root}=environment(t);
   const controller=mountBunko(root,{embedded:true,paused:true});
   assert.deepEqual([...root.querySelectorAll('button')].map(b=>b.id),['zoom-reset']);
-  assert.equal(root.querySelectorAll('input,select,dialog,nav,form').length,0);
+  // The one control on the home stage is the age slider beside the age label (user decision 2026-11-24, chain-2 V8).
+  assert.deepEqual([...root.querySelectorAll('input,select,dialog,nav,form')].map(e=>e.className),['era-range']);
   controller.destroy();
 });
 
