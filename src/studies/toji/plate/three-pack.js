@@ -62,14 +62,8 @@ export const BOX_PAPER_FRAG_GLSL = `
     outgoingLight=mix(outgoingLight,vec3(.80,.50,.13)*(.5+.7*lit),max(sq,dust*.8));
   }
 }`;
-/**
- * The lid's age (uAge, 0..1) from its age in years. Lacquer clears fastest in its first decades and ever more slowly after: an
- * exponential approach with a time constant of AGE_TAU_YEARS. The fixed point is the Hatsune trousseau, made in 1639: at its age
- * (HATSUNE_YEARS in 2026) the curve gives about .92, the look the shader's age 1 constants were set against. 0 years is a lid fresh
- * from the workshop: a deep brown film over the gold.
- */
-export const AGE_TAU_YEARS = 150, HATSUNE_YEARS = 2026 - 1639;
-export const ageFromYears = years => 1 - Math.exp(-Math.max(0, Number(years) || 0) / AGE_TAU_YEARS);
+// The lid's age in years and uAge: age.js (shared with the page's age slider).
+export {AGE_TAU_YEARS, HATSUNE_YEARS, ageFromYears} from './age.js';
 export const BOX_MATERIALS = {
   // Hatsune: the whole body is nashiji (amber lacquer over gold powder), not black lacquer (user decision, handoff §3).
   20: meshLook({name: 'side', color: '#a8722e', metalness: .72, roughness: .45, clearcoat: 1, clearcoatRoughness: .06, flake: 0, nashijiSide: true}),

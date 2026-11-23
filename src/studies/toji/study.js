@@ -8,6 +8,7 @@ import {viewBox,clampPan,clampZoom,isZoomed,rubberBand,panLimit,planePoint,ancho
 import {mountBackdrop,cabinetKeepout} from './backdrop.js';
 import {WARD_ART} from './ward-art.js';
 import {FEEL} from './feel.js';
+import {AGE_DEFAULT, ageFromSearch, yearsFromAge} from './plate/age.js';
 
 // Cabinet timings, distances and feel coefficients: feel.js (one table, read by the expressions below).
 
@@ -47,7 +48,18 @@ let lastActivity=-Infinity,idlePhase=0,autoPlaying=false;
 // from the workshop to the Hatsune set's age (1639 to now); the unattended cabinet breathes between the two. A small label says the year.
 const HATSUNE_YEARS=new Date().getFullYear()-1639;let years=null;
 const era=document.createElement('p');era.className='era';era.setAttribute('aria-hidden','true');root.querySelector('.seal')?.after(era);
-const syncEra=()=>{era.hidden=years===null;if(years!==null)era.textContent=`${language==='ja'?'漆齢':'漆齡'}${kanjiNumber(years,language)}年`;};syncEra();
+// The age by hand (chain-2 V8): a slider under the label, from a lid fresh from the workshop to the Hatsune set's age. Once moved it holds
+// the age; the demonstration and the unattended breathing no longer change it. It starts where the plate does (?years, ?age, else
+// AGE_DEFAULT: plate/age.js), and follows the demonstration until it is moved.
+const startYears=Math.min(HATSUNE_YEARS,Math.round(yearsFromAge(typeof location!=='undefined'?ageFromSearch(location.search):AGE_DEFAULT)));
+let manualYears=null;
+const eraRange=document.createElement('input');eraRange.type='range';eraRange.className='era-range';eraRange.min='0';eraRange.max=String(HATSUNE_YEARS);eraRange.step='1';eraRange.value=String(startYears);
+era.after(eraRange);
+const syncEra=()=>{
+  era.hidden=years===null;if(years!==null)era.textContent=`${language==='ja'?'漆齢':'漆齡'}${kanjiNumber(years,language)}年`;
+  const shown=Math.round(years??startYears);if(eraRange.value!==String(shown))eraRange.value=String(shown);
+  eraRange.setAttribute('aria-label',translate('bunko_age',language));eraRange.setAttribute('aria-valuetext',`${kanjiNumber(shown,language)}年`);
+};syncEra();
 let projection,render,dispose,poke,paintGhost=null;
 const backdrop=mountBackdrop($('stage'),{night,motion:!still(),wardId:cabinet.id});
 // The cabinets either side of this one stand on the same track. Each is a still picture of that cabinet at rest,
@@ -180,7 +192,7 @@ function syncLanguage(){
   root.lang=language==='zh'?'zh-Hant':'ja';
   $('loading').textContent=translate(failed?'bunko_failed':'bunko_loading',language);
   const reset=translate('bunko_zoom_reset',language);$('zoom-reset').setAttribute('aria-label',reset);$('zoom-reset').title=reset;
-  syncCabinet();notify();
+  syncEra();syncCabinet();notify();
 }
 function schedule(){if(!destroyed&&!frame&&visible&&!document.hidden&&render)frame=requestAnimationFrame(tick);}
 function activity(){
@@ -205,7 +217,7 @@ function tick(time){
     if(t>FEEL.demoDurationSec||still()){demoStart=0;hover=false;tx=ty=0;notify();}
     else{tx=Math.sin(t*FEEL.sweepFreqX)*FEEL.sweepAmpX;ty=Math.cos(t*FEEL.sweepFreqY)*FEEL.sweepAmpY;addTrail(tx*FEEL.sweepTrailScaleX,ty*FEEL.sweepTrailScaleY,time);}
   }
-  years=demoStart?Math.min(1,(time-demoStart)/FEEL.demoAgeMs)*HATSUNE_YEARS:autoPlaying?HATSUNE_YEARS*(.5-.5*Math.cos(idlePhase*FEEL.idleAgeFreq)):null;syncEra();
+  years=manualYears!==null?manualYears:demoStart?Math.min(1,(time-demoStart)/FEEL.demoAgeMs)*HATSUNE_YEARS:autoPlaying?HATSUNE_YEARS*(.5-.5*Math.cos(idlePhase*FEEL.idleAgeFreq)):null;syncEra();
   bookProgress=progressToward(bookProgress,bookTarget,dt,still());
   if(bookProgress===1&&bookState==='opening'){bookState='unrolling';bookReadyAt=time+(still()?0:FEEL.unrollMs);syncBook();}
   if(bookState==='unrolling'&&(time>=bookReadyAt||still()))enterReading();
@@ -423,6 +435,7 @@ listen(canvas,'pointerup',e=>{
   else if(tap&&projection){const r=canvas.getBoundingClientRect();const [x,z]=groundPoint(projection,(e.clientX-r.left)/r.width*2-1,1-(e.clientY-r.top)/r.height*2);if(onLid(x,z))openBook(canvas);}
   if(e.pointerType==='touch')release();
 });
+listen(eraRange,'input',()=>{manualYears=Number(eraRange.value);years=manualYears;demoStart=0;syncEra();schedule();});
 listen(canvas,'focus',()=>{hover=true;schedule();});listen(canvas,'blur',release);
 listen(canvas,'keydown',e=>{
   if(e.key==='Escape'&&isZoomed(zoomTarget)){e.preventDefault();resetZoom();return;}
@@ -471,7 +484,7 @@ return {
     if(destroyed)return;destroyed=true;
     events.abort();intersection.disconnect();resize.disconnect();clearTimeout(ghostTimer);ghostAnimations.forEach(a=>a.cancel());ghosts.forEach(ghost=>ghost.remove());
     switchAnimation?.cancel();dragAnimation?.cancel();endDrag();cancelAnimationFrame(frame);frame=0;
-    dispose?.();backdrop.destroy();render=null;updateMesh=null;
+    dispose?.();backdrop.destroy();render=null;updateMesh=null;era.remove();eraRange.remove();
   },
 };
 }

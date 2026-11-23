@@ -27,10 +27,9 @@ import {
   MAKIE_GROUND_PARS_GLSL, MAKIE_GROUND_FRAG_GLSL, MAKIE_MIST_VERT_GLSL, MAKIE_MIST_FRAG_GLSL,
   BOX_SIDE_VERT_GLSL, BOX_SIDE_PARS_GLSL, BOX_SIDE_FRAG_GLSL, BOX_INNER_FRAG_GLSL, BOX_PAPER_FRAG_GLSL, ageFromYears,
 } from './three-pack.js';
+import {ageFromSearch} from './age.js';
 
 const EYE = [430, 720, 920], TARGET = [0, 40, 0];
-/** How old the box looks unless ?age= says otherwise: 0 is as new, 1 is the Hatsune trousseau as it is today. */
-const AGE_DEFAULT = .85;
 /** ?coat=0..1: the shared tinted-lacquer coat (three-pack COAT, docs/plans/2026-11-16-coat.md). 0, the default, compiles none of it. */
 const COAT_DEFAULT = 1; // the recommended strength once the user has chosen (docs/agent-runs/2026-11-16-coat.md)
 const COAT_RAW = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('coat') : null;
@@ -153,12 +152,9 @@ export function createThreeRenderer(gl, canvas, onReady, onFailure) {
   const coldProbe = import.meta.env.DEV && new URLSearchParams(location.search).has('cold') ? `uCold${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}` : '';
   // Dev only: ?matSwap=21:19,2:3 draws material 21 as 19 and 2 as 3 on the lid, so that ground-shader paths no ward uses can be exercised.
   const matSwap = new Map(/** @type {[number, number][]} */ (import.meta.env.DEV ? (new URLSearchParams(location.search).get('matSwap') ?? '').split(',').filter(Boolean).map(pair => pair.split(':').map(Number)) : []));
-  // ?age=0..1 sets how old the box looks (0 is as new); every ageing effect is scaled by it.
-  const ageParam = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('age') : null;
-  // ?years=N sets the lid's age in years (0: fresh from the workshop; 387: the Hatsune trousseau's age); ?age=0..1 sets uAge itself.
-  const yearsParam = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('years') : null;
-  const ageValue = yearsParam !== null && !Number.isNaN(Number(yearsParam)) ? ageFromYears(Number(yearsParam))
-    : ageParam === null || Number.isNaN(Number(ageParam)) ? AGE_DEFAULT : Math.min(1, Math.max(0, Number(ageParam)));
+  // How old the box looks when no frame says (0 is as new; every ageing effect is scaled by it): ?years=N or ?age=0..1, else the
+  // default (age.js, the same reading the page's age slider starts from).
+  const ageValue = ageFromSearch(typeof location !== 'undefined' ? location.search : '');
   const neutralDens = own(new THREE.DataTexture(new Uint8Array([128]), 1, 1, THREE.RedFormat, THREE.UnsignedByteType)); neutralDens.unpackAlignment = 1; neutralDens.needsUpdate = true;
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const stampTex = own(bakeStampTexture(doc, maxAniso));
