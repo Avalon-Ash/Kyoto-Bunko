@@ -15,10 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  # Build and deploy are separate jobs (GitHub's starter workflow does the same). In one job, deploy-pages sometimes
+  # looked the artifact up before it was listed and failed with "No artifacts named github-pages" (every push from
+  # 2026-11-23 15:08 on, three runs; actions/deploy-pages#451); re-running the failed job does not recover.
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,6 +53,13 @@ jobs:
         with:
           path: './dist'
 
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

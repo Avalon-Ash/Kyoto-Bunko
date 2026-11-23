@@ -9,7 +9,7 @@
 | 主線 | `main` 與 `origin/main` 同步；實際位置以 `git log -1 main` 為準。11/18–11/20 上線的：全庫事實查核（792 → 734 筆，`56fc135`）、材質表解耦第 0–4c 步（ADR 0016、0017）、第一次載入先非同步編譯（ADR 0018）、地著色器冷編譯減半（ADR 0019）、換函不再卡（ADR 0020）。11/22 的 `b61314c` 只改合約文件 |
 | 工作分支 | 本機與遠端平常只有 `main`；工作分支合併後就刪。現況以 `git branch -a` 為準，這一列不逐次改 |
 | 子代理工作樹 | 目前沒有（`git worktree list` 只有主資料夾）。要用時由主代理建在 `C:\Git\_wt_kyoto_<topic>`（`git worktree add`）並負責刪除；`node_modules` 用 junction 連到主資料夾（`cmd /c mklink /J`），**刪工作樹前先 `cmd /c rmdir` 拿掉 junction**，否則會刪到主資料夾的 `node_modules`。舊工作樹 `_wt_kyoto_doha` 已拆，截圖與派工紀錄在 `.shots/_archive_wt_kyoto_doha/` |
-| 遠端與部署 | GitHub repo `Avalon-Ash/Kyoto-Bunko`；GitHub Pages（`https://avalon-ash.github.io/Kyoto-Bunko/`）由 `.github/workflows/deploy.yml` 在 push `main` 時自動部署。部署結果用 `gh run list --workflow deploy.yml --limit 3` 查。`b61314c` 的 push 那次因 GitHub 取不到 artifact 失敗，同一個 commit 重跑成功（2026-11-22） |
+| 遠端與部署 | GitHub repo `Avalon-Ash/Kyoto-Bunko`；GitHub Pages（`https://avalon-ash.github.io/Kyoto-Bunko/`）由 `.github/workflows/deploy.yml` 在 push `main` 時自動部署。部署結果用 `gh run list --workflow deploy.yml --limit 3` 查。`b61314c` 的 push 那次因 GitHub 取不到 artifact 失敗，同一個 commit 重跑成功（2026-11-22）。11/23 15:08 起連續三次（`6ef5f01`、`fd0afad` 與它的重跑）同樣失敗：lint、測試、build、上傳都過，是同一個 job 裡 `deploy-pages` 查不到剛上傳的 artifact（[actions/deploy-pages#451](https://github.com/actions/deploy-pages/issues/451)，11/22 起多個 repo 回報）。11/24 把 build 與 deploy 拆成兩個 job（GitHub 範本的寫法）；線上在修好前停在 `73ac948` |
 | 參考資源 | ThreeRT 原始碼與參考圖在 `C:\Git\_ext`（不在本 repo）；用法見 `MAKIE_THREERT_REFERENCE.md` |
 | 不提交 | `.claude/`、`.shots/`、`dist/`、`node_modules/`、驗收截圖與日誌 |
 
