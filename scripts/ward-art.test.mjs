@@ -5,7 +5,8 @@ import {layoutBands,cabinetKeepout,centreZone} from '../src/studies/toji/backdro
 import {lookAt,multiply,ortho} from '../src/studies/toji/geometry.js';
 import {viewBox} from '../src/studies/toji/view.js';
 
-const WARDS=['W_KITA','W_KAMIGYO','W_SAKYO','W_NAKAGYO','W_HIGASHIYAMA','W_SHIMOGYO','W_MINAMI','W_UKYO','W_NISHIKYO','W_YAMASHINA','W_FUSHIMI'];
+// The wards in WARD_KEYS order: src/lib/ward-keys.test.ts locks WARD_ART's key order to WARD_KEYS.
+const WARDS=Object.keys(WARD_ART);
 
 test('every ward has its own pattern and a short verse in both languages',()=>{
   assert.deepEqual(Object.keys(WARD_ART).sort(),[...WARDS].sort());

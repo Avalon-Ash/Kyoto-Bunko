@@ -44,7 +44,8 @@
  */
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Lang, FlatSpot, WardKey } from '../types';
-import { loadSpotsByWard, WARD_BY_AREA, WARD_KEYS, getTagCounts, getWardStats } from '../data/index';
+import { loadSpotsByWard, WARD_BY_AREA, getTagCounts, getWardStats } from '../data/index';
+import { WARD_KEY_LIST, isWardKey } from '../lib/ward-keys';
 import { translate } from '../data/i18n';
 import { TYPES } from '../data/types';
 
@@ -91,7 +92,7 @@ export function useKyotoEngine() {
       setIsLoading(true);
 
       // 找出這筆資料屬於哪個行政區 (一區可能跨多個 Ward)
-      const wardIds: WardKey[] = mode === 'ward' ? [id as WardKey] : WARD_BY_AREA[id] ?? [];
+      const wardIds: WardKey[] = mode === 'ward' ? (isWardKey(id) ? [id] : []) : WARD_BY_AREA[id] ?? [];
 
       if (wardIds.length > 0) {
         // 並行載入所有相關行政區資料
@@ -121,7 +122,7 @@ export function useKyotoEngine() {
     }
     let isMounted = true;
     setIsGlobalLoading(true);
-    Promise.all((WARD_KEYS as WardKey[]).map(w => loadSpotsByWard(w, lang)))
+    Promise.all(WARD_KEY_LIST.map(w => loadSpotsByWard(w, lang)))
       .then(results => {
         if (isMounted) setAllLoadedSpots(results.flat());
       })

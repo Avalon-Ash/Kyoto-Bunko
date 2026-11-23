@@ -1,4 +1,5 @@
-import { WARD_KEYS, WARD_NAMES } from '../../data/wards';
+import { WARD_NAMES } from '../../data/wards';
+import { WARD_KEY_LIST } from '../../lib/ward-keys';
 import { computeWardStats } from '../../data/spots-loader';
 import { MAKIE_LANDMARKS } from '../../lib/makie-scene';
 import type { Lang, WardKey } from '../../types';
@@ -8,10 +9,10 @@ import { LANDMARK_STUDIES } from './landmarks.js';
 export const DEFAULT_CABINET: WardKey = 'W_MINAMI';
 
 const counts = computeWardStats();
-export const CABINETS = WARD_KEYS.map(id => {
+export const CABINETS = WARD_KEY_LIST.map(id => {
   const landmark = MAKIE_LANDMARKS.find(item => item.wardId === id);
   if (!landmark) throw new Error(`Missing cabinet landmark: ${id}`);
-  return { id: id as WardKey, names: WARD_NAMES[id], count: counts[id], landmark, relief: Object.hasOwn(LANDMARK_STUDIES,id) };
+  return { id, names: WARD_NAMES[id], count: counts[id], landmark, relief: Object.hasOwn(LANDMARK_STUDIES,id) };
 });
 
 export function cabinetFor(id: string) {
