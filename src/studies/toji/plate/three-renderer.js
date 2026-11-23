@@ -85,11 +85,26 @@ function bakeStampTexture(doc, maxAniso) {
 /**
  * @param {WebGL2RenderingContext} gl the canvas's WebGL2 context
  * @param {HTMLCanvasElement} canvas
- * @param {() => void} [onReady] called once the first plate's shaders have compiled and it can be drawn (loading() turns false)
+ * @param {() => void} onReady called once the first plate's shaders have compiled and it can be drawn (loading() turns false)
+ * @param {(error: unknown) => void} onFailure switches the owning renderer to the still picture
  */
-export function createThreeRenderer(gl, canvas, onReady) {
+export function createThreeRenderer(gl, canvas, onReady, onFailure) {
   const doc = canvas.ownerDocument;
   const renderer = new THREE.WebGLRenderer({canvas, context: gl, antialias: true, alpha: true});
+  let disposed = false, failed = false;
+  /** @param {unknown} error */
+  function reportFailure(error) {
+    if (disposed || failed) return;
+    failed = true;
+    // Wait for three.js to finish using the program and for drawNeighbour to restore the active ward before disposal.
+    queueMicrotask(() => { if (!disposed) onFailure(error); });
+  }
+  renderer.debug.checkShaderErrors = true;
+  renderer.debug.onShaderError = (context, program, vertex, fragment) => {
+    if (context.isContextLost()) return; // study.js handles the context-loss event and restoration
+    const logs = [context.getProgramInfoLog(program), context.getShaderInfoLog(vertex), context.getShaderInfoLog(fragment)];
+    reportFailure(new Error(['Plate shader program failed to link', ...logs.filter(Boolean)].join('\n')));
+  };
   renderer.setPixelRatio(1);
   renderer.setClearColor(0x000000, 0);
   renderer.toneMapping = THREE.NeutralToneMapping;
@@ -101,7 +116,7 @@ export function createThreeRenderer(gl, canvas, onReady) {
   try {
     const pmrem = new THREE.PMREMGenerator(renderer), room = new RoomEnvironment(), env = pmrem.fromScene(room, .04);
     scene.environment = env.texture; own(env); pmrem.dispose(); room.dispose?.();
-  } catch (error) { console.warn('Environment map unavailable:', error); }
+  } catch (error) { if (!failed) console.warn('Environment map unavailable:', error); }
 
   // The camera is the page's: view and projection come in as one matrix and are split into three's two.
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 2200);
@@ -446,6 +461,9 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
 void main() {`)
         .replace('outgoingLight=mFinish(c,1.).rgb;', `outgoingLight=mFinish(c,1.).rgb+vec3(${coldProbe}*0.);`);
     }
+    if (import.meta.env.DEV && new URLSearchParams(location.search).get('plate') === 'shaderfail') {
+      shader.fragmentShader += '\n#error KYOTO_TEST_SHADER_FAILURE\n';
+    }
   };
   const mistMaterial = own(new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
@@ -537,18 +555,35 @@ void main() {`)
   const IDENTITY = new THREE.Matrix4();
 
   const MAX_CACHED = 3; // Maximum number of ward plate entries kept in cache (active + two neighbours)
-  let plate = null, life = null, lastTime = 0, wardGroup = null, disposed = false, current = null;
+  let plate = null, life = null, lastTime = 0, wardGroup = null, current = null;
   // The first plate is not drawn until every program the scene needs has compiled (renderer.compileAsync, which waits on
   // KHR_parallel_shader_compile instead of stalling the page: the ground shader alone takes 10-15 s on a cold D3D cache,
   // docs/plans/2026-11-18-material-table.md §8.12). Until then loading() is true and the page shows the still picture.
   let compiled = false, compiling = false;
+  async function compilePrograms(object, targetScene) {
+    if (failed || disposed) return false;
+    try {
+      await renderer.compileAsync(object, camera, targetScene);
+      if (failed || disposed || gl.isContextLost()) return false;
+      // compileAsync waits for completion, not link success. First use runs three.js's checkShaderErrors hook.
+      // Programs from another compile can still be in flight. Check those when ready or on their first draw.
+      for (const program of renderer.info.programs) {
+        if (program.isReady()) program.getUniforms();
+        if (failed) return false;
+      }
+      return true;
+    } catch (error) {
+      reportFailure(error);
+      return false;
+    }
+  }
   function compileScene() {
     if (compiled || compiling) return;
     compiling = true;
     const group = wardGroup;
-    renderer.compileAsync(scene, camera).catch(error => console.warn('Plate shaders did not precompile:', error)).then(() => {
+    void compilePrograms(scene, null).then(ok => {
       compiling = false;
-      if (disposed) return;
+      if (!ok || disposed || failed) return;
       // A cabinet changed while it compiled: its parts may need programs of their own (the ground and box ones are ready by now).
       if (wardGroup && wardGroup !== group) { compileScene(); return; }
       compiled = true;
@@ -821,6 +856,7 @@ void main() {`)
 
   /** Builds or activates a ward's plate. Returns false when the ward has not been redrawn as a plate. */
   function setWard(ward) {
+    if (failed) return false;
     if (!Object.hasOwn(PLATES, ward)) { freePlate(); return false; }
     const t0 = performance.now();
     const prefetched = Boolean(cache.get(ward)?.entry);
@@ -834,8 +870,8 @@ void main() {`)
     if (!slot.entry || slot.warmed) return;
     slot.warmed = true;
     for (const tex of slot.entry.textures) renderer.initTexture(tex);
-    renderer.compileAsync(slot.entry.group, camera, scene).catch(() => {}).then(() => {
-      if (disposed || !slot.entry) return;
+    void compilePrograms(slot.entry.group, scene).then(ok => {
+      if (!ok || disposed || failed || !slot.entry) return;
       slot.compiled = true;
       onReady?.(); // its picture can be drawn now (drawNeighbour)
     });
@@ -852,9 +888,8 @@ void main() {`)
     const own = {entry: current, plate, life};
     bind(slot.entry);
     plate = {...slot.entry.plate, frames: 0}; life = slot.life ??= createLife(slot.entry.plate.parts);
-    try { draw(f, projection, unitsPerPx); }
+    try { return draw(f, projection, unitsPerPx); }
     finally { bind(own.entry); plate = own.plate; life = own.life; }
-    return true;
   }
 
   function pumpPrefetch() {
@@ -898,7 +933,7 @@ void main() {`)
 
   /** Pre-builds and warms up neighbouring wards during idle time so switching stays off the main path. */
   function prefetch(wards) {
-    if (disposed) return;
+    if (disposed || failed) return;
     lastNeighbours = wards.filter(w => Object.hasOwn(PLATES, w));
     evict(new Set([plate?.ward, ...lastNeighbours]));
     for (const w of lastNeighbours) {
@@ -914,9 +949,7 @@ void main() {`)
    * @param {number} unitsPerPx plate units covered by one device pixel
    */
   function draw(f, projection, unitsPerPx) {
-    if (!plate || !compiled) return;
-    // study.js writes 'webgl' once after init; the frame says which renderer actually drew it.
-    canvas.dataset.renderer = 'three';
+    if (!plate || !compiled || failed) return false;
     const quiet = f.still || f.flat, dt = Math.min(.05, Math.max(0, (f.time - lastTime) / 1000) || .016); lastTime = f.time;
     const want = f.presence ?? 0;
     if (f.still) { presence.x = want; presence.v = 0; } else stepSpring(presence, want, want > presence.x ? 8 : 2.2, dt);
@@ -983,10 +1016,15 @@ void main() {`)
     // three's view is the page's lookAt; its projection is whatever makes projection × view equal the page's matrix.
     pageMatrix.fromArray(projection);
     camera.projectionMatrix.multiplyMatrices(pageMatrix, camera.matrixWorld); camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
-    renderer.render(scene, camera);
+    try { renderer.render(scene, camera); }
+    catch (error) { if (!failed) throw error; }
+    if (failed) return false;
     renderer.resetState();
     // Leave the context as the relief renderer expects to find it.
     gl.bindVertexArray(null); gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.activeTexture(gl.TEXTURE0); gl.depthMask(true); gl.disable(gl.BLEND);
+    // study.js writes 'webgl' once after init; the frame says which renderer actually drew it.
+    canvas.dataset.renderer = 'three';
+    return true;
   }
 
   /** A tap on a part in close-up. Returns the part's id, or '' when the tap met bare ground. */
@@ -998,8 +1036,8 @@ void main() {`)
 
   return {
     setWard, prefetch, draw, drawNeighbour, poke, active: () => Boolean(plate),
-    /** True while the first plate's shaders are still compiling (nothing is drawn meanwhile). */
-    loading: () => Boolean(plate) && !compiled,
+    /** True while the first plate compiles or a reported failure is waiting for the still picture. */
+    loading: () => failed || (Boolean(plate) && !compiled),
     dispose() {
       disposed = true;
       cancelIdle(idleHandle); clearTimeout(prefetchTimer);
