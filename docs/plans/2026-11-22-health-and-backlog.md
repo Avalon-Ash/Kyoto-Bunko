@@ -436,3 +436,9 @@ dev server 的數字（同腳本，四種條件，含 CPU ×1 的 375 px）溫�
   - 行為測試 T4a 兩條原本從各區取樣 `rock()` 的岩；現在沒有一區用 `rock()`，改成把那 17 組舊參數照抄成 `FORMER_WARD_ROCKS` 直接呼叫 `rock()`。輸入與斷言都沒變，第一條的「至少 17 顆」改成「剛好 17 顆」。
 - 檢查：`npm test` 156／156、27／27；`npm run lint` exit 0；`plate-clip` findings 0；`npm run smoke` 通過；部件雜湊：九區 CHANGED，伏見與中京相同。降級圖：九區日夜 18 張重拍（伏見、中京還原），拼成一張核對過每張的區與日夜。
 - 沒做：§18 的第 1–3 點（逐顆照參考圖畫輪廓、會站起來的薄側影）。`rock()`／`meshRock` 現在只剩測試在用；要不要刪，等下一次動岩時再定。
+
+### 9.13 README 截圖與 OG 圖（2026-11-23，主席）
+
+- README 引用的八張圖（`docs/images/*.webp`）全部重拍：原本是 11/13 舊管線的畫面，寫著 809 筆和舊短句。新圖用一次性腳本走首頁拍，腳本在 scratchpad，不提交：dev server、共用的無頭 Chrome、1440×900，手機 390×844 ×2。取景沿用舊圖：左京夜（中、日介面各一）、北日、左京開蓋（按 Enter 後 350 ms，蓋正掀起，看得到盒內的料紙與卷）、左京卷的列表與地圖、手機的首頁與卷。拼成一張逐張核對過（`.shots/chain/readme/sheet.png`）。README 的替代文字仍然符合，沒改。
+- OG：`public/og.jpg`（1200×630，從左京夜那張裁的），`index.html` 加 `og:type`、`og:title`、`og:url`、`og:image`（GitHub Pages 的絕對網址）與 `twitter:card`。`og:description` 不另寫，預覽會讀 `meta description`，同一段字只寫一處。
+- 建置後 `dist/index.html` 的 icon 是 `./favicon.svg`，`og.jpg` 也在 `dist/` 裡。線上的連結預覽要等部署後才看得到。
