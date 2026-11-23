@@ -1,5 +1,5 @@
 // Low-relief (takamaki-e) meshes for the plate's creatures and small solids (fox, phoenix, bird, sand cone, bowl, wall).
-// Pure geometry like rock-mesh.js: every builder returns chunks {mat, vertices} of 8 floats per vertex [x, y, z, nx, ny, nz, u, v],
+// Pure geometry like crag-mesh.js: every builder returns chunks {mat, vertices} of 8 floats per vertex [x, y, z, nx, ny, nz, u, v],
 // non-indexed triangles, in plate coordinates (x right, z down the picture) with y the height the relief stands off its plane.
 //
 // The big form is a pillow: the part's own 2D outline (the same polygon the picture, picking and bounds use) raised into a

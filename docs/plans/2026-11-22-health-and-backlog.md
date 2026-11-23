@@ -90,13 +90,13 @@
 
 | # | 項目 | 出處 |
 |---|---|---|
-| B7 | 資料未結：FS-018 伏水酒蔵小路的類型、NK-014 寺町通商店街的身分、NK-084／NK-085 是哪家分店、延暦寺根本中堂參拜現況、HY-041 光明院、HY-024 地主神社、FS-026 宝塔寺、SK-018 真如堂與安祥寺的國寶、清水寺等國寶指定頁原文 | `2026-11-18-data-next.md` 第 2–5 項；HANDOFF §4.6 |
+| B7 | 資料未結：FS-018 伏水酒蔵小路的類型、NK-014 寺町通商店街的身分、NK-084／NK-085 是哪家分店（11/23 晚重查已結，§9.15）、延暦寺根本中堂參拜現況、HY-041 光明院、HY-024 地主神社、FS-026 宝塔寺、SK-018 真如堂與安祥寺的國寶、清水寺等國寶指定頁原文 | `2026-11-18-data-next.md` 第 2–5 項；HANDOFF §4.6 |
 | B8 | 冷編譯其餘：`mNashiji` 上色組合約 1.5 秒、其他 24 支程式 | 材質表提案 §8.17 |
 | B9 | 偶發測試失敗（N2）：下次出現先存完整輸出 | `2026-11-20-next.md` |
 | B10 | 盤面小缺口：鳳凰不放大時頭喙偏小；細草與葦不放大看不到；夜間濃梨子地與圖案差距小；`parts.js` 的 `act()` 讓 `MAT.lamp` 部件在游標停留時發橘光；背景霞帶避開盒子的輪廓窄 2–10 px | HANDOFF §4.6 |
 | B11 | 年代：沒有可拖的控制（只有網址參數）；立體部件在演示中不跟著年代變 | `2026-11-17-finish.md` §15.2 |
 | B12 | 用 ThreeRT 算每區俯視遮蔽圖給地用（研究） | `2026-11-16-lighting-research.md` 實驗 2 |
-| B13 | 中京預建 387 ms 的長工作（要改構圖檔才能切）、`meshRock` 約 18 ms：收益小，沒排 | `agent-runs/2026-11-17-mesh-perf.md` |
+| B13 | 中京預建 387 ms 的長工作（要改構圖檔才能切）、`meshRock` 約 18 ms（11/23 已隨檔案刪除）：收益小，沒排 | `agent-runs/2026-11-17-mesh-perf.md` |
 | B14 | `export-glb.js` 的顏色表和 `MATERIALS.color` 不同；GPU 幀成本的前後對照沒量 | 材質表提案 §8.11、§8.13（文件說，沒核對後來有沒有做） |
 | B15 | 夜間 agy 流水線的改進（R12）：擱置中 | roadmap R12 |
 | B16 | 盒內左側四張色紙是素面 | `2026-11-17-finish.md` §13「沒做、主席還在意的」 |
@@ -469,6 +469,26 @@ dev server 的數字（同腳本，四種條件，含 CPU ×1 的 375 px）溫�
 - `study.js` 的 `FEEL`：三組只寫在註解裡的關係（`settleMs`、`demoDurationSec`、`liftEmbedded + idleLiftAmp = 1`），以及表外還沒命名的兩個裸數字 `.985` 與 `700`。
 - `connectCdp` 的 `logs` 沒有區分 error 與 warning；`plate-env.mjs` 的 Chrome 路徑寫死 Windows（應先讀 `CHROME_PATH`）；檔頭註解寫「兩個埠」，實際有三個。
 - `useKyotoEngine.ts` 的 `WARD_KEYS as WardKey[]` 是型別轉型。
-- `rock()`／`meshRock` 已經沒有任何區在用，只剩測試；提案 (c) 的 `MAKIE_LANDMARKS.title`／`shape` 也沒有讀者。兩者都等使用者同意再刪。
+- `rock()`／`meshRock` 已經沒有任何區在用，只剩測試；提案 (c) 的 `MAKIE_LANDMARKS.title`／`shape` 也沒有讀者。兩者都等使用者同意再刪。→ 使用者同意，11/23 晚刪了（§9.15）。
 - 資料：SK-038 的停止參拜到 2028-01 為止，2028 年要回頭改；NK-014 名稱仍是泛稱，導航可能落在寺町京極那一段。
 - 載入：`setWard` 改成非同步、烘焙搬進 Worker（§9.10）。岩：簇偏小、17 簇有一家人的相似感（§9.12）。
+
+### 9.15 收尾：NK-084／NK-085 重查、刪沒人用的程式（2026-11-23 晚）
+
+使用者的決定（對話原話）：NK-084、NK-085「重新查一輪不符合規範就拿掉」；`rock()`／`meshRock` 與 `MAKIE_LANDMARKS.title`／`shape`「刪掉」。分支 `claude/cleanup-1123`，base `6ef5f01`。
+
+**資料**：主代理用使用者的 Chrome 重開兩頁 Tabelog，這次兩頁都直接顯示（只有語言選擇框，沒有安全驗證），主代理只做了開頁與讀文字（同一個 Chrome 當天稍早通過過一次自動驗證，這次沒跳可能跟那次有關）。兩頁都沒有閉店標示，名稱、住所、區與現有資料相符，兩筆保留、資料不改。細節與原文在 [`agent-runs/2026-11-23-data-open-items.md`](../agent-runs/2026-11-23-data-open-items.md) 末節。兩筆都不在 `map-centers.ts` 的 `SPOT_POSITIONS`（地圖上走群集點、導航用日文店名），沒有搬家前的舊座標。
+
+**刪掉的程式**
+- `src/studies/toji/plate/rock-mesh.js` 整檔（只匯出 `meshRock`）與 `vocab.js` 的 `rock()`。
+- `mat.js` 的 `ROCK_LOOK`、`ROCK_DEFAULT`、`rockLook`：讀者只有 `rock-mesh.js`。
+- `makie-scene.ts` 的 `MakieLandmark.title`／`shape` 與十一列的值；`oldName` 有讀者（`study.js` 盒面的古地名），保留。
+- 測試：`plate.test.mjs` 的 `FORMER_WARD_ROCKS`、`formerRocks` 和三個只測 `rock()`／`meshRock` 的測試（T4a 網格、T4a 切金離面距離、自訂輪廓的岩），以及只有後者用的 `pointTriDist3D`、`segIntersectXZ`；`plate-fences.test.mjs` 的材質表圍欄拿掉 `rock-mesh.js` 那半，留 doha 那半。十一區的岩是 crag 的測試（`every ward draws its rocks as crags…`）保留。
+- 註解：`mat.js`、`three-renderer.js`、`creature-mesh.js`、`crag-mesh.js` 裡指向 `rock-mesh.js` 的改掉。
+- ADR 0013 的「證據」列了 `rock-mesh.js`，`adr:check` 會擋不存在的路徑：改成「2026-11-23 刪除，最後的版本在 commit `6ef5f01`」。0013 已被 0017 取代，決定本文不動。0017（採用）的決定寫「`DOHA_TONE`、`ROCK_LOOK` 是以別的鍵查的表，也在 `mat.js`」，現在 `ROCK_LOOK` 不在了：決定（以別的鍵查的表也放 `mat.js`）沒被推翻，只是舉的例子少了一個，所以不新開 ADR、也不改原文，記在這裡；使用者要的話再新開一份。0021 只在背景提到 `meshRock`，不動。
+
+**沒動的**（著色器與材質列）：`mat.js` 的 `rock` 欄、`MAT.muraSilver`、`three-renderer.js` 的 `isRock` 分支、`three-pack.js` 的 `K_ROCK_*`。石垣（`vocab.js` 的牆，`MAT.mura`＋`KIND.rock`）還走這條路，動了會改到著色器，要逐像素證明，不在這次範圍。
+
+**檢查**：`npm run lint` exit 0（ADR 21 份）；`validate_data.js --strict` ERROR 0／WARN 0，734 筆；`npm test` 154／154＋27／27（原本 157，少的 3 個是上面刪的）；`npm run build` exit 0，`three-renderer` 808.47 kB（gzip 230.68；原本 809.24／230.76）；`plate-parts-hash --check` 11／11 相同；`npm run smoke` 通過（three、console 0 錯）。部件一個位元都沒變，所以沒有拍圖。
+
+**留到積壓**：`MAT.muraSilver`（銀岩的身）現在沒有任何部件用（`grep -rn muraSilver src` 只剩 `mat.js` 的定義與 `three-renderer.js` 的註解），還有 `plate.test.mjs` 的 `MATERIALS[MAT.muraSilver].rock` 測試。拿掉它會動到材質編號與著色器的 `isSilverRock` 分支，要的話另外提案、逐像素證明。

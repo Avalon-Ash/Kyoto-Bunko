@@ -18,22 +18,21 @@ export function projectMakie(lat: number, lng: number): [number, number] {
   return [interpolate(lng, LONGITUDES, X), interpolate(lat, LATITUDES, Y)];
 }
 export interface MakieLandmark {
-  wardId: string; spotId: string; title: I18nText; oldName: I18nText;
-  shape: 'temple' | 'palace' | 'pagoda' | 'torii';
+  wardId: string; spotId: string; oldName: I18nText;
 }
-// Labels describe today's landmarks and historic place names, not a Heian reconstruction.
+// Each ward's landmark spot (where its picture is anchored) and its historic place name, not a Heian reconstruction.
 export const MAKIE_LANDMARKS: MakieLandmark[] = [
-  { wardId:'W_KITA', spotId:'KT-005', title:{zh:'金閣寺',ja:'金閣寺'}, oldName:{zh:'衣笠',ja:'衣笠'}, shape:'temple' },
-  { wardId:'W_KAMIGYO', spotId:'KG-007', title:{zh:'京都御所',ja:'京都御所'}, oldName:{zh:'御所・西陣',ja:'御所・西陣'}, shape:'palace' },
-  { wardId:'W_SAKYO', spotId:'SK-006', title:{zh:'銀閣寺',ja:'銀閣寺'}, oldName:{zh:'東山・白川',ja:'東山・白川'}, shape:'temple' },
-  { wardId:'W_NAKAGYO', spotId:'NK-004', title:{zh:'二条城',ja:'二条城'}, oldName:{zh:'二条・堀川',ja:'二条・堀川'}, shape:'palace' },
-  { wardId:'W_HIGASHIYAMA', spotId:'HY-003', title:{zh:'清水寺',ja:'清水寺'}, oldName:{zh:'祇園・清水',ja:'祇園・清水'}, shape:'temple' },
-  { wardId:'W_SHIMOGYO', spotId:'SG-003', title:{zh:'西本願寺',ja:'西本願寺'}, oldName:{zh:'堀川七条',ja:'堀川七条'}, shape:'temple' },
-  { wardId:'W_MINAMI', spotId:'MN-001', title:{zh:'東寺',ja:'東寺'}, oldName:{zh:'東寺・九条',ja:'東寺・九条'}, shape:'pagoda' },
-  { wardId:'W_UKYO', spotId:'UK-003', title:{zh:'天龍寺',ja:'天龍寺'}, oldName:{zh:'嵯峨野',ja:'嵯峨野'}, shape:'temple' },
-  { wardId:'W_NISHIKYO', spotId:'NS-006', title:{zh:'桂離宮',ja:'桂離宮'}, oldName:{zh:'桂',ja:'桂'}, shape:'palace' },
-  { wardId:'W_YAMASHINA', spotId:'YS-004', title:{zh:'毘沙門堂',ja:'毘沙門堂'}, oldName:{zh:'山科',ja:'山科'}, shape:'temple' },
-  { wardId:'W_FUSHIMI', spotId:'FS-006', title:{zh:'伏見稻荷',ja:'伏見稲荷'}, oldName:{zh:'深草・伏見',ja:'深草・伏見'}, shape:'torii' },
+  { wardId:'W_KITA', spotId:'KT-005', oldName:{zh:'衣笠',ja:'衣笠'} },
+  { wardId:'W_KAMIGYO', spotId:'KG-007', oldName:{zh:'御所・西陣',ja:'御所・西陣'} },
+  { wardId:'W_SAKYO', spotId:'SK-006', oldName:{zh:'東山・白川',ja:'東山・白川'} },
+  { wardId:'W_NAKAGYO', spotId:'NK-004', oldName:{zh:'二条・堀川',ja:'二条・堀川'} },
+  { wardId:'W_HIGASHIYAMA', spotId:'HY-003', oldName:{zh:'祇園・清水',ja:'祇園・清水'} },
+  { wardId:'W_SHIMOGYO', spotId:'SG-003', oldName:{zh:'堀川七条',ja:'堀川七条'} },
+  { wardId:'W_MINAMI', spotId:'MN-001', oldName:{zh:'東寺・九条',ja:'東寺・九条'} },
+  { wardId:'W_UKYO', spotId:'UK-003', oldName:{zh:'嵯峨野',ja:'嵯峨野'} },
+  { wardId:'W_NISHIKYO', spotId:'NS-006', oldName:{zh:'桂',ja:'桂'} },
+  { wardId:'W_YAMASHINA', spotId:'YS-004', oldName:{zh:'山科',ja:'山科'} },
+  { wardId:'W_FUSHIMI', spotId:'FS-006', oldName:{zh:'深草・伏見',ja:'深草・伏見'} },
 ];
 export const landmarkPosition = (landmark: MakieLandmark): [number, number] => {
   const { lat, lng } = SPOT_POSITIONS[landmark.spotId];

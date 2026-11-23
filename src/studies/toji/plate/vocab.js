@@ -14,7 +14,6 @@
 import {meshTorii, meshKakezukuri} from './frame-mesh.js';
 import {meshRoof, meshStorey, meshPagoda, meshHall, meshRomon, meshSanmon, meshKaramon, meshCorridor} from './architecture-mesh.js';
 import {meshLantern} from './lantern-mesh.js';
-import {meshRock} from './rock-mesh.js';
 import {meshFox, meshPhoenix, meshBird, meshSandCone, meshMoonBowl, meshWall, feetCentre} from './creature-mesh.js';
 
 export const PLATE = {halfW: 360, halfH: 230};
@@ -114,11 +113,6 @@ export function suyari(id, x0, x1, z, thick, seed, layer = 1) {
   if (r() > .35) bars.push(bar(x0 + span * .06, x0 + span * (.5 + r() * .2), z - thick * .8, thick * .62));
   for (const d of bars) p.fills.push({d, soft: 0, crisp: .12});
   return [p];
-}
-
-/** A rock: angular, raised, with ridge lines; cut gold or silver foil tiles sit on its lit faces. */
-export function rock(id, cx, cz, w, h, seed, opts = {}) {
-  return meshRock(id, cx, cz, w, h, seed, opts);
 }
 
 /**

@@ -30,6 +30,6 @@
 - `AGENTS.md`（§2 不做耦合）
 - `docs/HANDOFF.md`（§4.4a、§4.5）
 - `docs/plans/2026-11-18-material-table.md`（§0、§2、§4、§8.1–§8.13）
-- `src/studies/toji/plate/mat.js`、`src/studies/toji/plate/three-pack.js`、`src/studies/toji/plate/doha.js`、`src/studies/toji/plate/rock-mesh.js`
+- `src/studies/toji/plate/mat.js`、`src/studies/toji/plate/three-pack.js`、`src/studies/toji/plate/doha.js`；rock-mesh.js 在 2026-11-23 隨 `rock()` 一起刪除（沒有區在用），最後的版本在 commit `6ef5f01`
 - `scripts/plate.test.mjs`、`scripts/plate-diff.mjs`、`scripts/plate-parts-hash.mjs`
 

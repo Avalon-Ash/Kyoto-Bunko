@@ -4,7 +4,7 @@
 // lies over the one behind it. Every block has its own powder (blue-gold, pale gold or pale silver). Over the faces run a few fine
 // raised lines in the grain of the rock (the stroke of a fude), and on a few lit faces a small group of cut-gold squares. At the
 // foot there are flat pebbles. All of it is written by hand in the ward's file; only the surface is computed here.
-// Pure geometry. Returns one plate part (`mesh` + `fills` for the bake and for picking), like meshRock.
+// Pure geometry. Returns one plate part (`mesh` + `fills` for the bake and for picking), like the other mesh builders.
 import {MAT} from './mat.js';
 import {KIND} from './vocab.js';
 

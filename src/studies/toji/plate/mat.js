@@ -1,4 +1,4 @@
-// Material ids of the plate. No imports: vocab.js and rock-mesh.js both need them and import each other.
+// Material ids of the plate. No imports: vocab.js and the mesh builders all need them, and vocab.js imports the builders.
 // muraSilver is the body of a silver rock (the shader lays silver foil on it); kasumi is mist, which is baked, not meshed.
 // roofPowder is gold powder sprinkled on a roof face (takamakie); gold is leaf, kept for small parts.
 // coral is red coral inlay: the one colour that is not metal or shell, kept to a few small pieces (Hatsune: plum blossoms).
@@ -58,7 +58,7 @@ export const RECIPE = {lamp: 0, ground: 1, hill: 2, gyobu: 3, gold: 4, hirame: 5
  *   shine      its clearcoat is raised to the shared coat's shine (three-pack.js COAT.shine). Not the paper or the cords.
  *   shinnuri   black lacquer polished to a dark mirror (walls, plinths).
  *   rock       the body of a cut-foil rock mound, and its foil: 'gold' or 'silver'; null otherwise.
- *   rockPowder a pilot ward's powder rock or its lines (rock-mesh.js): fine pale powder in one raised form, no foil.
+ *   rockPowder a ward's crag (crag-mesh.js): fine pale powder in one raised form, no foil.
  *   grain      'powder' gold powder on a roof face, 'leaf' gold leaf laid on wood (three-pack.js PART_POWDER_GLSL); null none.
  *   wood       a tree's limbs in this material are 'silver' wood (Hatsune: silver wood under gold foliage) or 'gold'.
  */
@@ -160,19 +160,3 @@ export const DOHA_TONE = Object.freeze({
   }),
 });
 
-// High-makie rock body and foil-tile materials keyed by the requested MAT id; unlisted ids keep the gold kirikane mound default.
-/** @typedef {{powder: boolean, body: number, tile: number}} RockLook */
-/** @type {Readonly<RockLook>} */
-export const ROCK_DEFAULT = Object.freeze({powder: false, body: MAT.mura, tile: MAT.kirikane});
-/**
- * @param {Partial<RockLook>} [over]
- * @returns {Readonly<RockLook>}
- */
-const rockLook = (over = {}) => Object.freeze({...ROCK_DEFAULT, ...over});
-/** @type {Readonly<Record<number, Readonly<RockLook>>>} */
-export const ROCK_LOOK = Object.freeze({
-  [MAT.kirikane]: rockLook(),
-  [MAT.kirigin]: rockLook({body: MAT.muraSilver, tile: MAT.kirigin}),
-  [MAT.rockGold]: rockLook({powder: true, body: MAT.rockGold}),
-  [MAT.rockSilver]: rockLook({powder: true, body: MAT.rockSilver}),
-});

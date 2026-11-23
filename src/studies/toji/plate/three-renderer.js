@@ -6,7 +6,7 @@
 // trees (T2: half-tube limbs with procedural bark + instanced foliage stamps with 2D array texture & alphaTest),
 // their motion (createLife → DataTexture → onBeforeCompile hinge), and a DirectionalLight shadow map.
 // The creatures and small solids (rocks, fox, phoenix, uguisu, sand cone and bowl, the moat wall) are low-relief meshes
-// (creature-mesh.js, rock-mesh.js) like everything else: no part is painted on the lid any more except layer 0 and the mist.
+// (creature-mesh.js, crag-mesh.js) like everything else: no part is painted on the lid any more except layer 0 and the mist.
 import * as THREE from 'three';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {PLATE, MAT, KIND, rand} from './vocab.js';
@@ -177,7 +177,7 @@ export function createThreeRenderer(gl, canvas, onReady) {
   const patchMaterial = (material, spec, glsl, call) => {
     const isPart = call === 'kyotoMotion';
     // The columns are the material's own (mat.js meshLook): this function reads them and decides nothing per material.
-    // Only rock mounds (meshRock bodyMat) carry `rock` among 3D part meshes; tiles use kirikane/kirigin.
+    // Among 3D part meshes only materials with a `rock` column (mura: the stone wall; muraSilver: no part since rock() went, 2026-11-23) take the rock-foil branch.
     const isRock = isPart && Boolean(spec.rock), isSilverRock = spec.rock === 'silver';
     const isLacq = isPart && spec.shinnuri;
     const isRockP = isPart && spec.rockPowder;
