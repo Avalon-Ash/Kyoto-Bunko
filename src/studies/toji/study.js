@@ -58,8 +58,12 @@ era.after(eraRange);
 const syncEra=()=>{
   era.hidden=years===null;if(years!==null)era.textContent=`${language==='ja'?'漆齢':'漆齡'}${kanjiNumber(years,language)}年`;
   const shown=Math.round(years??startYears);if(eraRange.value!==String(shown))eraRange.value=String(shown);
-  eraRange.setAttribute('aria-label',translate('bunko_age',language));eraRange.setAttribute('aria-valuetext',`${kanjiNumber(shown,language)}年`);
+  const label=translate('bunko_age',language),valueText=`${kanjiNumber(shown,language)}年`;
+  if(eraRange.getAttribute('aria-label')!==label)eraRange.setAttribute('aria-label',label);
+  if(eraRange.getAttribute('aria-valuetext')!==valueText)eraRange.setAttribute('aria-valuetext',valueText);
 };syncEra();
+/** The demonstration ends: by itself after demoDurationSec, or when the age slider takes over. */
+function endDemo(){demoStart=0;hover=false;tx=ty=0;notify();}
 let projection,render,dispose,poke,paintGhost=null;
 const backdrop=mountBackdrop($('stage'),{night,motion:!still(),wardId:cabinet.id});
 // The cabinets either side of this one stand on the same track. Each is a still picture of that cabinet at rest,
@@ -105,7 +109,7 @@ function snapshotNeighbours(){
   for(const ghost of ghosts){
     const ward=adjacentCabinet(own,Number(ghost.dataset.side)).id,ctx=ghost.getContext('2d');
     if(!ctx)continue;
-    if(!drawNeighbour(ward,{time:performance.now(),moving:false,still:true,flat,night,ground,lift:FEEL.liftStill,opening:0,px:0,py:0,zoom:1,panX:0,panY:0,trails:[],presence:0})){ghostsStale=true;continue;}
+    if(!drawNeighbour(ward,{time:performance.now(),moving:false,still:true,flat,night,ground,lift:FEEL.liftStill,opening:0,px:0,py:0,zoom:1,panX:0,panY:0,trails:[],presence:0,years})){ghostsStale=true;continue;}
     // Same task as the draw: the WebGL canvas still holds the frame.
     ghost.width=canvas.width;ghost.height=canvas.height;ctx.drawImage(canvas,0,0);ghost.dataset.ward=ward;ghost.dataset.plate='true';drawn++;
   }
@@ -214,7 +218,7 @@ function tick(time){
   }
   if(demoStart){
     const t=(time-demoStart)/1000;
-    if(t>FEEL.demoDurationSec||still()){demoStart=0;hover=false;tx=ty=0;notify();}
+    if(t>FEEL.demoDurationSec||still())endDemo();
     else{tx=Math.sin(t*FEEL.sweepFreqX)*FEEL.sweepAmpX;ty=Math.cos(t*FEEL.sweepFreqY)*FEEL.sweepAmpY;addTrail(tx*FEEL.sweepTrailScaleX,ty*FEEL.sweepTrailScaleY,time);}
   }
   years=manualYears!==null?manualYears:demoStart?Math.min(1,(time-demoStart)/FEEL.demoAgeMs)*HATSUNE_YEARS:autoPlaying?HATSUNE_YEARS*(.5-.5*Math.cos(idlePhase*FEEL.idleAgeFreq)):null;syncEra();
@@ -435,7 +439,7 @@ listen(canvas,'pointerup',e=>{
   else if(tap&&projection){const r=canvas.getBoundingClientRect();const [x,z]=groundPoint(projection,(e.clientX-r.left)/r.width*2-1,1-(e.clientY-r.top)/r.height*2);if(onLid(x,z))openBook(canvas);}
   if(e.pointerType==='touch')release();
 });
-listen(eraRange,'input',()=>{manualYears=Number(eraRange.value);years=manualYears;demoStart=0;syncEra();schedule();});
+listen(eraRange,'input',()=>{manualYears=Number(eraRange.value);years=manualYears;if(demoStart)endDemo();syncEra();schedule();});
 listen(canvas,'focus',()=>{hover=true;schedule();});listen(canvas,'blur',release);
 listen(canvas,'keydown',e=>{
   if(e.key==='Escape'&&isZoomed(zoomTarget)){e.preventDefault();resetZoom();return;}

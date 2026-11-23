@@ -413,15 +413,21 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
    * changes (setAge below). The coat is one lacquer on everything: no surface sits below COAT.shine of clearcoat, and a
    * glossy-but-not-mirror one takes the shared roughness.
    */
-  const setLook = (m, spec) => {
+  const setLook = (m, spec, coated) => {
     m.color.set(spec.color); m.metalness = spec.metalness; m.roughness = spec.roughness;
-    m.clearcoat = spec.clearcoat; m.clearcoatRoughness = spec.clearcoatRoughness;
+    m.clearcoat = coated ? Math.max(spec.clearcoat, CLEARCOAT_FLOOR) : spec.clearcoat; m.clearcoatRoughness = spec.clearcoatRoughness;
     if (COAT_ON > 0 && spec.shine && !spec.glow) {
       m.clearcoat = Math.max(m.clearcoat, COAT.shine * COAT_ON);
       if (spec.clearcoat <= .6) m.clearcoatRoughness = THREE.MathUtils.lerp(spec.clearcoatRoughness, COAT.shineRough, COAT_ON);
     }
     if (spec.envMapIntensity) m.envMapIntensity = spec.envMapIntensity;
   };
+  /**
+   * Clearcoat never quite reaches 0 on a surface that has some at any age: three.js compiles another program when clearcoat crosses 0,
+   * and dragging the age slider would stall on it (chain-2 final review). A material with none at every age keeps exactly 0.
+   */
+  const CLEARCOAT_FLOOR = 1e-3;
+  const coatedOf = spec => spec.clearcoat > 0 || (spec.aged?.clearcoat ?? 0) > 0;
   /** Materials whose look ages ({material, spec} with spec.aged), re-set by setAge when a frame carries another age (chain-2 V7). */
   const ageing = [];
   let shownAge = shared.uAge.value;
@@ -429,12 +435,12 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
   const setAge = age => {
     if (age === shownAge) return;
     shownAge = age;
-    for (const {material, spec} of ageing) setLook(material, agedSpec(spec, age));
+    for (const {material, spec} of ageing) setLook(material, agedSpec(spec, age), coatedOf(spec));
   };
   /** A physical material for `spec` at the lid's current age; it keeps ageing with the lid when the spec has `aged` values. */
   const physical = (spec, extra = {}) => {
     const m = new THREE.MeshPhysicalMaterial({side: THREE.DoubleSide, shadowSide: THREE.DoubleSide, ...extra});
-    setLook(m, agedSpec(spec, shared.uAge.value));
+    setLook(m, agedSpec(spec, shared.uAge.value), coatedOf(spec));
     if (spec.aged) ageing.push({material: m, spec});
     if (spec.emissive) { m.emissive.set(spec.emissive); m.emissiveIntensity = 1; }
     if (spec.iridescence) { m.iridescence = spec.iridescence; m.iridescenceIOR = spec.iridescenceIOR; m.iridescenceThicknessRange = [...spec.iridescenceThicknessRange]; }

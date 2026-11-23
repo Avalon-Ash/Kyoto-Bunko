@@ -20,10 +20,11 @@
 .bunko canvas[data-plate="true"] { filter:none; }
 .bunko .loading { position:absolute; inset:0; display:grid; place-content:center; background:var(--panel); padding:40px; text-align:center; line-height:2; }
 .bunko .loading[hidden] { display:none; }
-.bunko .era { position:absolute; left:28px; top:98px; margin:0; color:var(--entry-seal); font:12px/1.5 var(--bunko-title); letter-spacing:.14em; writing-mode:vertical-rl; pointer-events:none; opacity:.85; }
+.bunko { --era-left:28px; --era-top:98px; --era-range-gap:16px; }
+.bunko .era { position:absolute; left:var(--era-left); top:var(--era-top); margin:0; color:var(--entry-seal); font:12px/1.5 var(--bunko-title); letter-spacing:.14em; writing-mode:vertical-rl; pointer-events:none; opacity:.85; }
 .bunko .era[hidden] { display:none; }
 /* The age by hand (study.js eraRange): a thin vertical slider beside the age label, older at the top. */
-.bunko .era-range { position:absolute; left:44px; top:100px; width:28px; height:110px; margin:0; writing-mode:vertical-lr; direction:rtl; accent-color:var(--entry-seal); opacity:.7; cursor:ns-resize; touch-action:none; }
+.bunko .era-range { position:absolute; left:calc(var(--era-left) + var(--era-range-gap)); top:calc(var(--era-top) + 2px); width:28px; height:110px; margin:0; writing-mode:vertical-lr; direction:rtl; accent-color:var(--entry-seal); opacity:.7; cursor:ns-resize; touch-action:none; }
 .bunko .era-range[hidden] { display:none; }
 /* The still picture does not age: no slider over it (renderer.js data-renderer). */
 .bunko:has(#scene[data-renderer="static"]) .era-range { display:none; }
