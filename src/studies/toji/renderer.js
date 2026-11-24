@@ -68,10 +68,10 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     if (ok) plate.prefetch?.([adjacentCabinet(id, -1).id, adjacentCabinet(id, 1).id]);
   };
   /**
-   * Every failure shows the still picture; the log says at which step it came (load, start, first ward, or later while drawing).
+   * Every failure shows the still picture; the log says at which step it came (load, start, first ward, or later: a shader that failed to compile or link, a frame that threw).
    * @param {unknown} error @param {string} [step]
    */
-  const fallback = (error, step = 'drawing') => {
+  const fallback = (error, step = 'compile or draw') => {
     if (disposed || plate?.kind === 'static') return;
     console.warn(`three.js plate unavailable (${step}), showing the still picture:`, error);
     useStatic(); ready();
