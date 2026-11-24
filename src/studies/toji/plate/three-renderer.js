@@ -592,7 +592,8 @@ void main() {`)
       }
       return true;
     } catch (error) {
-      reportFailure(error);
+      // A lost context also rejects the compile; study.js handles loss and restoration, so that is not a shader failure (ADR 0022).
+      if (!gl.isContextLost()) reportFailure(error);
       return false;
     }
   }

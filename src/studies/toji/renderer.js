@@ -67,23 +67,29 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     canvas.dataset.plate = String(ok);
     if (ok) plate.prefetch?.([adjacentCabinet(id, -1).id, adjacentCabinet(id, 1).id]);
   };
-  /** @param {unknown} error */
-  const fallback = error => {
+  /**
+   * Every failure shows the still picture; the log says at which step it came (load, start, first ward, or later while drawing).
+   * @param {unknown} error @param {string} [step]
+   */
+  const fallback = (error, step = 'drawing') => {
     if (disposed || plate?.kind === 'static') return;
-    console.warn('three.js plate unavailable, showing the still picture:', error);
+    console.warn(`three.js plate unavailable (${step}), showing the still picture:`, error);
     useStatic(); ready();
   };
   if (!gl2) {
     useStatic();
   } else {
     loading = true;
+    let step = 'load';
     // Loaded on demand: three.js is large and the home page may never need it.
     import('./plate/three-renderer.js').then(({createThreeRenderer}) => {
       if (disposed) return;
       loading = false;
-      plate = createThreeRenderer(gl2, canvas, ready, fallback);
+      step = 'start';
+      plate = createThreeRenderer(gl2, canvas, ready, error => fallback(error));
+      step = 'first ward';
       setMesh(ward); ready();
-    }).catch(fallback);
+    }).catch(error => fallback(error, step));
   }
   /** The canvas's drawing size for frame f (resized if needed), its camera matrix and the plate units one pixel covers. */
   const size = f => {

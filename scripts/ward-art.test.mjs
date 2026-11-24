@@ -10,7 +10,6 @@ import {viewBox} from '../src/studies/toji/view.js';
 const WARDS=Object.keys(WARD_ART);
 
 test('every ward has its own pattern and a short verse in both languages',()=>{
-  assert.deepEqual(Object.keys(WARD_ART).sort(),[...WARDS].sort());
   assert.equal(new Set(WARDS.map(id=>WARD_ART[id].motif)).size,11,'no two wards share a pattern');
   for(const id of WARDS){
     const {motif,verse}=WARD_ART[id];
