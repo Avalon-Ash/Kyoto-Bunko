@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {lookAt,multiply,ortho,groundPoint} from '../src/studies/toji/geometry.js';
+import {EYE, TARGET, NEAR, FAR} from '../src/studies/toji/plate/camera.js';
 import {baseHalf,viewBox,clampPan,panLimit,rubberBand,planePoint,anchorPan,dragPan,renderDpr,isZoomed,clampZoom,isDoubleTap,ZOOM_MAX} from '../src/studies/toji/view.js';
 
-const VIEW=lookAt([430,720,920],[0,40,0]);
-const camera=(aspect,zoom=1,cx=0,cy=0)=>{const v=viewBox(aspect,zoom,cx,cy);return multiply(ortho(v.left,v.right,v.bottom,v.top,1,2200),VIEW);};
+const VIEW=lookAt(EYE,TARGET);
+const camera=(aspect,zoom=1,cx=0,cy=0)=>{const v=viewBox(aspect,zoom,cx,cy);return multiply(ortho(v.left,v.right,v.bottom,v.top,NEAR,FAR),VIEW);};
 const close=(a,b,eps=1e-6)=>assert.ok(Math.abs(a-b)<eps,`${a} vs ${b}`);
 
 test('zoom 1 with no pan is the original home framing',()=>{

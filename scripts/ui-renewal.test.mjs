@@ -3,13 +3,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {layoutBands, cabinetKeepout, centreZone, bandSegments, particleSpecs, spanX, bandMargin, random, BACKDROP_PALETTE, MAX_BANDS} from '../src/studies/toji/backdrop.js';
 import {ortho, lookAt, multiply, project} from '../src/studies/toji/geometry.js';
+import {EYE, TARGET, NEAR, FAR} from '../src/studies/toji/plate/camera.js';
 import {buildBox} from '../src/studies/toji/plate/box.js';
 import {PLATES, preparePlate} from '../src/studies/toji/plate/parts.js';
 
 // Same camera as study.js render(): fixed eye, orthographic, halfW = max(475, 340·aspect).
 const camera = (width, height) => {
   const aspect = width / height, halfW = Math.max(475, 340 * aspect), halfH = halfW / aspect;
-  return multiply(ortho(-halfW, halfW, -halfH, halfH, 1, 2200), lookAt([430, 720, 920], [0, 40, 0]));
+  return multiply(ortho(-halfW, halfW, -halfH, halfH, NEAR, FAR), lookAt(EYE, TARGET));
 };
 const STAGES = [[375, 640], [390, 700], [320, 420], [768, 900], [1280, 760], [1440, 820], [1024, 280]];
 const inside = (poly, [x, y]) => {

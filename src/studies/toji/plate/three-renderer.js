@@ -28,8 +28,8 @@ import {
   BOX_SIDE_VERT_GLSL, BOX_SIDE_PARS_GLSL, BOX_SIDE_FRAG_GLSL, BOX_INNER_FRAG_GLSL, BOX_PAPER_FRAG_GLSL, ageFromYears,
 } from './three-pack.js';
 import {ageFromSearch} from './age.js';
+import {EYE, TARGET, NEAR, FAR} from './camera.js';
 
-const EYE = [430, 720, 920], TARGET = [0, 40, 0];
 /** ?coat=0..1: the shared tinted-lacquer coat (three-pack COAT, docs/plans/2026-11-16-coat.md). 0, the default, compiles none of it. */
 const COAT_DEFAULT = 1; // the recommended strength once the user has chosen (docs/agent-runs/2026-11-16-coat.md)
 const COAT_RAW = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('coat') : null;
@@ -118,7 +118,7 @@ export function createThreeRenderer(gl, canvas, onReady, onFailure) {
   } catch (error) { if (!failed) console.warn('Environment map unavailable:', error); }
 
   // The camera is the page's: view and projection come in as one matrix and are split into three's two.
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 2200);
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, NEAR, FAR);
   camera.position.set(...EYE); camera.up.set(0, 1, 0); camera.lookAt(...TARGET); camera.updateMatrixWorld(true);
   const pageMatrix = new THREE.Matrix4();
 

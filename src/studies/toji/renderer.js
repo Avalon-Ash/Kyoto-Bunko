@@ -12,13 +12,14 @@ import {multiply, lookAt, ortho} from './geometry.js';
 import {viewBox, renderDpr} from './view.js';
 import {createStaticPlate} from './plate/static-plate.js';
 import {adjacentCabinet} from './collection';
+import {EYE, TARGET, NEAR, FAR} from './plate/camera.js';
 
 // Fixed home camera; the backdrop's cabinet keepout shares it.
-const EYE = [430, 720, 920], CAMERA_VIEW = lookAt(EYE, [0, 40, 0]);
+const CAMERA_VIEW = lookAt(EYE, TARGET);
 /** zoom/cx/cy default to the full frame; view.js keeps zoom 1 identical to the original framing. */
 export function cameraMatrix(width, height, zoom = 1, cx = 0, cy = 0) {
   const v = viewBox(width / height, zoom, cx, cy);
-  return multiply(ortho(v.left, v.right, v.bottom, v.top, 1, 2200), CAMERA_VIEW);
+  return multiply(ortho(v.left, v.right, v.bottom, v.top, NEAR, FAR), CAMERA_VIEW);
 }
 
 /**

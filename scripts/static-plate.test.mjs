@@ -6,6 +6,7 @@ import {pictureLayout} from '../src/studies/toji/plate/static-layout.js';
 import {LANDMARK_STUDIES} from '../src/studies/toji/landmarks.js';
 import {viewBox} from '../src/studies/toji/view.js';
 import {multiply, lookAt, ortho, project} from '../src/studies/toji/geometry.js';
+import {EYE, TARGET, NEAR, FAR} from '../src/studies/toji/plate/camera.js';
 
 const DIR = new URL('../src/studies/toji/plate/static/', import.meta.url);
 
@@ -20,13 +21,13 @@ test('a picture of the reference frame fills a canvas of that shape exactly', ()
 test('the picture lands where the camera puts the plate, at any canvas shape, zoom and pan', () => {
   // The three.js canvas shows view-box (zoom, pan) of the camera plane; the picture covers the 950 x 680 box centred on the origin.
   // A point of the plate must therefore sit at the same CSS pixel in the picture's layout and in the camera's own projection.
-  const view = lookAt([430, 720, 920], [0, 40, 0]);
+  const view = lookAt(EYE, TARGET);
   for (const [w, h, zoom, cx, cy] of [[375, 300, 1, 0, 0], [375, 700, 1, 0, 0], [1440, 820, 1, 0, 0], [800, 800, 2, 60, -30], [320, 420, 3, -90, 40]]) {
-    const v = viewBox(w / h, zoom, cx, cy), matrix = multiply(ortho(v.left, v.right, v.bottom, v.top, 1, 2200), view), l = pictureLayout(w, h, zoom, cx, cy);
+    const v = viewBox(w / h, zoom, cx, cy), matrix = multiply(ortho(v.left, v.right, v.bottom, v.top, NEAR, FAR), view), l = pictureLayout(w, h, zoom, cx, cy);
     for (const point of [[0, 0, 0], [-370, 0, 240], [370, -94, -240], [72, 241, 25]]) {
       const [nx, ny] = project(matrix, point), screen = [(nx + 1) / 2 * w, (1 - ny) / 2 * h];
       // (The matrices are float32, hence the tolerance.) The reference picture holds the same point at a pixel of its own: the camera plane box of the reference frame.
-      const ref = project(multiply(ortho(-475, 475, -340, 340, 1, 2200), view), point), pixel = [(ref[0] + 1) / 2 * 950, (1 - ref[1]) / 2 * 680];
+      const ref = project(multiply(ortho(-475, 475, -340, 340, NEAR, FAR), view), point), pixel = [(ref[0] + 1) / 2 * 950, (1 - ref[1]) / 2 * 680];
       const placed = [l.left + pixel[0] * l.width / 950, l.top + pixel[1] * l.height / 680];
       assert.ok(Math.hypot(placed[0] - screen[0], placed[1] - screen[1]) < .01, `${w}x${h} zoom ${zoom}: ${point}`);
     }

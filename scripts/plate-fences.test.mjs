@@ -165,3 +165,13 @@ test('material table: the renderer shader choices read the mesh columns and give
   const src = readFileSync(new URL('../src/studies/toji/plate/three-renderer.js', import.meta.url), 'utf8');
   assert.deepEqual(src.match(/spec\.name\s*(===?|!==?)|\.test\(spec\.name\)/g) ?? [], [], 'the renderer does not branch on a material name');
 });
+
+test('camera: the home camera is written once, in plate/camera.js (chain-3 P1)', async () => {
+  const {readdirSync, readFileSync} = await import('node:fs');
+  const files = ['src/studies/toji/renderer.js', 'src/studies/toji/plate/three-renderer.js',
+    ...readdirSync(new URL('.', import.meta.url)).filter(f => f.endsWith('.test.mjs')).map(f => `scripts/${f}`)];
+  for (const f of files) {
+    const src = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(src, /\[\s*430\s*,\s*720\s*,\s*920\s*\]|\[\s*0\s*,\s*40\s*,\s*0\s*\]/, `${f} writes the eye or target itself`);
+  }
+});

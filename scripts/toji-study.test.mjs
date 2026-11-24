@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalize,multiply,lookAt,ortho,project,groundPoint,trailIntensity} from '../src/studies/toji/geometry.js';
+import {EYE, TARGET, NEAR, FAR} from '../src/studies/toji/plate/camera.js';
 
 test('ground picking inverts the fixed projection on desktop and narrow screens',()=>{
   for(const [width,height] of [[1182,570],[337,450]]){
     const halfW=Math.max(475,340*width/height),halfH=halfW/(width/height);
-    const matrix=multiply(ortho(-halfW,halfW,-halfH,halfH,1,2200),lookAt([430,720,920],[0,40,0]));
+    const matrix=multiply(ortho(-halfW,halfW,-halfH,halfH,NEAR,FAR),lookAt(EYE,TARGET));
     for(const point of [[0,0,0],[-350,0,-230],[350,0,230],[72,0,25]]){
       const screen=project(matrix,point),world=groundPoint(matrix,screen[0],screen[1]);
       assert.ok(Math.hypot(world[0]-point[0],world[1]-point[2])<.001);
