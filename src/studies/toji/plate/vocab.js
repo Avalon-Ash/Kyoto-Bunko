@@ -522,12 +522,14 @@ export const BLADE_W = Object.freeze({grass: 3.2, reed: 2.2});
 /**
  * Tufts of grass or reed at the places given: [x, z, height, blades, lean?, flower?]. Blades fan from one root and curve
  * with the lean; a tuft with a flower carries one five-petalled silver blossom on its middle blade.
- * Gold mat = grass, silver mat = reed (narrow spread).  Each blade is a thin leaf inlaid flat, not a raised stalk.
+ * Gold sheet = grass, silver sheet = reed (narrow spread). Each blade is a thin leaf of sheet metal inlaid flat (hyomon), not a raised
+ * stalk. Why sheet: the grass stands on gold banks and powder; in the ground's own gold (MAT.gold) it melted into them, and polished
+ * sheet is the one flat gold brighter than any powder it lies on (chain-3 P4).
  * @param {string} id
  * @param {Array<[number, number, number, number, number?, boolean?]>} spots
  * @param {{on?: string, mat?: number, seed?: number, w?: number, spread?: number}} [opts]
  */
-export function grassTufts(id, spots, {on, mat = MAT.gold, seed = 1, w = BLADE_W.grass, spread = .42} = {}) {
+export function grassTufts(id, spots, {on, mat = MAT.hyomonGold, seed = 1, w = BLADE_W.grass, spread = .42} = {}) {
   need('grassTufts', id, on);
   if (!spots.length) throw new Error(`grassTufts(${id}): spots must not be empty`);
   const r = rand(seed), grass = part(id, KIND.still, 0, mat, spots[0].slice(0, 2), {reach: .5, on}), bloom = [];
