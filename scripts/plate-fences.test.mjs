@@ -168,20 +168,32 @@ test('material table: the renderer shader choices read the mesh columns and give
 
 test('camera: the home camera is written once, in plate/camera.js (chain-3 P1)', async () => {
   const {readdirSync, readFileSync} = await import('node:fs');
-  const files = ['src/studies/toji/renderer.js', 'src/studies/toji/plate/three-renderer.js',
+  const {EYE, TARGET, FAR} = await import('../src/studies/toji/plate/camera.js');
+  // Every script under src/studies/toji and every test, except camera.js. The patterns are built from the constants, so this file does
+  // not match itself: the eye or target as an array literal, and the far plane as a bare number.
+  const vec = v => new RegExp(`\\[\\s*${v.join('\\s*,\\s*')}\\s*\\]`), far = new RegExp(`\\b${FAR}\\b`);
+  const toji = (await import('node:url')).fileURLToPath(new URL('../src/studies/toji/', import.meta.url));
+  const files = [
+    ...readdirSync(toji, {recursive: true, encoding: 'utf8'}).filter(f => /\.(js|ts)$/.test(f) && f.replace(/\\/g, '/') !== 'plate/camera.js').map(f => `src/studies/toji/${f.replace(/\\/g, '/')}`),
     ...readdirSync(new URL('.', import.meta.url)).filter(f => f.endsWith('.test.mjs')).map(f => `scripts/${f}`)];
+  assert.ok(files.length > 40, `scanned ${files.length} files`);
   for (const f of files) {
     const src = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
-    assert.doesNotMatch(src, /\[\s*430\s*,\s*720\s*,\s*920\s*\]|\[\s*0\s*,\s*40\s*,\s*0\s*\]/, `${f} writes the eye or target itself`);
+    for (const [re, what] of /** @type {[RegExp, string][]} */ ([[vec(EYE), 'eye'], [vec(TARGET), 'target'], [far, 'far plane']])) assert.doesNotMatch(src, re, `${f} writes the ${what} itself`);
   }
 });
 
 test('age: the Hatsune year is written once; the calibration age is fixed while the slider top follows the year (chain-3 P2)', async () => {
   const {readFileSync} = await import('node:fs');
   const {HATSUNE_MADE, CALIBRATION_YEARS, hatsuneAge} = await import('../src/studies/toji/plate/age.js');
+  // 2026 here is the calibration year written a second time on purpose: the fence pins it (plate/age.js CALIBRATED_IN).
   assert.equal(hatsuneAge(2026), CALIBRATION_YEARS);
   assert.equal(hatsuneAge(2027), CALIBRATION_YEARS + 1, 'the slider top grows a year a year; the calibration does not');
   assert.equal(hatsuneAge(HATSUNE_MADE), 0);
-  for (const f of ['study.js', 'feel.js', 'plate/three-renderer.js', 'plate/three-pack.js'])
-    assert.doesNotMatch(readFileSync(new URL(`../src/studies/toji/${f}`, import.meta.url), 'utf8'), /\b1639\b/, `${f} writes the year itself`);
+  // Every script under src/studies/toji except age.js; the pattern is built from the constant, so this file does not match itself.
+  const {readdirSync} = await import('node:fs');
+  const toji = (await import('node:url')).fileURLToPath(new URL('../src/studies/toji/', import.meta.url)), year = new RegExp(`(?<![\\d.])${HATSUNE_MADE}(?![\\d.])`);
+  const files = readdirSync(toji, {recursive: true, encoding: 'utf8'}).map(f => f.replace(/\\/g, '/')).filter(f => /\.(js|ts)$/.test(f) && f !== 'plate/age.js');
+  assert.ok(files.length > 40, `scanned ${files.length} files`);
+  for (const f of files) assert.doesNotMatch(readFileSync(new URL(`../src/studies/toji/${f}`, import.meta.url), 'utf8'), year, `${f} writes the year itself`);
 });

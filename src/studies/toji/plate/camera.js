@@ -1,6 +1,6 @@
 // The cabinet's fixed home camera: one orthographic view from above and in front, the lid seen at an angle. The only place it is
 // written (chain-3 P1). renderer.js builds the hit-testing matrix from it, plate/three-renderer.js the three.js camera; the
-// backdrop's cabinet keepout and the tests reach it through those matrices. No imports: plain numbers in plate units.
+// backdrop's cabinet keepout reaches it through renderer.js's matrix; the tests import it. No imports: plain numbers in plate units.
 
 /** Where the camera stands. */
 export const EYE = Object.freeze([430, 720, 920]);

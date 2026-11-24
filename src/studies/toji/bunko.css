@@ -26,7 +26,7 @@
 /* The age by hand (study.js eraRange): a thin vertical slider beside the age label, older at the top. */
 .bunko .era-range { position:absolute; left:calc(var(--era-left) + var(--era-range-gap)); top:calc(var(--era-top) + 2px); width:28px; height:110px; margin:0; writing-mode:vertical-lr; direction:rtl; accent-color:var(--entry-seal); opacity:.7; cursor:ns-resize; touch-action:none; }
 .bunko .era-range[hidden] { display:none; }
-/* The still picture does not age: no slider over it (renderer.js data-renderer). */
+/* The still picture does not age: no age label or slider over it (renderer.js data-renderer). */
 .bunko:has(#scene[data-renderer="static"]) :is(.era, .era-range) { display:none; }
 .bunko .era-range:hover, .bunko .era-range:focus-visible { opacity:1; }
 .bunko .seal { position:absolute; left:28px; top:26px; color:var(--entry-seal); border:1px solid var(--entry-seal); font:19px/1.3 var(--bunko-title); padding:5px; pointer-events:none; }

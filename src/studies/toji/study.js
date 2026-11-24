@@ -51,7 +51,8 @@ const era=document.createElement('p');era.className='era';era.setAttribute('aria
 // The age by hand (chain-2 V8): a slider under the label, from a lid fresh from the workshop to the Hatsune set's age. Once moved it holds
 // the age; the demonstration and the unattended breathing no longer change it. It starts where the plate does (?years, ?age, else
 // AGE_DEFAULT: plate/age.js), and follows the demonstration until it is moved. A URL age past the Hatsune set's (?age=1, ?years=1000)
-// stretches the slider to reach it, so the slider and the lid always show the same age (chain-3 P2).
+// stretches the slider to reach it, so the slider and the lid always show the same age (chain-3 P2). A debugging URL: ?age=1 reads as
+// about 3100 years (plate/age.js yearsFromAge stops just short of 1), and the demonstration still runs only to the Hatsune set's age.
 const startYears=Math.round(yearsFromAge(typeof location!=='undefined'?ageFromSearch(location.search):AGE_DEFAULT));
 let manualYears=null;
 const eraRange=document.createElement('input');eraRange.type='range';eraRange.className='era-range';eraRange.min='0';eraRange.max=String(Math.max(HATSUNE_NOW,startYears));eraRange.step='1';eraRange.value=String(startYears);

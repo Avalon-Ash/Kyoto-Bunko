@@ -69,9 +69,10 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
   };
   /**
    * Every failure shows the still picture; the log says at which step it came (load, start, first ward, or later: a shader that failed to compile or link, a frame that threw).
-   * @param {unknown} error @param {string} [step]
+   * @param {unknown} error
+   * @param {string} step
    */
-  const fallback = (error, step = 'compile or draw') => {
+  const fallback = (error, step) => {
     if (disposed || plate?.kind === 'static') return;
     console.warn(`three.js plate unavailable (${step}), showing the still picture:`, error);
     useStatic(); ready();
@@ -86,9 +87,10 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
       if (disposed) return;
       loading = false;
       step = 'start';
-      plate = createThreeRenderer(gl2, canvas, ready, error => fallback(error));
+      plate = createThreeRenderer(gl2, canvas, ready, error => fallback(error, step));
       step = 'first ward';
       setMesh(ward); ready();
+      step = 'compile or draw';
     }).catch(error => fallback(error, step));
   }
   /** The canvas's drawing size for frame f (resized if needed), its camera matrix and the plate units one pixel covers. */
