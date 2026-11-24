@@ -63,7 +63,7 @@ export const BOX_PAPER_FRAG_GLSL = `
   }
 }`;
 // The lid's age in years and uAge: age.js (shared with the page's age slider).
-export {AGE_TAU_YEARS, HATSUNE_YEARS, ageFromYears} from './age.js';
+export {AGE_TAU_YEARS, CALIBRATION_YEARS, ageFromYears} from './age.js';
 export const BOX_MATERIALS = {
   // Hatsune: the whole body is nashiji (amber lacquer over gold powder), not black lacquer (user decision, handoff §3).
   20: meshLook({name: 'side', color: '#a8722e', metalness: .72, roughness: .45, clearcoat: 1, clearcoatRoughness: .06, flake: 0, nashijiSide: true}),

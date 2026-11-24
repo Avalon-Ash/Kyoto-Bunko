@@ -4,10 +4,18 @@
 /**
  * The lid's age (uAge, 0..1) from its age in years. Lacquer clears fastest in its first decades and ever more slowly after: an
  * exponential approach with a time constant of AGE_TAU_YEARS. The fixed point is the Hatsune trousseau, made in 1639: at its age
- * (HATSUNE_YEARS in 2026) the curve gives about .92, the look the shader's age 1 constants were set against. 0 years is a lid fresh
+ * (CALIBRATION_YEARS) the curve gives about .92, the look the shader's age 1 constants were set against. 0 years is a lid fresh
  * from the workshop: a deep brown film over the gold.
  */
-export const AGE_TAU_YEARS = 150, HATSUNE_YEARS = 2026 - 1639;
+export const AGE_TAU_YEARS = 150;
+/** The year the Hatsune trousseau was made: the fixed point of the age scale. */
+export const HATSUNE_MADE = 1639;
+/** The year the curve and the shader's age 1 constants were matched to the Hatsune set's look. */
+const CALIBRATED_IN = 2026;
+/** The Hatsune set's age when the curve was set. Fixed: it does not grow with the calendar (the slider's top does: hatsuneAge). */
+export const CALIBRATION_YEARS = CALIBRATED_IN - HATSUNE_MADE;
+/** The Hatsune set's age in `year` (default: this year): the top of the age slider and the end of the demonstration. */
+export const hatsuneAge = (year = new Date().getFullYear()) => year - HATSUNE_MADE;
 /** @param {unknown} years */
 export const ageFromYears = years => 1 - Math.exp(-Math.max(0, Number(years) || 0) / AGE_TAU_YEARS);
 /** The inverse of ageFromYears: the years that give uAge `age` (0 ≤ age < 1). @param {number} age */

@@ -47,7 +47,7 @@ export const FEEL = Object.freeze({
   sweepTrailScaleX: .63, // Trail X scale applied to the swept light position
   sweepTrailScaleY: .45, // Trail Y scale applied to the swept light position
   demoDurationSec: DEMO_AGE_MS / 1000 + DEMO_TAIL_SEC, // Total length (s) of the demonstration sweep: the ageing, then a short rest
-  demoAgeMs: DEMO_AGE_MS, // Duration (ms) for the demo patina age to progress from 0 to HATSUNE_YEARS
+  demoAgeMs: DEMO_AGE_MS, // Duration (ms) for the demo patina age to progress from 0 to the Hatsune set's age (plate/age.js hatsuneAge)
   idleAgeFreq: .16, // Angular frequency (rad/s) of the unattended patina breathing cycle
   idleLiftFreq: .7, // Angular frequency (rad/s) of the unattended relief lift breathing
   idleLiftAmp: 1 - LIFT_EMBEDDED, // Amplitude of the unattended relief lift breathing around liftEmbedded: its crest is exactly full lift (1)

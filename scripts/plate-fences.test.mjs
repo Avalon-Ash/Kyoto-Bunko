@@ -175,3 +175,13 @@ test('camera: the home camera is written once, in plate/camera.js (chain-3 P1)',
     assert.doesNotMatch(src, /\[\s*430\s*,\s*720\s*,\s*920\s*\]|\[\s*0\s*,\s*40\s*,\s*0\s*\]/, `${f} writes the eye or target itself`);
   }
 });
+
+test('age: the Hatsune year is written once; the calibration age is fixed while the slider top follows the year (chain-3 P2)', async () => {
+  const {readFileSync} = await import('node:fs');
+  const {HATSUNE_MADE, CALIBRATION_YEARS, hatsuneAge} = await import('../src/studies/toji/plate/age.js');
+  assert.equal(hatsuneAge(2026), CALIBRATION_YEARS);
+  assert.equal(hatsuneAge(2027), CALIBRATION_YEARS + 1, 'the slider top grows a year a year; the calibration does not');
+  assert.equal(hatsuneAge(HATSUNE_MADE), 0);
+  for (const f of ['study.js', 'feel.js', 'plate/three-renderer.js', 'plate/three-pack.js'])
+    assert.doesNotMatch(readFileSync(new URL(`../src/studies/toji/${f}`, import.meta.url), 'utf8'), /\b1639\b/, `${f} writes the year itself`);
+});

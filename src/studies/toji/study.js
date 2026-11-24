@@ -8,7 +8,7 @@ import {viewBox,clampPan,clampZoom,isZoomed,rubberBand,panLimit,planePoint,ancho
 import {mountBackdrop,cabinetKeepout} from './backdrop.js';
 import {WARD_ART} from './ward-art.js';
 import {FEEL} from './feel.js';
-import {AGE_DEFAULT, ageFromSearch, yearsFromAge} from './plate/age.js';
+import {AGE_DEFAULT, ageFromSearch, yearsFromAge, hatsuneAge} from './plate/age.js';
 
 // Cabinet timings, distances and feel coefficients: feel.js (one table, read by the expressions below).
 
@@ -45,15 +45,16 @@ let dragOffset=0,dragAnimation=null,kick=0;
 let zoom=1,zoomTarget=1,panX=0,panY=0,panTX=0,panTY=0,pinch=null,lastTap=null;
 let lastActivity=-Infinity,idlePhase=0,autoPlaying=false;
 // The lid's age in years while it is being shown off (null: the age it was made with). The demonstration runs it once from a lid fresh
-// from the workshop to the Hatsune set's age (1639 to now); the unattended cabinet breathes between the two. A small label says the year.
-const HATSUNE_YEARS=new Date().getFullYear()-1639;let years=null;
+// from the workshop to the Hatsune set's age (plate/age.js hatsuneAge: from the year it was made to now); the unattended cabinet breathes between the two. A small label says the year.
+const HATSUNE_NOW=hatsuneAge();let years=null;
 const era=document.createElement('p');era.className='era';era.setAttribute('aria-hidden','true');root.querySelector('.seal')?.after(era);
 // The age by hand (chain-2 V8): a slider under the label, from a lid fresh from the workshop to the Hatsune set's age. Once moved it holds
 // the age; the demonstration and the unattended breathing no longer change it. It starts where the plate does (?years, ?age, else
-// AGE_DEFAULT: plate/age.js), and follows the demonstration until it is moved.
-const startYears=Math.min(HATSUNE_YEARS,Math.round(yearsFromAge(typeof location!=='undefined'?ageFromSearch(location.search):AGE_DEFAULT)));
+// AGE_DEFAULT: plate/age.js), and follows the demonstration until it is moved. A URL age past the Hatsune set's (?age=1, ?years=1000)
+// stretches the slider to reach it, so the slider and the lid always show the same age (chain-3 P2).
+const startYears=Math.round(yearsFromAge(typeof location!=='undefined'?ageFromSearch(location.search):AGE_DEFAULT));
 let manualYears=null;
-const eraRange=document.createElement('input');eraRange.type='range';eraRange.className='era-range';eraRange.min='0';eraRange.max=String(HATSUNE_YEARS);eraRange.step='1';eraRange.value=String(startYears);
+const eraRange=document.createElement('input');eraRange.type='range';eraRange.className='era-range';eraRange.min='0';eraRange.max=String(Math.max(HATSUNE_NOW,startYears));eraRange.step='1';eraRange.value=String(startYears);
 era.after(eraRange);
 const syncEra=()=>{
   era.hidden=years===null;if(years!==null)era.textContent=`${language==='ja'?'漆齢':'漆齡'}${kanjiNumber(years,language)}年`;
@@ -221,7 +222,7 @@ function tick(time){
     if(t>FEEL.demoDurationSec||still())endDemo();
     else{tx=Math.sin(t*FEEL.sweepFreqX)*FEEL.sweepAmpX;ty=Math.cos(t*FEEL.sweepFreqY)*FEEL.sweepAmpY;addTrail(tx*FEEL.sweepTrailScaleX,ty*FEEL.sweepTrailScaleY,time);}
   }
-  years=manualYears!==null?manualYears:demoStart?Math.min(1,(time-demoStart)/FEEL.demoAgeMs)*HATSUNE_YEARS:autoPlaying?HATSUNE_YEARS*(.5-.5*Math.cos(idlePhase*FEEL.idleAgeFreq)):null;syncEra();
+  years=manualYears!==null?manualYears:demoStart?Math.min(1,(time-demoStart)/FEEL.demoAgeMs)*HATSUNE_NOW:autoPlaying?HATSUNE_NOW*(.5-.5*Math.cos(idlePhase*FEEL.idleAgeFreq)):null;syncEra();
   bookProgress=progressToward(bookProgress,bookTarget,dt,still());
   if(bookProgress===1&&bookState==='opening'){bookState='unrolling';bookReadyAt=time+(still()?0:FEEL.unrollMs);syncBook();}
   if(bookState==='unrolling'&&(time>=bookReadyAt||still()))enterReading();
