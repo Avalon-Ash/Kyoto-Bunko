@@ -44,25 +44,32 @@ let dragOffset=0,dragAnimation=null,kick=0;
 // Close-up: current and target zoom/pan; a pinch or pan writes both, the tick eases current toward target.
 let zoom=1,zoomTarget=1,panX=0,panY=0,panTX=0,panTY=0,pinch=null,lastTap=null;
 let lastActivity=-Infinity,idlePhase=0,autoPlaying=false;
-// The lid's age in years while it is being shown off (null: the age it was made with). The demonstration runs it once from a lid fresh
-// from the workshop to the Hatsune set's age (plate/age.js hatsuneAge: from the year it was made to now); the unattended cabinet breathes between the two. A small label says the year.
-const HATSUNE_NOW=hatsuneAge();let years=null;
-const era=document.createElement('p');era.className='era';era.setAttribute('aria-hidden','true');root.querySelector('.seal')?.after(era);
-// The age by hand (chain-2 V8): a slider under the label, from a lid fresh from the workshop to the Hatsune set's age. Once moved it holds
-// the age; the demonstration and the unattended breathing no longer change it. It starts where the plate does (?years, ?age, else
-// AGE_DEFAULT: plate/age.js), and follows the demonstration until it is moved. A URL age past the Hatsune set's (?age=1, ?years=1000)
-// stretches the slider to reach it, so the slider and the lid always show the same age (chain-3 P2). A debugging URL: ?age=1 reads as
+// The lid's age in years while it is shown (null: the age it was made with). Two ways to set it, side by side in the era panel
+// (template.ts, bottom right, mirroring the ward caption; chain-3):
+//   auto    the original: the demonstration runs it once from a lid fresh from the workshop to the Hatsune set's age (plate/age.js
+//           hatsuneAge), and the unattended cabinet breathes between the two. The scale's thumb follows.
+//   custom  the age by hand (chain-2 V8): moving the scale, or pressing 自訂, holds an age; the demonstration and the breathing no longer
+//           change it. Pressing 自動 hands the age back and runs the demonstration once.
+// The scale starts where the plate does (?years, ?age, else AGE_DEFAULT). A URL age past the Hatsune set's (?age=1, ?years=1000)
+// stretches the scale to reach it, so the scale and the lid always show the same age (chain-3 P2). A debugging URL: ?age=1 reads as
 // about 3100 years (plate/age.js yearsFromAge stops just short of 1), and the demonstration still runs only to the Hatsune set's age.
+const HATSUNE_NOW=hatsuneAge();let years=null;
 const startYears=Math.round(yearsFromAge(typeof location!=='undefined'?ageFromSearch(location.search):AGE_DEFAULT));
-let manualYears=null;
-const eraRange=document.createElement('input');eraRange.type='range';eraRange.className='era-range';eraRange.min='0';eraRange.max=String(Math.max(HATSUNE_NOW,startYears));eraRange.step='1';eraRange.value=String(startYears);
-era.after(eraRange);
+let manualYears=null,eraLanguage=null;
+const ERA_TICK_YEARS=100; // one tick on the scale a century
+const eraPanel=$('era-panel'),era=$('era'),eraRange=/** @type {HTMLInputElement} */($('era-range')),eraMax=Math.max(HATSUNE_NOW,startYears);
+eraRange.max=String(eraMax);eraRange.value=String(startYears);eraRange.style.setProperty('--era-tick',`${ERA_TICK_YEARS/eraMax*100}%`);
 const syncEra=()=>{
-  era.hidden=years===null;if(years!==null)era.textContent=`${language==='ja'?'漆齢':'漆齡'}${kanjiNumber(years,language)}年`;
-  const shown=Math.round(years??startYears);if(eraRange.value!==String(shown))eraRange.value=String(shown);
-  const label=translate('bunko_age',language),valueText=`${kanjiNumber(shown,language)}年`;
-  if(eraRange.getAttribute('aria-label')!==label)eraRange.setAttribute('aria-label',label);
-  if(eraRange.getAttribute('aria-valuetext')!==valueText)eraRange.setAttribute('aria-valuetext',valueText);
+  if(eraLanguage!==language){
+    eraLanguage=language;
+    for(const [id,key] of [['era-kicker','bunko_age_kicker'],['era-new','bunko_age_new'],['era-old','bunko_age_old'],['era-auto','bunko_age_auto'],['era-custom','bunko_age_custom']])$(id).textContent=translate(key,language);
+    $('era-mode').setAttribute('aria-label',translate('bunko_age_mode',language));eraRange.setAttribute('aria-label',translate('bunko_age',language));
+  }
+  const shown=Math.round(years??startYears),manual=manualYears!==null,text=`${kanjiNumber(shown,language)}年`;
+  if(era.textContent!==text){era.textContent=text;eraRange.setAttribute('aria-valuetext',text);}
+  if(eraRange.value!==String(shown))eraRange.value=String(shown);
+  const mode=manual?'custom':'auto';
+  if(eraPanel.dataset.mode!==mode){eraPanel.dataset.mode=mode;$('era-auto').setAttribute('aria-pressed',String(!manual));$('era-custom').setAttribute('aria-pressed',String(manual));}
 };syncEra();
 /** The demonstration ends: by itself after demoDurationSec, or when the age slider takes over. */
 function endDemo(){demoStart=0;hover=false;tx=ty=0;notify();}
@@ -442,6 +449,9 @@ listen(canvas,'pointerup',e=>{
   if(e.pointerType==='touch')release();
 });
 listen(eraRange,'input',()=>{manualYears=Number(eraRange.value);years=manualYears;if(demoStart)endDemo();syncEra();schedule();});
+// The two modes (the era panel): 自訂 holds the age shown now; 自動 hands it back and runs the demonstration once.
+listen($('era-custom'),'click',()=>{if(manualYears!==null)return;manualYears=Math.round(years??startYears);years=manualYears;if(demoStart)endDemo();syncEra();schedule();});
+listen($('era-auto'),'click',()=>{if(manualYears===null)return;manualYears=null;years=null;syncEra();demo();schedule();});
 listen(canvas,'focus',()=>{hover=true;schedule();});listen(canvas,'blur',release);
 listen(canvas,'keydown',e=>{
   if(e.key==='Escape'&&isZoomed(zoomTarget)){e.preventDefault();resetZoom();return;}
@@ -490,7 +500,7 @@ return {
     if(destroyed)return;destroyed=true;
     events.abort();intersection.disconnect();resize.disconnect();clearTimeout(ghostTimer);ghostAnimations.forEach(a=>a.cancel());ghosts.forEach(ghost=>ghost.remove());
     switchAnimation?.cancel();dragAnimation?.cancel();endDrag();cancelAnimationFrame(frame);frame=0;
-    dispose?.();backdrop.destroy();render=null;updateMesh=null;era.remove();eraRange.remove();
+    dispose?.();backdrop.destroy();render=null;updateMesh=null;
   },
 };
 }

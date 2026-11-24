@@ -77,8 +77,9 @@ const settle=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
 test('the home stage carries no study controls, reader or search',t=>{
   const {root}=environment(t);
   const controller=mountBunko(root,{embedded:true,paused:true});
-  assert.deepEqual([...root.querySelectorAll('button')].map(b=>b.id),['zoom-reset']);
-  // The one control on the home stage is the age slider beside the age label (user decision 2026-11-24, chain-2 V8).
+  // The only controls on the home stage are the era panel's (user decisions 2026-11-24: the age slider, chain-2 V8; its two modes, auto
+  // and by hand, side by side, chain-3) and the zoom reset.
+  assert.deepEqual([...root.querySelectorAll('button')].map(b=>b.id),['era-auto','era-custom','zoom-reset']);
   assert.deepEqual([...root.querySelectorAll('input,select,dialog,nav,form')].map(e=>e.className),['era-range']);
   controller.destroy();
 });

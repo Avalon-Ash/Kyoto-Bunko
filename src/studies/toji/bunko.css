@@ -20,15 +20,33 @@
 .bunko canvas[data-plate="true"] { filter:none; }
 .bunko .loading { position:absolute; inset:0; display:grid; place-content:center; background:var(--panel); padding:40px; text-align:center; line-height:2; }
 .bunko .loading[hidden] { display:none; }
-.bunko { --era-left:28px; --era-top:98px; --era-range-gap:16px; }
-.bunko .era { position:absolute; left:var(--era-left); top:var(--era-top); margin:0; color:var(--entry-seal); font:12px/1.5 var(--bunko-title); letter-spacing:.14em; writing-mode:vertical-rl; pointer-events:none; opacity:.85; }
-.bunko .era[hidden] { display:none; }
-/* The age by hand (study.js eraRange): a thin vertical slider beside the age label, older at the top. */
-.bunko .era-range { position:absolute; left:calc(var(--era-left) + var(--era-range-gap)); top:calc(var(--era-top) + 2px); width:28px; height:110px; margin:0; writing-mode:vertical-lr; direction:rtl; accent-color:var(--entry-seal); opacity:.7; cursor:ns-resize; touch-action:none; }
-.bunko .era-range[hidden] { display:none; }
-/* The still picture does not age: no age label or slider over it (renderer.js data-renderer). */
-.bunko:has(#scene[data-renderer="static"]) :is(.era, .era-range) { display:none; }
+/* The era panel (template.ts, study.js syncEra): the lid's age, bottom right, mirroring the ward caption at bottom left. A small kicker,
+   the age in years, a gold scale from new (新) to the Hatsune set's age (古) with a tick a century, and the two modes, auto and by hand. */
+.bunko { --era-scale-w:168px; --era-thumb:9px; }
+.bunko .era-panel { position:absolute; right:30px; bottom:24px; display:flex; flex-direction:column; align-items:flex-end; gap:4px; color:var(--ink); text-shadow:0 0 2px var(--paper),0 0 7px var(--paper); transition:opacity .3s; }
+.bunko .era-panel>small { font-size:10px; letter-spacing:.12em; color:var(--muted); }
+.bunko .era { font:600 17px/1.2 var(--bunko-title); letter-spacing:.14em; font-variant-numeric:tabular-nums; }
+.bunko .era-panel[data-mode="custom"] .era { color:var(--gold); }
+.bunko .era-scale { display:flex; align-items:center; gap:8px; font:11px/1 var(--bunko-title); color:var(--muted); }
+/* The scale: a 1px gold rule and the century ticks drawn on the input itself, inset by half a thumb so a tick sits where the thumb would. */
+.bunko .era-range { appearance:none; -webkit-appearance:none; width:var(--era-scale-w); height:24px; margin:0; background:
+  linear-gradient(var(--gold),var(--gold)) center/calc(100% - var(--era-thumb)) 1px no-repeat,
+  repeating-linear-gradient(90deg,var(--gold) 0 1px,transparent 1px var(--era-tick,25%)) center/calc(100% - var(--era-thumb)) 7px no-repeat;
+  opacity:.8; cursor:ew-resize; touch-action:none; }
+.bunko .era-range::-webkit-slider-runnable-track { height:24px; background:transparent; }
+.bunko .era-range::-moz-range-track { height:24px; background:transparent; }
+.bunko .era-range::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:var(--era-thumb); height:var(--era-thumb); margin-top:calc((24px - var(--era-thumb))/2); border:0; background:var(--gold); transform:rotate(45deg); box-shadow:0 0 6px 1px color-mix(in srgb,var(--gold) 60%,transparent); }
+.bunko .era-range::-moz-range-thumb { width:var(--era-thumb); height:var(--era-thumb); border:0; border-radius:0; background:var(--gold); transform:rotate(45deg); box-shadow:0 0 6px 1px color-mix(in srgb,var(--gold) 60%,transparent); }
 .bunko .era-range:hover, .bunko .era-range:focus-visible { opacity:1; }
+.bunko .era-range:focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
+/* The modes: two words, the one in force in gold and underlined; compact, with the touch target kept by the padding. */
+.bunko .era-mode { display:flex; gap:2px; }
+.bunko .era-mode>button { min-height:32px; padding:6px 8px; border:0; border-bottom:1px solid transparent; border-radius:0; background:none; font-size:11px; letter-spacing:.2em; color:var(--muted); text-shadow:inherit; }
+.bunko .era-mode>button:hover { background:none; color:var(--ink); }
+.bunko .era-mode>button[aria-pressed="true"] { color:var(--ink); border-bottom-color:var(--gold); background:none; }
+/* Out of the way when it does not apply: the still picture does not age; a close-up (the zoom reset takes the corner) and an open lid. */
+.bunko:has(#scene[data-renderer="static"]) .era-panel { display:none; }
+.bunko canvas[data-zoomed="true"]~.era-panel, .bunko .stage:not([data-book-state="closed"]):not([data-book-state="switching"]) .era-panel { opacity:0; pointer-events:none; }
 .bunko .seal { position:absolute; left:28px; top:26px; color:var(--entry-seal); border:1px solid var(--entry-seal); font:19px/1.3 var(--bunko-title); padding:5px; pointer-events:none; }
 .bunko .stage-caption { position:absolute; left:30px; bottom:24px; display:flex; flex-direction:column; gap:6px; pointer-events:none; color:var(--ink); }
 .bunko .stage-caption small { font-size:10px; letter-spacing:.12em; }
@@ -83,6 +101,9 @@
   .bunko .cabinet-verse { right:14px; top:18px; font-size:12px; }
   .bunko[data-embedded] #cabinet-context { font-size:11px; max-width:none; }
   .bunko .zoom-reset { right:14px; bottom:16px; }
+  .bunko .era-panel { right:16px; bottom:18px; }
+  .bunko { --era-scale-w:128px; }
+  .bunko .era { font-size:15px; }
 }
 /* While the three.js plate renderer loads, the stage stays open: the words and a breathing gold rule over the backdrop. */
 .bunko .loading[data-kind="plate"] { background:transparent; pointer-events:none; color:var(--ink); }
