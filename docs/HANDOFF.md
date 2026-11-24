@@ -40,20 +40,20 @@ npm run dev -- --host 127.0.0.1 --strictPort
 | 歲時記 | 只有[計畫](SEASONAL_PLAN.md)；首頁入口已移除。使用者 2026-11-22：擱到體質與畫面收完 |
 | 文箱架構 | `study.js`（`mountBunko`：手勢、移光、縮放、換函、開蓋）、`renderer.js`（選 three 或靜態圖）、`plate/three-renderer.js`＋`three-pack.js`、`plate/static-plate.js`、`plate/parts.js`＋`vocab.js`＋`mat.js`＋`<區>.js`（構圖資料）、`plate/creature-mesh.js`／`crag-mesh.js`／`architecture-mesh.js` 等（網格）、`backdrop.js`＋`ward-art.js`（背景） |
 
-## 3. 最近一次驗收（2026-11-24 清晨，分支 `claude/chain-1124`，第二條長鏈）
+## 3. 最近一次驗收（2026-11-24 上午，分支 `claude/chain3-1124`，第三條鏈）
 
 | 檢查 | 結果 |
 |---|---|
 | `npm run lint` | exit 0（`tsc --noEmit`、JS 的 JSDoc 型別檢查、ESLint、ADR 22 份） |
 | `npx --no-install tsx validate_data.js --strict` | ERROR 0、WARN 0，734 筆 |
-| `npm test` | `scripts/*.test.mjs` 162／162、`src/lib/*.test.ts` 29／29（`npm test` 失敗時完整輸出存到 `.shots/test-fail/`） |
-| `npm run build` | exit 0；`three-renderer` 807.75 kB（gzip 230.95）、`main` 362.58 kB（gzip 117.49）、`ClusterMap` 205.95 kB（gzip 61.44）；`dist` 沒有 `probe-*.js` |
+| `npm test` | `scripts/*.test.mjs` 164／164、`src/lib/*.test.ts` 29／29（`npm test` 失敗時完整輸出存到 `.shots/test-fail/`） |
+| `npm run build` | exit 0；`three-renderer` 807.78 kB（gzip 230.96）、`main` 362.58 kB（gzip 117.49）、`ClusterMap` 205.95 kB（gzip 61.44）；`dist` 沒有 `probe-*.js` |
 | `npm run smoke` | 一般：three.js 畫出、console 無錯；`node scripts/smoke.mjs --allow-static --query=plate=shaderfail`：著色器失敗時退回降級圖（ADR 0022） |
-| 部件雜湊、穿插 | `plate-parts-hash --check` 11／11（基準在 V1、V2、V5 之後重寫）；`plate-clip` findings 0 |
-| 像素證明 | F、H1、V7 沒改到靜止畫面（開案書 §8.1–§8.2）；拍圖每輪自己會在 1–5 個像素上跳 1 級，比對時改前改後各拍兩輪 |
-| 終審 | Fable 5.2（API 點數 $2.43）：可以合併；應修 3 條已修（開案書 §8.3） |
+| 部件雜湊、穿插 | `plate-parts-hash --check` 11／11（基準在 P4 之後重寫：南、左京、上京、山科）；`plate-clip` findings 0 |
+| 像素證明 | P1–P3 沒改到靜止畫面（第三條鏈開案書 §8.1；改前要拍兩次以上，`src` 切回改前重拍才分得出是哪一邊在跳）；拍圖每輪自己會在 1–5 個像素上跳 1 級 |
+| 終審 | Fable 5.2（API 點數 $1.07）：可以合併；應修 1 條已修，提問 4 條都查了（開案書 §8.2） |
 
-以上是主代理 11/24 清晨在主資料夾跑的（`claude/chain-1124`）。11/22 那天沒有拍圖；最近一次蓋面矩陣是 11/20 的 `plate-matrix.sh`（25 張 0 差異，[`plans/2026-11-20-next.md`](plans/2026-11-20-next.md)）。穿插檢查用 `node scripts/plate-clip.mjs <out.json>`，上次跑是 11/23 的長鏈整合（`c19e02f`，findings 0）。
+以上是主代理 11/24 上午在主資料夾跑的（`claude/chain3-1124`；終審後的修正只重跑 lint、test、兩種 smoke）。11/22 那天沒有拍圖；最近一次蓋面矩陣是 11/20 的 `plate-matrix.sh`（25 張 0 差異，[`plans/2026-11-20-next.md`](plans/2026-11-20-next.md)）。穿插檢查用 `node scripts/plate-clip.mjs <out.json>`，上次跑是 11/23 的長鏈整合（`c19e02f`，findings 0）。
 
 **沒人驗過的**：11/16 之後上線的畫面與效能，沒有人在手機實機上看過或量過；所有截圖與量測都是這台機器的無頭 Chrome（桌機 GPU）。使用者 2026-11-22 決定不看實機、畫面由主代理全權決定（§4.1）；所以報告裡不要寫「實機看過」。
 
@@ -74,7 +74,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 **第二條長鏈（2026-11-24）**：使用者 11/24 凌晨說「長鏈開跑」，睡前說「還有長鏈可跑就安排，有問題問顧問」。F 體質（拍圖腳本步數一處、`feel.js`、`ward-keys.ts`、刪 `muraSilver`、測試失敗存檔、建置套件搬 dev）、G 資料（安祥寺、真如堂加國寶與座標）、H1 著色器失敗退回降級圖（ADR 0022，Codex 實作）、I 畫面（鳳凰頭、草葦加寬、霞避盒重算、部件跟著年代、**年代拖桿**、九區岩重畫）都做完，Fable 終審可以合併。沒做的（V6 盒內色紙、金草對比、README 重拍等）在開案書 §8.3 的積壓。**下一步（主席建議，使用者 11/24 還沒回答）**：第三條鏈做 V6 盒內色紙、金草對比（要換材質）、README 八張與 OG 圖重拍、終審小事（開案書 §8.3）；兩個解耦提案（相機眼睛位置 7 處、`HATSUNE_YEARS` 兩種意思）開跑前一起問。12/1 起做 D1 三家店複查。`C:\Git\_wt_kyoto_h1` 是被行程佔住的空資料夾，重開機後可刪（11/24 上午再試仍被佔住）。
 
-**第三條鏈（2026-11-24 上午開案）**：開案書 [`plans/2026-11-24-chain-3.md`](plans/2026-11-24-chain-3.md)。V6 盒內色紙核對後結案（早已是料紙）。段一是短鏈：相機位置與 `HATSUNE_YEARS` 兩個解耦、終審小事（派 Neon）、金草換材質、FS-018 再查、README／OG 重拍；段二歲時記使用者 11/24 選繼續擱置。開跑前的問題使用者 11/24 上午已回答（該檔 §5.1），可以開跑。Claude 週總量只剩 29%，段一的停損線在該檔 §1。
+**第三條鏈（2026-11-24 上午開案）**：開案書 [`plans/2026-11-24-chain-3.md`](plans/2026-11-24-chain-3.md)。V6 盒內色紙核對後結案（早已是料紙）。段一是短鏈：相機位置與 `HATSUNE_YEARS` 兩個解耦、終審小事（派 Neon）、金草換材質、FS-018 再查、README／OG 重拍；段二歲時記使用者 11/24 選繼續擱置。開跑前的問題使用者 11/24 上午已回答（該檔 §5.1）。**段一做完**（同日上午，開案書 §8）：P1 相機位置、P2 年數拆名、P3 終審小事（主席自己做，沒派 Neon）、P4 金草改平文金片、P6 降級圖四區與 README／OG 重拍；Fable 終審可以合併。FS-018 又遇到 Cloudflare，仍未確認。積壓在開案書 §8.3（新的一條：context 復原後停在佔位圖，改前就有）。Claude 週總量只剩 29%，段一的停損線在該檔 §1。
 
 誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與目前開案書（`plans/2026-11-24-chain-2.md`）§1 的額度表、§3 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
 
@@ -110,7 +110,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 - 量測：`node scripts/plate-doha-measure.mjs <區…>`（佔比、留白、直線）、`plate-doha-similar.mjs`（形的相似度）、`plate-clip.mjs <out.json>`（穿插）。降級圖：`node scripts/plate-fallback-shots.mjs`（22 張；只改了幾區就把其餘 `git checkout` 還原）。
 - **冒煙測試**：`npm run smoke`（首頁 → 換函 → 開蓋進卷 → 返回，console 無錯；約 5 秒；要 dev server 與 GPU，不在 `npm test` 裡）。改了文箱或首頁的流程就跑一次。
 - **拍圖 job 可以直接寫區名**（`kita`、`W_KITA`），步數的寫法照舊能用；腳本的 dev 位址、埠與 Chrome 啟動都在 `scripts/lib/plate-env.mjs`。
-- **有幾個像素會自己跳 1 級**：南區 (448,261)、中京 (755–757, 387–392)、伏見兩個點、下京夜 (634,360)、西京日 (488–681, 219–264 之間的三點)（1440×900 的圖）。逐像素比對只在這些位置差 1 級時，重拍那一張再比；和任何一次改前的拍攝相同就不算差異（開案書 §9.4、§9.5、§9.9）。
+- **有幾個像素會自己跳 1 級**：南區 (448,261)、中京 (755–757, 387–392)、中京日 (550,196)、伏見兩個點、下京夜 (634,360)、西京日 (488–681, 219–264 之間的三點)（1440×900 的圖）。逐像素比對只在這些位置差 1 級時，重拍那一張再比；和任何一次改前的拍攝相同就不算差異（開案書 §9.4、§9.5、§9.9）。
 - **量第一次載入與換函**：`node scripts/perf-home.mjs [--cpu 4] [--size 375x812 --mobile] [--url …] [--compile]`（用法在檔頭；自己開、自己關一個 9379 埠的 Chrome）。要量正式建置就 `vite build` 到別處再 `vite preview`，用 `--url` 指過去；dev server 沒打包，JS 載入會被高估。
 - **不要在拍圖用的 Chrome 開著時跑 `npm ci`**：`node_modules/.cache/chrome-profile` 被它鎖住，`npm ci` 會刪到一半以 EBUSY 中斷。要乾淨安裝就在工作樹裝，或先關掉自己啟動的那個 Chrome（開案書 §9.6）。
 - **要證明一個修改沒有動到畫面**：`bash scripts/plate-matrix.sh <資料夾>` 拍改前與改後（固定時鐘、只拍盤），`node scripts/plate-diff.mjs <改前>/<組> <改後>/<組>` 逐像素比。改前與改後要在同一次開機、同一個 dev server 裡拍（跨一次重開機會差 1–2 級）；有差異的那一張要重拍，重現才算。拍圖進行中不改 `src/`。細節在材質表提案 §8.2、§8.7、§8.8。拍圖腳本的檢查偶爾會讀早了、對某一張報 WRONG 而圖本身是對的（`plans/2026-11-20-next.md` N5）：以比對結果為準並重拍那一張。
