@@ -83,10 +83,12 @@ export const waitForChrome = async (port, attempts = 40, intervalMs = 250) => {
 
 /**
  * Launches headless Chrome with the exact GPU and window flags required by plate scripts.
- * @param {{port: number, profileDir: string, width?: number, height?: number, detached?: boolean}} options
+ * `extraArgs` is for callers that need more flags (perf-home's --gpu); the default flag set stays what the pixel baselines used.
+ * @param {{port: number, profileDir: string, width?: number, height?: number, detached?: boolean, extraArgs?: string[]}} options
  */
-export function launchChrome({port, profileDir, width = 1440, height = 900, detached = false}) {
+export function launchChrome({port, profileDir, width = 1440, height = 900, detached = false, extraArgs = []}) {
   const args = [
+    ...extraArgs,
     '--headless=new',
     `--remote-debugging-port=${port}`,
     `--user-data-dir=${profileDir}`,

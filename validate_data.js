@@ -12,10 +12,12 @@
  *   - ZH / JA Locale 缺漏或孤立節點
  *   - map-centers：AREA_CENTERS 缺漏、SPOT_POSITIONS 指向不存在的景點
  *   - TYPE_TAG_GROUP_MAP 與 TYPES 不同步
+ *   - 歲時記：活動主檔、雙語內容、場地、年度場次、日期、狀態或來源無效
  * WARN（資料品質規範，預設不阻擋；加 --strict 時一併視為失敗）：
  *   - ZH locale.tags 未與 schema.tagIds 鏡射
  *   - 世界遺產 / 國寶景點未在 SPOT_POSITIONS 註冊座標
  *   - JA name 重複
+ *   - 歲時記：年度缺少活動場次列，或場次展開後沒有舉辦日期
  */
 import fs from 'fs';
 import path from 'path';
@@ -27,6 +29,9 @@ import { AREA_KEYS, AREA_BY_WARD } from './src/data/areas.ts';
 import { AREA_CENTERS, SPOT_POSITIONS } from './src/data/map-centers.ts';
 import { TYPE_TAG_GROUP_MAP } from './src/data/type-tag-groups.ts';
 import { MUNICIPALITIES, DEFAULT_MUNICIPALITY } from './src/data/municipalities.ts';
+import { EVENT_CATALOG } from './src/data/events/catalog.ts';
+import { EVENT_LOCALES, EVENT_OCCURRENCES } from './src/data/events/loader.ts';
+import { checkEvents } from './src/lib/event-checks.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -151,6 +156,18 @@ async function run() {
   for (const [typeId, groups] of Object.entries(TYPE_TAG_GROUP_MAP)) {
     if (!TYPES[typeId]) err(`type-tag-groups: ${typeId} 不存在於 TYPES`);
     for (const g of groups) if (!validGroups.has(g)) err(`type-tag-groups: ${typeId} 含未知 group「${g}」`);
+  }
+
+  // 歲時記
+  for (const { level, code, message } of checkEvents({
+    catalog: EVENT_CATALOG,
+    occurrences: EVENT_OCCURRENCES,
+    locales: EVENT_LOCALES,
+    spotIds: new Set(idOwner.keys()),
+    wardKeys: WARD_KEYS,
+    municipalities: MUNICIPALITIES,
+  })) {
+    (level === 'ERROR' ? err : warn)(`歲時記 [${code}] ${message}`);
   }
 
   // 報告

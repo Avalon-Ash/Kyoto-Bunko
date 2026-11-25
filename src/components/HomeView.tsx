@@ -9,10 +9,12 @@ import { ScrollRoller } from './ScrollRoller';
 import { BunkoTools } from './BunkoTools';
 import { MakieIcon } from './MakieIcon';
 import type { MakieMotif } from '../lib/makie-icons';
+import { NAV_MODES, type NavMode } from '../lib/nav-modes';
+
+const SeasonalView = React.lazy(() => import('./SeasonalView').then(module => ({ default: module.SeasonalView })));
 
 const GROUPS = ['food', 'misc', 'culture', 'nature', 'transport', 'acg'] as const;
 const GROUP_MOTIFS: Record<string, MakieMotif> = { food: 'food', misc: 'all', culture: 'temple', nature: 'nature', transport: 'transport', acg: 'acg' };
-const MODES = [['ward', 'mode_bunko'], ['area', 'mode_area'], ['tag', 'mode_tag']] as const;
 const AREA_STATS = getAreaStats();
 
 interface HomeViewProps {
@@ -48,6 +50,46 @@ export const HomeView: React.FC<HomeViewProps> = ({ engine, cabinetWard, onCabin
   useEffect(() => { if (!activeTag) tagOpener.current?.focus(); }, [activeTag]);
   const closeTag = () => setActiveTag(null);
 
+  const renderMode: Record<NavMode, () => React.JSX.Element> = {
+    ward: () => (
+      <BunkoEntrance lang={lang} wardId={cabinetWard} preferences={cabinetPreferences}
+        onWardChange={onCabinetWardChange} onOpenVolume={ward => openDetail(ward, 'ward')} />
+    ),
+    area: () => (
+      <div className="bunko-index">
+        <p className="index-caption">{t('caption_area')}</p>
+        <div className="area-leaves">{AREA_KEYS.map((areaId, index) => (
+          <button key={areaId} type="button" data-area-id={areaId} onClick={() => openDetail(areaId, 'area')}>
+            <span className="leaf-number">{String(index + 1).padStart(2, '0')}</span><MakieIcon motif="map" />
+            <span className="leaf-name">{t(areaId, AREA_NAMES)}</span>
+            <small>{AREA_STATS[areaId] || 0} {t('unit_spot')}</small><span aria-hidden="true">↗</span>
+          </button>
+        ))}</div>
+      </div>
+    ),
+    tag: () => (
+      <div className="bunko-index">
+        <p className="index-caption">{t('caption_tag')}</p>
+        {GROUPS.map(group => (
+          <section className="index-group" key={group}>
+            <h2><MakieIcon motif={GROUP_MOTIFS[group]} />{TAG_GROUP_LABELS[group]?.[lang] ?? group}</h2>
+            <div className="index-tags">{Object.values(TAG_REGISTRY).filter(tag => tag.group === group).map(tag => (
+              <button key={tag.id} type="button" aria-pressed={activeTag === tag.id}
+                onClick={event => { tagOpener.current = event.currentTarget; setActiveTag(tag.id); }}>
+                <span>{tag.label[lang]}</span><small>{tagCounts[tag.id] ?? '—'}</small>
+              </button>
+            ))}</div>
+          </section>
+        ))}
+      </div>
+    ),
+    seasonal: () => (
+      <React.Suspense fallback={<div className="ui-status" role="status">{t('loading')}</div>}>
+        <SeasonalView lang={lang} />
+      </React.Suspense>
+    ),
+  };
+
   return (
     <motion.div key="home" initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={reduceMotion ? { duration: 0 } : undefined} className="kyoto-home">
@@ -63,42 +105,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ engine, cabinetWard, onCabin
       </header>
 
       <nav inert={overlayOpen} className="mode-tabs" aria-label={t('mode_label')}>
-        {MODES.map(([id, label]) => (
+        {NAV_MODES.map(([id, label]) => (
           <button key={id} type="button" aria-pressed={mode === id} onClick={() => engine.switchMode(id)}>{t(label)}</button>
         ))}
       </nav>
 
       <div inert={overlayOpen} ref={scrollRef} className="home-body">
-        {mode === 'ward' ? (
-          <BunkoEntrance lang={lang} wardId={cabinetWard} preferences={cabinetPreferences}
-            onWardChange={onCabinetWardChange} onOpenVolume={ward => openDetail(ward, 'ward')} />
-        ) : mode === 'tag' ? (
-          <div className="bunko-index">
-            <p className="index-caption">{t('caption_tag')}</p>
-            {GROUPS.map(group => (
-              <section className="index-group" key={group}>
-                <h2><MakieIcon motif={GROUP_MOTIFS[group]} />{TAG_GROUP_LABELS[group]?.[lang] ?? group}</h2>
-                <div className="index-tags">{Object.values(TAG_REGISTRY).filter(tag => tag.group === group).map(tag => (
-                  <button key={tag.id} type="button" aria-pressed={activeTag === tag.id}
-                    onClick={event => { tagOpener.current = event.currentTarget; setActiveTag(tag.id); }}>
-                    <span>{tag.label[lang]}</span><small>{tagCounts[tag.id] ?? '—'}</small>
-                  </button>
-                ))}</div>
-              </section>
-            ))}
-          </div>
-        ) : (
-          <div className="bunko-index">
-            <p className="index-caption">{t('caption_area')}</p>
-            <div className="area-leaves">{AREA_KEYS.map((areaId, index) => (
-              <button key={areaId} type="button" data-area-id={areaId} onClick={() => openDetail(areaId, 'area')}>
-                <span className="leaf-number">{String(index + 1).padStart(2, '0')}</span><MakieIcon motif="map" />
-                <span className="leaf-name">{t(areaId, AREA_NAMES)}</span>
-                <small>{AREA_STATS[areaId] || 0} {t('unit_spot')}</small><span aria-hidden="true">↗</span>
-              </button>
-            ))}</div>
-          </div>
-        )}
+        {renderMode[mode]()}
       </div>
 
       <AnimatePresence mode="wait">

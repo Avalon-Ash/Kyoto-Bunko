@@ -92,3 +92,5 @@
 - [0020 鄰盒的預覽只畫背景已建好的區，沒好就淡出淡入](0020-neighbour-pictures-only-from-prefetch.md)：畫預覽圖不再同步建鄰區（換函後 285–600 ms 的卡頓 → ≤77 ms），來不及預建時換函改淡出淡入。
 - [0021 JavaScript 也做型別檢查，ESLint 只管正確性](0021-javascript-type-check-and-correctness-lint.md)：`tsconfig.js.json` 用 JSDoc 檢查全部 JavaScript、關卡是 0 個錯誤、只用 JSDoc 修；ESLint 只開正確性規則，兩者都接在 `npm run lint`。
 - [0022 著色器編譯或連結失敗時退回降級圖](0022-shader-failure-falls-back-to-still-picture.md)：`three-renderer.js` 的 `reportFailure` 是唯一的失敗通知，`renderer.js` 的 `fallback` 換成同區同日夜的降級圖；`?plate=shaderfail`（只在開發時）可重現。
+- [0023 歲時記活動資料：主檔、年度場次與雙語內容分離](0023-seasonal-events-catalog-occurrences-locales.md)：活動放 `src/data/events/`，主檔、年度場次、中日 locale 分開，和地點的關係只在 `venues`，畫面只經 `loader.ts`，不改受保護檔。
+- [0024 歲時記的日期語意：東京曆日、場次展開與狀態規則](0024-seasonal-dates-tokyo-sessions-status.md)：東京曆日字串、多筆 session、日期判斷只在 `seasonal-query.ts`、狀態規則一張表、例年日期算已確認但要標示。
