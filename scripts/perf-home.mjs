@@ -135,10 +135,10 @@ try {
             await sleep(POLL_MS);
           }
           const sw = await evalJs(`({long: __perf.long.filter(([t]) => t >= ${keyAt}), gaps: __perf.gaps.filter(([t]) => t >= ${keyAt}).map(([, d]) => d)})`);
-          // prefetched false: the neighbour was still unbuilt and the switch built it in one task, so its numbers measure the
+          // prefetched (written by three-renderer activate(); null when the canvas has none, e.g. the still picture) false: the neighbour was still unbuilt and the switch built it in one task, so its numbers measure the
           // build, not the switch (under --cpu 4 with --taps the idle-time prefetch may not finish in PREFETCH_SETTLE_MS).
           const shown = await evalJs(`(({renderedWard, prefetched}) => ({renderedWard, prefetched}))(document.querySelector('#scene').dataset)`);
-          row.switch = {from: before, to: shown.renderedWard, prefetched: shown.prefetched === 'true', changedMs,
+          row.switch = {from: before, to: shown.renderedWard, prefetched: shown.prefetched === undefined ? null : shown.prefetched === 'true', changedMs,
             maxGapMs: Math.round(Math.max(0, ...sw.gaps)), gapsOver50: sw.gaps.filter(d => d > LONG_TASK_MS).length,
             longTasks: sw.long.length, longestTaskMs: Math.round(Math.max(0, ...sw.long.map(([, d]) => d)))};
         }

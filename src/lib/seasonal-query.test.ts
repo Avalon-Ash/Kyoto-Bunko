@@ -339,9 +339,10 @@ test('稽核的慣例月份包含與期間重疊的兩端，並區分場次年�
 
 test('稽核列出已過的慣例月份：當月不算已過，並跨年度比較', () => {
   const [december, january, february] = SEASON_MONTHS.winter;
-  const today = `${BASE_YEAR + 1}-${String(february).padStart(2, '0')}-10`;
-  assert.deepEqual(usualMonthsPassed(BASE_YEAR, [december], today), [`${BASE_YEAR}-12`]);
-  assert.deepEqual(usualMonthsPassed(BASE_YEAR + 1, [february, january], today), [`${BASE_YEAR + 1}-01`]);
+  const ym = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}`;
+  const today = `${ym(BASE_YEAR + 1, february)}-10`;
+  assert.deepEqual(usualMonthsPassed(BASE_YEAR, [december], today), [ym(BASE_YEAR, december)]);
+  assert.deepEqual(usualMonthsPassed(BASE_YEAR + 1, [february, january], today), [ym(BASE_YEAR + 1, january)]);
   assert.deepEqual(usualMonthsPassed(BASE_YEAR + 2, [january], today), []);
   assert.deepEqual(usualMonthsPassed(BASE_YEAR, [december], `${BASE_YEAR}-13-01`), []);
 });

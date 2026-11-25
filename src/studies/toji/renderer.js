@@ -59,6 +59,8 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     canvas.dataset.renderer = 'static';
     setMesh(ward);
   };
+  /** The step a failed ward build reports, in tasks or in the call (ADR 0026). */
+  const BUILD_WARD_STEP = 'build ward';
   const setMesh = id => {
     ward = id;
     if (loading) { canvas.dataset.plate = 'false'; return; }
@@ -74,7 +76,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     // build in tasks does below. The still picture itself has nothing to fall back to.
     try { result = source?.setWard(id) ?? false; } catch (error) {
       if (source?.kind === 'static') throw error;
-      fallback(error, 'build ward');
+      fallback(error, BUILD_WARD_STEP);
       return;
     }
     if (typeof result === 'boolean') {
@@ -88,11 +90,11 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     void result.then(ok => {
       if (ok !== undefined && isCurrent()) apply(ok);
     }).catch(error => {
-      if (isCurrent()) fallback(error, 'build ward');
+      if (isCurrent()) fallback(error, BUILD_WARD_STEP);
     });
   };
   /**
-   * Every failure shows the still picture; the log says at which step it came (load, start, first ward, or later: a shader that failed to compile or link, a frame that threw).
+   * Every failure shows the still picture; the log says at which step it came (load, start, first ward, build ward, or later: a shader that failed to compile or link, a frame that threw).
    * @param {unknown} error
    * @param {string} step
    */
