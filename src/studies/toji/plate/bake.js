@@ -150,8 +150,13 @@ function paintTongue(ctx, f) {
   ctx.restore();
 }
 
+// Leave room below the browser's 50 ms long-task threshold for the next indivisible canvas operation.
+const RASTER_SLICE_MS = 32;
+const rasterSliceExpired = (canYield, start) => canYield() && performance.now() - start >= RASTER_SLICE_MS;
+
 /** Paint one layer of the plate into ctx (w × h pixels). Layer 0 is opaque: it is the ground itself. */
-export function paintLayer(ctx, w, h, parts, layer) {
+export function* paintLayer(ctx, w, h, parts, layer, canYield) {
+  let sliceStart = performance.now();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
   ctx.clearRect(0, 0, w, h);
@@ -170,7 +175,17 @@ export function paintLayer(ctx, w, h, parts, layer) {
     // Fading tongues: clear what lies under the whole cluster first, then lay each one's powder; where two overlap the thicker shows.
     if (fine === FINE.powder && p.fills.some(f => f.fade)) { ctx.fillStyle = '#000'; for (const f of p.fills) if (f.fade) { trace(ctx, f.d, true); ctx.fill(); } }
     for (const f of p.fills) {
-      if (fine === FINE.ridge) { if (!farDone) { for (const g of fars) paintFar(ctx, g); farDone = true; ctx.globalCompositeOperation = 'source-over'; } continue; }
+      if (rasterSliceExpired(canYield, sliceStart)) { yield 'paint-layer'; sliceStart = performance.now(); }
+      if (fine === FINE.ridge) {
+        if (!farDone) {
+          for (const g of fars) {
+            if (rasterSliceExpired(canYield, sliceStart)) { yield 'paint-far-heads'; sliceStart = performance.now(); }
+            paintFar(ctx, g);
+          }
+          farDone = true; ctx.globalCompositeOperation = 'source-over';
+        }
+        continue;
+      }
       if (fine === FINE.wedge) { paintWedge(ctx, f); if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
       if (fine === FINE.powder && f.fade) { paintTongue(ctx, f); ctx.globalCompositeOperation = 'source-over'; if (f.kiri) paintKiriString(ctx, f.kiri); continue; }
       // A standing part is a pillow: its whole silhouette feeds the blurred channel, which becomes its dome.
@@ -181,6 +196,7 @@ export function paintLayer(ctx, w, h, parts, layer) {
     // Lines add to the blue channel only, so they sit on whatever relief is already there.
     ctx.globalCompositeOperation = 'lighter';
     for (const l of p.lines) {
+      if (rasterSliceExpired(canYield, sliceStart)) { yield 'paint-layer'; sliceStart = performance.now(); }
       ctx.strokeStyle = `rgb(0,0,${Math.round(l.amp * 255)})`; ctx.lineWidth = l.w;
       trace(ctx, l.d, false); ctx.stroke();
     }
@@ -242,7 +258,8 @@ const ALPHA_SHIFT = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1 ? 24 : 
  * and a solid has room for the wall around its drawing.
  * Returns interleaved (index, material) bytes per layer, plus the bare index maps used for picking.
  */
-export function identMaps(doc, parts, w, h, layers, groundMat) {
+export function* identMaps(doc, parts, w, h, layers, groundMat, canYield) {
+  let sliceStart = performance.now();
   const scratch = doc.createElement('canvas'); scratch.width = w; scratch.height = h;
   const ctx = scratch.getContext('2d', {willReadFrequently: true});
   const packed = Array.from({length: layers}, (_, i) => { const a = new Uint8Array(w * h * 2); if (i === 0) for (let k = 1; k < a.length; k += 2) a[k] = groundMat; return a; });
@@ -252,28 +269,33 @@ export function identMaps(doc, parts, w, h, layers, groundMat) {
   ctx.fillStyle = ctx.strokeStyle = '#fff'; ctx.lineCap = ctx.lineJoin = 'round';
   // Two passes: first every part with its margin, then every part's drawing alone, so a margin never eats into
   // a neighbour's own shape however wide it is.
-  for (const exact of [false, true]) for (const p of parts) {
-    const reach = exact ? 0 : p.reach;
-    if (exact && !p.reach) continue;
-    const pad = reach + 2;
-    const x0 = Math.max(0, Math.floor((p.bounds[0] - pad + PLATE.halfW) * sx)), z0 = Math.max(0, Math.floor((p.bounds[1] - pad + PLATE.halfH) * sz));
-    const x1 = Math.min(w, Math.ceil((p.bounds[2] + pad + PLATE.halfW) * sx)), z1 = Math.min(h, Math.ceil((p.bounds[3] + pad + PLATE.halfH) * sz));
-    if (x1 <= x0 || z1 <= z0) continue;
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(x0, z0, x1 - x0, z1 - z0); toUnits(ctx, w, h);
-    for (const f of p.fills) {
-      trace(ctx, f.d, true); ctx.fill(); if (reach > 0) { ctx.lineWidth = reach * 2; ctx.stroke(); }
-      // A far head belongs to the nearer head of the other metal wherever that one lies over it.
-      if (f.hiddenBy?.length) { ctx.globalCompositeOperation = 'destination-out'; for (const d of f.hiddenBy) { trace(ctx, d, true); ctx.fill(); } ctx.globalCompositeOperation = 'source-over'; }
+  try {
+    for (const exact of [false, true]) for (const p of parts) {
+      const reach = exact ? 0 : p.reach;
+      if (exact && !p.reach) continue;
+      const pad = reach + 2;
+      const x0 = Math.max(0, Math.floor((p.bounds[0] - pad + PLATE.halfW) * sx)), z0 = Math.max(0, Math.floor((p.bounds[1] - pad + PLATE.halfH) * sz));
+      const x1 = Math.min(w, Math.ceil((p.bounds[2] + pad + PLATE.halfW) * sx)), z1 = Math.min(h, Math.ceil((p.bounds[3] + pad + PLATE.halfH) * sz));
+      if (x1 <= x0 || z1 <= z0) continue;
+      if (rasterSliceExpired(canYield, sliceStart)) { yield 'ident-maps'; sliceStart = performance.now(); }
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(x0, z0, x1 - x0, z1 - z0); toUnits(ctx, w, h);
+      for (const f of p.fills) {
+        trace(ctx, f.d, true); ctx.fill(); if (reach > 0) { ctx.lineWidth = reach * 2; ctx.stroke(); }
+        // A far head belongs to the nearer head of the other metal wherever that one lies over it.
+        if (f.hiddenBy?.length) { ctx.globalCompositeOperation = 'destination-out'; for (const d of f.hiddenBy) { trace(ctx, d, true); ctx.fill(); } ctx.globalCompositeOperation = 'source-over'; }
+      }
+      for (const l of p.lines) { ctx.lineWidth = l.w + reach * 2; trace(ctx, l.d, false); ctx.stroke(); }
+      // One 32-bit read per texel instead of four byte reads: the alpha is the top byte on a little-endian machine.
+      const data = new Uint32Array(ctx.getImageData(x0, z0, x1 - x0, z1 - z0).data.buffer), map = maps[p.layer], pack = packed[p.layer], bw = x1 - x0;
+      for (let z = z0, o = 0; z < z1; z++, o += bw) for (let x = 0, i = z * w + x0; x < bw; x++, i++) {
+        if (((data[o + x] >>> ALPHA_SHIFT) & 255) < 128) continue;
+        map[i] = p.index; pack[i * 2] = p.index; pack[i * 2 + 1] = p.mat;
+      }
     }
-    for (const l of p.lines) { ctx.lineWidth = l.w + reach * 2; trace(ctx, l.d, false); ctx.stroke(); }
-    // One 32-bit read per texel instead of four byte reads: the alpha is the top byte on a little-endian machine.
-    const data = new Uint32Array(ctx.getImageData(x0, z0, x1 - x0, z1 - z0).data.buffer), map = maps[p.layer], pack = packed[p.layer], bw = x1 - x0;
-    for (let z = z0, o = 0; z < z1; z++, o += bw) for (let x = 0, i = z * w + x0; x < bw; x++, i++) {
-      if (((data[o + x] >>> ALPHA_SHIFT) & 255) < 128) continue;
-      map[i] = p.index; pack[i * 2] = p.index; pack[i * 2 + 1] = p.mat;
-    }
+    return {packed, maps};
+  } finally {
+    scratch.width = scratch.height = 1;
   }
-  return {packed, maps};
 }
 
 /**
