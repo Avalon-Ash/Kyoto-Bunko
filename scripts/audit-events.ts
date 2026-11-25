@@ -2,7 +2,7 @@ import { parseArgs } from 'node:util';
 import { EVENT_CATALOG } from '../src/data/events/catalog';
 import { EVENT_LOCALES, EVENT_OCCURRENCES } from '../src/data/events/loader';
 import type { IsoDate } from '../src/data/events/types';
-import { isStale, parseIsoDay, STALE_AFTER_DAYS, tokyoToday, usualMonthsInWindow } from '../src/lib/seasonal-query';
+import { isStale, parseIsoDay, STALE_AFTER_DAYS, tokyoToday, usualMonthsInWindow, usualMonthsPassed } from '../src/lib/seasonal-query';
 
 /** Look ahead this many calendar days when reviewing unannounced dates by their usual months. */
 const TBA_LOOKAHEAD_DAYS = 90;
@@ -16,6 +16,7 @@ function auditEvents(today: IsoDate) {
   const events = new Map(EVENT_CATALOG.map(event => [event.id, event]));
   const stale: string[] = [];
   const upcomingTba: string[] = [];
+  const passedTba: string[] = [];
   const usual: string[] = [];
 
   for (const occurrences of Object.values(EVENT_OCCURRENCES)) {
@@ -31,6 +32,9 @@ function auditEvents(today: IsoDate) {
       if (status === 'tba') {
         const months = usualMonthsInWindow(year, event.usualMonths, today, TBA_LOOKAHEAD_DAYS);
         if (months.length) upcomingTba.push(`${label}｜估計月份 ${months.join('、')}｜查核日 ${checkedOn}`);
+        // Listed whatever the check date: a recent check that found nothing does not make a passed month's date known.
+        const passed = usualMonthsPassed(year, event.usualMonths, today);
+        if (passed.length) passedTba.push(`${label}｜慣例月份 ${passed.join('、')}｜查核日 ${checkedOn}`);
       }
 
       if (basis === 'usual') {
@@ -43,6 +47,7 @@ function auditEvents(today: IsoDate) {
   console.log(`歲時記資料稽核｜東京曆日 ${today}`);
   printSection(`查核日已超過 ${STALE_AFTER_DAYS} 天`, stale);
   printSection(`估計在 ${TBA_LOOKAHEAD_DAYS} 天內舉行且仍待公告`, upcomingTba);
+  printSection('慣例月份已過且仍待公告', passedTba);
   printSection('仍採例年日期', usual);
 }
 

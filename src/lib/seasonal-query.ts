@@ -194,6 +194,16 @@ export function usualMonthsInWindow(
     .sort();
 }
 
+/** Return YYYY-MM values of the occurrence year's usual months that ended before today's month began. */
+export function usualMonthsPassed(year: number, months: readonly number[], today: IsoDate): string[] {
+  if (!parseIsoDay(today)) return [];
+  const current = today.slice(0, ISO_MONTH_LENGTH);
+  return months
+    .map(month => formatYearMonthDay(year, month, 1).slice(0, ISO_MONTH_LENGTH))
+    .filter(month => month < current)
+    .sort();
+}
+
 /** Expand a session into actual calendar dates (UTC arithmetic, weekday and exception filters applied). */
 export function sessionDates(session: EventSession): IsoDate[] {
   return [...iterateSessionDates(session)];
