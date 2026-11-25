@@ -51,7 +51,7 @@ export const FUSHIMI_SCHEMA: SpotSchema[] = [
   { id: 'FS-015', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_FOOD', tagIds: ['打卡', '正餐', '現代', '博物館'] },
   { id: 'FS-016', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_TEMPLE', tagIds: ['神社', '打卡'] },
   { id: 'FS-017', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_TEMPLE', tagIds: ['神社', '隱密'] },
-  { id: 'FS-018', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_SHOP', tagIds: ['打卡', '正餐'] },
+  { id: 'FS-018', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_FOOD', tagIds: ['打卡', '正餐'] },
   { id: 'FS-019', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_MODERN', tagIds: ['打卡', '現代'] },
   { id: 'FS-021', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_SHOP', tagIds: ['打卡'] },
   { id: 'FS-022', wardId: 'W_FUSHIMI', areaId: 'A13', typeId: 'T_SHOP', tagIds: ['打卡'] },
