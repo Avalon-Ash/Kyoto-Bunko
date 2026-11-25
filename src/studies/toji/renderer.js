@@ -69,7 +69,14 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
       if (ok) source.prefetch?.([adjacentCabinet(id, -1).id, adjacentCabinet(id, 1).id]);
     };
     const wasPending = pending();
-    const result = source?.setWard(id) ?? false;
+    let result;
+    // After the first compile a switch builds the ward in this call; a throw there shows the still picture, as a failed
+    // build in tasks does below. The still picture itself has nothing to fall back to.
+    try { result = source?.setWard(id) ?? false; } catch (error) {
+      if (source?.kind === 'static') throw error;
+      fallback(error, 'build ward');
+      return;
+    }
     if (typeof result === 'boolean') {
       apply(result);
       if (wasPending && !pending()) ready();
