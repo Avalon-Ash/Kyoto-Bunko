@@ -1,6 +1,6 @@
 # 京都專案交接入口
 
-更新：2026-11-24。這是**唯一的目前狀態入口**；各輪細節在 `agent-runs/`，舊狀態以 Git 歷史為準，不在文件頂端堆疊「最新狀態」。新對話依序讀 `../AGENTS.md`、本檔（**先看 §4**）、[`plans/2026-11-24-chain-3.md`](plans/2026-11-24-chain-3.md)（目前的開案書：第三條鏈與待辦）。[`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md) 是第二條鏈的紀錄，[`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) 是體檢與第一條鏈的紀錄。架構決策在 [`adr/`](adr/README.md)，動結構前先查。蒔繪盤的畫法在 skill `makie-painting`（§4.4）。
+更新：2026-11-25。這是**唯一的目前狀態入口**；各輪細節在 `agent-runs/`，舊狀態以 Git 歷史為準，不在文件頂端堆疊「最新狀態」。新對話依序讀 `../AGENTS.md`、本檔（**先看 §4**）、[`plans/2026-11-24-chain-3.md`](plans/2026-11-24-chain-3.md)（目前的開案書：第三條鏈與待辦）。[`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md) 是第二條鏈的紀錄，[`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) 是體檢與第一條鏈的紀錄。架構決策在 [`adr/`](adr/README.md)，動結構前先查。蒔繪盤的畫法在 skill `makie-painting`（§4.4）。
 
 ## 1. Git 狀態
 
@@ -88,9 +88,10 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 1. 讀 `AGENTS.md`、本檔、開案書；專案記憶會自動載入。
 2. `git fetch --prune; git status -sb; git branch -a`，確認從最新的 `main` 開工作分支。
-3. 查額度（`quota` skill），照目前開案書 §3 選下一包與執行者。
-4. 要動結構先查 [`adr/`](adr/README.md)；要動盤面先讀 skill `makie-painting`，並看參考圖與現況圖（都在本機 `.shots/`，不在 repo；雲端工作階段看不到）：`.shots/ref/`（初音、千代姬等實物照）、`.shots/polish/FINAL-day.png`、`FINAL-night.png`。
-5. 合併 `main`、push 分開問使用者；解耦提案（P3）、刪 `.shots` 也要問。
+3. 跑 `npm run audit:events`（歲時記稽核）：90 天內要辦、仍待公告的，照 `DEVELOPMENT.md` §6 查官方公告後更新（使用者 11/25 定的複查方式）。
+4. 查額度（`quota` skill），照目前開案書 §3 選下一包與執行者。
+5. 要動結構先查 [`adr/`](adr/README.md)；要動盤面先讀 skill `makie-painting`，並看參考圖與現況圖（都在本機 `.shots/`，不在 repo；雲端工作階段看不到）：`.shots/ref/`（初音、千代姬等實物照）、`.shots/polish/FINAL-day.png`、`FINAL-night.png`。
+6. 合併 `main`、push 分開問使用者；解耦提案（P3）、刪 `.shots` 也要問。
 
 ### 4.3 做完的批次（只供回溯，不是待辦）
 
@@ -138,7 +139,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 ### 4.6 待辦
 
-**待辦只在開案書維護**：[`plans/2026-11-24-chain-3.md`](plans/2026-11-24-chain-3.md) §3（包與順序）、§4（擱置與有日期的）；積壓的編號沿用 [`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md) §2。舊開案書（roadmap、finish、data-next、next、health-and-backlog）裡的待辦都已收進去，不再當待辦來源。這裡只留開案書各列會用到的細節：
+**待辦只在開案書維護**：[`plans/2026-11-24-chain-3.md`](plans/2026-11-24-chain-3.md) §3（包與順序）、§4（擱置與有日期的）、§9.4（11/25 的積壓總表）、§9.6（之後新增的積壓）；積壓的編號沿用 [`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md) §2。舊開案書（roadmap、finish、data-next、next、health-and-backlog）裡的待辦都已收進去，不再當待辦來源。這裡只留開案書各列會用到的細節：
 
 - **資料（B6、B7）**：12 月複查三家店：HY-065 八咫（臨時休業）、NK-120 村上開新堂（改裝休業）、NK-111（新店無評論）；仍未營業就退役。沒有原文、留給日後的：FS-018 伏水酒蔵小路改不改成食處（Tabelog 頁打不開）、NK-014 寺町通商店街的身分、延暦寺根本中堂內部參拜、安祥寺與真如堂的國寶、清水寺等國寶指定頁的原文；出處在 `plans/2026-11-18-data-next.md` §3 與三份查核報告（[商店](agent-runs/2026-11-17-shop-audit.md)、[ACG 與寺社](agent-runs/2026-11-17-audit-acg-temples.md)、[自然、近代設施與交通](agent-runs/2026-11-17-audit-nature-modern.md)）。新 ID 一律用歷史上沒用過的號碼（`git log -p -- src/data/spots` 找最大號）。
 - **盤面小缺口（B10）**：鳳凰不放大時頭與喙偏小；細小的草、葦不放大時幾乎看不到；夜間濃梨子地與圖案差距小；`parts.js` 的 `act()` 會讓任何 `MAT.lamp` 的部件在游標停留時發橘光，所以小景不要用 `MAT.lamp`；背景霞帶避開盒子的輪廓是照舊盒子調的，比 three 的盒子窄 2–10 px。
