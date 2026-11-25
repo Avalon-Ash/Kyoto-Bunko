@@ -5,9 +5,8 @@
 //   three.js   the default. WebGL2 is taken from the canvas and plate/three-renderer.js is loaded on demand.
 //   static     plate/static-plate.js: no WebGL2, three.js failed to load or start, a shader failed, or the context was lost.
 //              ?plate=static forces it (for checking the fallback by hand); the canvas never asks for a GL context then.
-// Either way the canvas reports it in data-renderer ('three' or 'static'; 'webgl' only while three.js is still loading).
-// Until three.js can draw (its module is loading, or the first plate's shaders are compiling, which a cold cache makes
-// 10-15 s) the canvas shows the still picture of the cabinet as a placeholder; data-renderer stays 'webgl' meanwhile.
+// Until three.js can draw (module loading, first plate building, or shaders compiling) the canvas shows the still
+// picture as a placeholder. data-renderer stays 'webgl' until the first live frame, or becomes 'static' on fallback.
 import {multiply, lookAt, ortho} from './geometry.js';
 import {viewBox, renderDpr} from './view.js';
 import {createStaticPlate} from './plate/static-plate.js';
@@ -37,7 +36,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
   if (!forced) { try { gl2 = canvas.getContext('webgl2', {alpha: true, antialias: true, stencil: true, powerPreference: 'low-power'}); } catch { gl2 = null; } }
   let ward = wardId, night = Boolean(options.night), draws = 0, loading = false, disposed = false, plate = null;
   const ready = () => { if (!disposed) onReady?.(); };
-  /** The one place that says three.js cannot draw yet: its module is loading or its first plate is compiling. */
+  /** The one place that says the renderer is still getting its first picture ready. */
   const pending = () => loading || Boolean(plate?.loading?.());
   /** The still picture laid under the canvas while three.js cannot draw yet; gone at the first frame three.js draws. */
   let placeholder = null;
@@ -63,9 +62,27 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
   const setMesh = id => {
     ward = id;
     if (loading) { canvas.dataset.plate = 'false'; return; }
-    const ok = Boolean(plate?.setWard(id));
-    canvas.dataset.plate = String(ok);
-    if (ok) plate.prefetch?.([adjacentCabinet(id, -1).id, adjacentCabinet(id, 1).id]);
+    const source = plate;
+    const isCurrent = () => !disposed && plate === source && ward === id;
+    const apply = ok => {
+      canvas.dataset.plate = String(ok);
+      if (ok) source.prefetch?.([adjacentCabinet(id, -1).id, adjacentCabinet(id, 1).id]);
+    };
+    const wasPending = pending();
+    const result = source?.setWard(id) ?? false;
+    if (typeof result === 'boolean') {
+      apply(result);
+      if (wasPending && !pending()) ready();
+      return;
+    }
+    // The ward has a plate that is still being built: 'true' as before, so the still picture standing in for it (which has
+    // its own shadow) gets no second one from bunko.css. A cancelled build leaves it to the setMesh that cancelled it.
+    canvas.dataset.plate = 'true';
+    void result.then(ok => {
+      if (ok !== undefined && isCurrent()) apply(ok);
+    }).catch(error => {
+      if (isCurrent()) fallback(error, 'build ward');
+    });
   };
   /**
    * Every failure shows the still picture; the log says at which step it came (load, start, first ward, or later: a shader that failed to compile or link, a frame that threw).
@@ -101,9 +118,9 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
   };
   return {
     setMesh,
-    /** True while three.js cannot draw yet (module loading, shaders compiling), or the still picture has not arrived. */
+    /** True while the first live frame is in preparation, or the still picture has not arrived. */
     loading: pending,
-    /** 'webgl' (three.js cannot draw yet: loading or compiling), 'three' or 'static'. */
+    /** 'webgl' (preparing the first live frame), 'three' or 'static'. */
     mode: () => plate?.kind ?? (pending() ? 'webgl' : 'three'),
     /** A tap on a part of a plate in close-up; '' when there is no plate or nothing was met. */
     poke: (x, z, time) => plate?.poke(x, z, time) ?? '',

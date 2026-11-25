@@ -6,14 +6,17 @@ import type { EventOccurrence, EventSession, IsoDate } from '../data/events/type
 import { DEFAULT_MUNICIPALITY } from '../data/municipalities';
 import {
   STALE_AFTER_DAYS,
+  consecutiveRuns,
   earliestSessionStart,
   isStale,
   listSeason,
   listYear,
   queryRange,
   seasonBounds,
+  selectCatalogYear,
   sessionDates,
   tokyoToday,
+  usualMonthsInWindow,
   validateRange,
 } from './seasonal-query';
 import { WARD_KEY_LIST } from './ward-keys';
@@ -297,6 +300,42 @@ test('tokyoToday 在 UTC 15:00 的前後（東京換日）', () => {
   assert.equal(tokyoToday(new Date('2027-12-31T15:00:00.000Z')), '2028-01-01');
 });
 
+test('顯示東京今天所在的有資料年度，即使已有下一年度的資料', () => {
+  assert.equal(selectCatalogYear(BASE_DAY, [BASE_YEAR + 1, BASE_YEAR]), BASE_YEAR);
+});
+
+test('今天早於資料年度時顯示最近的有資料年度', () => {
+  assert.equal(selectCatalogYear(BASE_DAY, [BASE_YEAR + 2, BASE_YEAR + 1]), BASE_YEAR + 1);
+});
+
+test('今天晚於資料年度時顯示最後有資料的年度', () => {
+  assert.equal(selectCatalogYear(BASE_DAY, [BASE_YEAR - 1, BASE_YEAR - 2]), BASE_YEAR - 1);
+});
+
+test('今天所在的年度缺資料時顯示下一個有資料的年度', () => {
+  assert.equal(selectCatalogYear(BASE_DAY, [BASE_YEAR + 1, BASE_YEAR - 1]), BASE_YEAR + 1);
+});
+
+test('東京元旦從 12/31 15:00 UTC 開始選下一年度', () => {
+  const years = [BASE_YEAR, BASE_YEAR + 1];
+  const before = new Date(`${BASE_YEAR}-12-31T14:59:59.999Z`);
+  const after = new Date(`${BASE_YEAR}-12-31T15:00:00.000Z`);
+  assert.equal(selectCatalogYear(tokyoToday(before), years), BASE_YEAR);
+  assert.equal(selectCatalogYear(tokyoToday(after), years), BASE_YEAR + 1);
+});
+
+test('沒有場次資料時沒有顯示年度', () => {
+  assert.equal(selectCatalogYear(BASE_DAY, []), undefined);
+});
+
+test('稽核的慣例月份包含與期間重疊的兩端，並區分場次年度', () => {
+  const [december, january, february] = SEASON_MONTHS.winter;
+  const today = `${BASE_YEAR}-${december}-31`;
+  assert.deepEqual(usualMonthsInWindow(BASE_YEAR, [january, december], today, 1), [`${BASE_YEAR}-12`]);
+  assert.deepEqual(usualMonthsInWindow(BASE_YEAR + 1, [january, february], today, 1), [`${BASE_YEAR + 1}-01`]);
+  assert.deepEqual(usualMonthsInWindow(BASE_YEAR + 1, [january], today, 0), []);
+});
+
 test('依第一個可參加日期與 hours.open 排序', () => {
   const noHours = makeItem({ id: 'EV-930' }, {}, { start: '2027-06-10', end: '2027-06-10' });
   const late = makeItem(
@@ -411,4 +450,17 @@ test('取最早的 session 起始日與排列順序無關', () => {
   const { from, to } = seasonBounds(BASE_YEAR, 'winter');
   const sessions = [{ start: to, end: to }, { start: from, end: from }];
   assert.equal(earliestSessionStart(sessions)?.toISOString().slice(0, from.length), from);
+});
+
+test('連續的日子合成一段，跨月、跨年也算連續，重複與亂序不影響', () => {
+  const { from, to } = seasonBounds(BASE_YEAR, 'winter'); // 12/1 to the end of February the next year
+  const newYearsEve: IsoDate = `${BASE_YEAR}-12-31`;
+  const newYear: IsoDate = `${BASE_YEAR + 1}-01-01`;
+  assert.deepEqual(consecutiveRuns([newYear, BASE_DAY, newYearsEve, BASE_DAY, from]), [
+    { from: BASE_DAY, to: BASE_DAY },
+    { from, to: from },
+    { from: newYearsEve, to: newYear },
+  ]);
+  assert.deepEqual(consecutiveRuns(sessionDates({ start: from, end: to })), [{ from, to }]);
+  assert.deepEqual(consecutiveRuns([]), []);
 });

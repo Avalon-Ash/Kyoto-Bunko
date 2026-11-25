@@ -18,8 +18,10 @@ export const CALIBRATION_YEARS = CALIBRATED_IN - HATSUNE_MADE;
 export const hatsuneAge = (year = new Date().getFullYear()) => year - HATSUNE_MADE;
 /** @param {unknown} years */
 export const ageFromYears = years => 1 - Math.exp(-Math.max(0, Number(years) || 0) / AGE_TAU_YEARS);
+/** The inverse conversion caps age here to avoid log(0). The resulting years set the slider maximum for ?age=1. */
+const MAX_INVERTIBLE_AGE = 1 - 1e-9;
 /** The inverse of ageFromYears: the years that give uAge `age` (0 ≤ age < 1). @param {number} age */
-export const yearsFromAge = age => -AGE_TAU_YEARS * Math.log(1 - Math.min(Math.max(age, 0), 1 - 1e-9));
+export const yearsFromAge = age => -AGE_TAU_YEARS * Math.log(1 - Math.min(Math.max(age, 0), MAX_INVERTIBLE_AGE));
 
 /** How old the lid looks when nothing sets it (about 285 years: mid-Edo). */
 export const AGE_DEFAULT = .85;

@@ -10,8 +10,9 @@
 import * as THREE from 'three';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {PLATE, MAT, KIND, rand} from './vocab.js';
-import {PLATES, LAYERS, preparePlate, createLife, partAt} from './parts.js';
+import {PLATES, LAYERS, hasPlate, preparePlate, createLife, partAt} from './parts.js';
 import {paintLayer, identMaps, bakeDensityField, bakeContactField, bakeSoftField} from './bake.js';
+import {cancelBuild, finishBuildInTasks, stepBuild} from './ward-build.js';
 import {blankStats} from './fillers.js';
 import {buildBox, FITTINGS} from './box.js';
 import {bakeStamps} from './stamps.js';
@@ -603,7 +604,8 @@ void main() {`)
     const group = wardGroup;
     void compilePrograms(scene, null).then(ok => {
       compiling = false;
-      if (!ok || disposed || failed) return;
+      // An unfinished replacement will compile its own scene when it activates.
+      if (!ok || disposed || failed || foreground) return;
       // A cabinet changed while it compiled: its parts may need programs of their own (the ground and box ones are ready by now).
       if (wardGroup && wardGroup !== group) { compileScene(); return; }
       compiled = true;
@@ -612,6 +614,7 @@ void main() {`)
   }
   const PREFETCH_DELAY_MS = 900; // let the switch animation settle before the neighbours start building
   let lastNeighbours = [], idleHandle = null, prefetchTimer = null;
+  let foreground = null;
   const cache = new Map();
   const presence = {x: 0, v: 0}, drift = {offset: 0, velocity: 0}, size = {w: 0, h: 0};
   const hasIdleCallback = typeof requestIdleCallback === 'function';
@@ -627,23 +630,21 @@ void main() {`)
     for (const tex of textures) tex.dispose();
   }
 
-  function disposeEntry(entry) {
-    disposeResources(entry.group, entry.textures);
+  function dropSlot(ward, slot) {
+    cache.delete(ward);
+    if (slot.entry) disposeResources(slot.entry.group, slot.entry.textures);
+    else cancelBuild(slot);
   }
 
   function evict(keep) {
     for (const [w, slot] of cache) {
       if (keep.has(w)) continue;
-      if (slot.entry) disposeEntry(slot.entry);
-      else slot.gen?.return();
-      cache.delete(w);
+      dropSlot(w, slot);
     }
     for (const [w, slot] of cache) {
       if (cache.size <= MAX_CACHED) break;
       if (w === plate?.ward) continue;
-      if (slot.entry) disposeEntry(slot.entry);
-      else slot.gen?.return();
-      cache.delete(w);
+      dropSlot(w, slot);
     }
   }
 
@@ -652,29 +653,27 @@ void main() {`)
     const group = new THREE.Group();
     const textures = [];
     const scratch = doc.createElement('canvas');
+    const canYield = () => foreground?.ward === ward;
     let committed = false;
-    let buildMs = 0;
     try {
-      let t = performance.now();
-      const {parts, errors} = preparePlate(PLATES[ward]());
+      const composition = PLATES[ward]();
+      if (canYield()) yield 'compose-plate';
+      const {parts, errors} = preparePlate(composition);
       if (errors.length) throw Error(`Plate ${ward}: ${errors.join('; ')}`);
       const w = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), canvas.clientWidth < 700 ? 1152 : 1536), h = Math.round(w * PLATE.halfH / PLATE.halfW);
-      buildMs += performance.now() - t;
-      yield;
+      yield 'prepare-plate';
 
-      t = performance.now();
       scratch.width = w; scratch.height = h;
       const ctx = scratch.getContext('2d', {willReadFrequently: true});
-      paintLayer(ctx, w, h, parts, 0);
+      yield* paintLayer(ctx, w, h, parts, 0, canYield);
+      if (canYield()) yield 'paint-ground';
       let fine0Img = new Uint8Array(ctx.getImageData(0, 0, w, h).data.buffer); // a view of the readback's own bytes, not a copy of them
       const fine0Tex = new THREE.DataTexture(fine0Img, w, h, THREE.RGBAFormat, THREE.UnsignedByteType);
       fine0Tex.minFilter = THREE.LinearMipmapLinearFilter; fine0Tex.magFilter = THREE.LinearFilter;
       fine0Tex.generateMipmaps = true; fine0Tex.anisotropy = maxAniso; fine0Tex.unpackAlignment = 1; fine0Tex.needsUpdate = true;
       textures.push(fine0Tex);
-      buildMs += performance.now() - t;
-      yield;
+      yield 'fine-texture';
 
-      t = performance.now();
       const soft = bakeSoftField(fine0Img, w, h);
       fine0Img = null;
       const softHalf = new Uint16Array(soft.data.length);
@@ -682,20 +681,17 @@ void main() {`)
       const soft0Tex = new THREE.DataTexture(softHalf, soft.sw, soft.sh, THREE.RedFormat, THREE.HalfFloatType);
       soft0Tex.minFilter = soft0Tex.magFilter = THREE.LinearFilter; soft0Tex.unpackAlignment = 1; soft0Tex.needsUpdate = true;
       textures.push(soft0Tex);
-      buildMs += performance.now() - t;
-      yield;
+      yield 'soft-field';
 
-      t = performance.now();
-      const mw = Math.round(w / 2), mh = Math.round(h / 2), {maps, packed} = identMaps(doc, parts, mw, mh, LAYERS, MAT.ground);
+      const mw = Math.round(w / 2), mh = Math.round(h / 2);
+      const {maps, packed} = yield* identMaps(doc, parts, mw, mh, LAYERS, MAT.ground, canYield);
       // The ident map is (part, material) byte pairs: the swap rewrites the material byte only.
       if (matSwap.size) for (let i = 1; i < packed[0].length; i += 2) { const to = matSwap.get(packed[0][i]); if (to !== undefined) packed[0][i] = to; }
       const ident0Tex = new THREE.DataTexture(packed[0], mw, mh, THREE.RGFormat, THREE.UnsignedByteType);
       ident0Tex.minFilter = ident0Tex.magFilter = THREE.NearestFilter; ident0Tex.unpackAlignment = 1; ident0Tex.needsUpdate = true;
       textures.push(ident0Tex);
-      buildMs += performance.now() - t;
-      yield;
+      yield 'ident-texture';
 
-      t = performance.now();
       let densTex = neutralDens, densMean = .5;
       if (densMode !== 'off') {
         const dw = DENSITY.width, dh = Math.round(dw * PLATE.halfH / PLATE.halfW);
@@ -705,6 +701,7 @@ void main() {`)
         densTex = new THREE.DataTexture(field, dw, dh, THREE.RedFormat, THREE.UnsignedByteType);
         densTex.minFilter = densTex.magFilter = THREE.LinearFilter; densTex.unpackAlignment = 1; densTex.needsUpdate = true;
         textures.push(densTex);
+        if (canYield()) yield 'density-field';
       }
       // Where things stand on the lid: age gathers dirt there. Not baked for a box as new.
       let contactTex = dummyRgba;
@@ -714,8 +711,7 @@ void main() {`)
         contactTex.minFilter = contactTex.magFilter = THREE.LinearFilter; contactTex.unpackAlignment = 1; contactTex.needsUpdate = true;
         textures.push(contactTex);
       }
-      buildMs += performance.now() - t;
-      yield;
+      yield 'contact-field';
 
       // Bare nashiji, for reference only (fillers.js): share farther than 12 units from any part / largest empty radius.
       // A readout for the measuring scripts, not something the plate needs: it is worked out after the ward is up (blankText below).
@@ -726,7 +722,6 @@ void main() {`)
         return `${(blank.ratio * 100).toFixed(1)}%/${blank.radius.toFixed(0)}`;
       };
 
-      t = performance.now();
       const addInterleaved = (byMat, getMaterial, depth) => {
         let vertices = 0;
         for (const [mat, data] of byMat) {
@@ -740,11 +735,10 @@ void main() {`)
         return vertices;
       };
       const meshVertices = addInterleaved(meshesByMaterial(parts), partMaterial, partDepth);
+      if (canYield()) yield 'part-meshes';
       const treeVertices = addInterleaved(limbsByMaterial(parts), limbMaterial, limbDepth);
-      buildMs += performance.now() - t;
-      yield;
+      yield 'tree-limbs';
 
-      t = performance.now();
       let treeStamps = 0;
       for (const [mat, s] of stampsByMaterial(parts)) {
         const g = new THREE.BufferGeometry();
@@ -763,24 +757,25 @@ void main() {`)
         group.add(im);
         treeStamps += s.count;
       }
-      buildMs += performance.now() - t;
-      yield;
+      yield 'tree-stamps';
 
-      t = performance.now();
       const uniforms = {uFine0: fine0Tex, uSoft0: soft0Tex, uIdent0: ident0Tex, uDens: densTex, uContact: contactTex};
       const mistParts = parts.filter(p => p.kind === KIND.mist);
       if (mistParts.length) {
-        paintLayer(ctx, w, h, mistParts.map(p => ({...p, layer: 1})), 1);
+        yield* paintLayer(ctx, w, h, mistParts.map(p => ({...p, layer: 1})), 1, canYield);
+        if (canYield()) yield 'paint-mist';
         const mistFineImg = new Uint8Array(ctx.getImageData(0, 0, w, h).data.buffer);
         const mistFineTex = new THREE.DataTexture(mistFineImg, w, h, THREE.RGBAFormat, THREE.UnsignedByteType);
         mistFineTex.minFilter = THREE.LinearMipmapLinearFilter; mistFineTex.magFilter = THREE.LinearFilter;
         mistFineTex.generateMipmaps = true; mistFineTex.anisotropy = maxAniso; mistFineTex.unpackAlignment = 1; mistFineTex.needsUpdate = true;
+        textures.push(mistFineTex);
+        if (canYield()) yield 'mist-fine-texture';
 
-        const {packed: mistPacked} = identMaps(doc, mistParts.map(p => ({...p, layer: 0})), mw, mh, 1, 0);
+        const {packed: mistPacked} = yield* identMaps(doc, mistParts.map(p => ({...p, layer: 0})), mw, mh, 1, 0, canYield);
         const mistIdentTex = new THREE.DataTexture(mistPacked[0], mw, mh, THREE.RGFormat, THREE.UnsignedByteType);
         mistIdentTex.minFilter = mistIdentTex.magFilter = THREE.NearestFilter; mistIdentTex.unpackAlignment = 1; mistIdentTex.needsUpdate = true;
 
-        textures.push(mistFineTex, mistIdentTex);
+        textures.push(mistIdentTex);
         uniforms.uMistFine = mistFineTex;
         uniforms.uMistIdent = mistIdentTex;
 
@@ -793,8 +788,7 @@ void main() {`)
         group.add(mistMesh);
       }
       scratch.width = scratch.height = 1;
-      buildMs += performance.now() - t;
-      yield;
+      yield 'finish-ward';
 
       committed = true;
       return {
@@ -805,7 +799,6 @@ void main() {`)
         densMean,
         stats: {meshVertices, treeVertices, treeStamps, boxVertices, parts: parts.length, blank: blankText},
         plate: {parts, maps, mw, mh, ward, soft, ident: packed[0]},
-        buildMs,
       };
     } finally {
       if (!committed) {
@@ -815,24 +808,13 @@ void main() {`)
     }
   }
 
-  function finish(ward) {
+  function slotFor(ward) {
     let slot = cache.get(ward);
     if (!slot) {
-      slot = {gen: buildWard(ward), entry: null, warmed: false};
+      slot = {gen: buildWard(ward), entry: null, warmed: false, buildMs: 0};
       cache.set(ward, slot);
     }
-    if (!slot.entry) {
-      try {
-        let step = slot.gen.next();
-        while (!step.done) step = slot.gen.next();
-        slot.entry = step.value;
-        slot.gen = null;
-      } catch (err) {
-        cache.delete(ward);
-        throw err;
-      }
-    }
-    return slot.entry;
+    return slot;
   }
 
   function freePlate() {
@@ -858,7 +840,8 @@ void main() {`)
     wardGroup = entry.group;
   }
 
-  function activate(entry, started, prefetched) {
+  function activate(slot, started, prefetched) {
+    const {entry, buildMs} = slot;
     bind(entry);
     current = entry;
     plate = {...entry.plate, frames: 0};
@@ -870,20 +853,63 @@ void main() {`)
     canvas.dataset.boxVertices = String(entry.stats.boxVertices); canvas.dataset.blank = '';
     canvas.dataset.bakeMs = (performance.now() - started).toFixed(0);
     canvas.dataset.prefetched = String(prefetched);
-    canvas.dataset.buildMs = entry.buildMs.toFixed(0);
+    canvas.dataset.buildMs = buildMs.toFixed(0);
     idle(() => { if (!disposed && canvas.dataset.ward === entry.ward) canvas.dataset.blank = entry.stats.blank(); });
+    evict(new Set([entry.ward, ...lastNeighbours]));
+    return true;
   }
 
-  /** Builds or activates a ward's plate. Returns false when the ward has not been redrawn as a plate. */
+  function cancelForeground() {
+    if (!foreground) return;
+    const {ward, slot} = foreground;
+    foreground = null;
+    dropSlot(ward, slot);
+  }
+
+  async function buildFirstWard(request, started) {
+    const {ward, slot} = request;
+    /** @type {import('./ward-build.js').MeasureStep | undefined} */
+    const measure = import.meta.env.DEV ? (step, start, end) => {
+      performance.measure(`toji:ward:${ward}:${step}`, {start, end});
+    } : undefined;
+    try {
+      await finishBuildInTasks(slot, measure);
+      if (foreground !== request || failed) return;
+      return activate(slot, started, false);
+    } catch (error) {
+      if (foreground !== request) return;
+      dropSlot(ward, slot);
+      throw error;
+    } finally {
+      if (foreground === request) foreground = null;
+    }
+  }
+
+  /** A cache hit activates immediately. Before the first compile, a cache miss builds in tasks.
+   * False means no plate for this ward. A cancelled build resolves without a result. */
   function setWard(ward) {
+    if (foreground?.ward === ward) return foreground.result;
+    cancelForeground();
     if (failed) return false;
-    if (!Object.hasOwn(PLATES, ward)) { freePlate(); return false; }
+    if (!hasPlate(ward)) { freePlate(); return false; }
     const t0 = performance.now();
-    const prefetched = Boolean(cache.get(ward)?.entry);
-    const entry = finish(ward);
-    activate(entry, t0, prefetched);
-    evict(new Set([ward, ...lastNeighbours]));
-    return true;
+    const slot = slotFor(ward);
+    if (slot.entry) return activate(slot, t0, true);
+    if (!compiled) {
+      pausePrefetch();
+      const request = {ward, slot, result: null};
+      foreground = request;
+      request.result = buildFirstWard(request, t0);
+      return request.result;
+    }
+    // Keep later switches in the animation's existing draw task.
+    try {
+      while (slot.gen) stepBuild(slot);
+    } catch (error) {
+      dropSlot(ward, slot);
+      throw error;
+    }
+    return activate(slot, t0, false);
   }
 
   function warmEntry(slot) {
@@ -929,14 +955,10 @@ void main() {`)
         if (!slot) continue;
         if (!slot.entry) {
           try {
-            const step = slot.gen.next();
-            if (step.done) {
-              slot.entry = step.value;
-              slot.gen = null;
-              warmEntry(slot);
-            }
+            stepBuild(slot);
+            if (slot.entry) warmEntry(slot);
           } catch (error) {
-            cache.delete(w);
+            dropSlot(w, slot);
             console.warn(`Prefetch ${w} failed:`, error);
           }
           pumpPrefetch();
@@ -951,14 +973,17 @@ void main() {`)
     });
   }
 
+  function pausePrefetch() {
+    cancelIdle(idleHandle); clearTimeout(prefetchTimer);
+    idleHandle = prefetchTimer = null;
+  }
+
   /** Pre-builds and warms up neighbouring wards during idle time so switching stays off the main path. */
   function prefetch(wards) {
     if (disposed || failed) return;
-    lastNeighbours = wards.filter(w => Object.hasOwn(PLATES, w));
+    lastNeighbours = wards.filter(hasPlate);
     evict(new Set([plate?.ward, ...lastNeighbours]));
-    for (const w of lastNeighbours) {
-      if (!cache.has(w)) cache.set(w, {gen: buildWard(w), entry: null, warmed: false});
-    }
+    for (const w of lastNeighbours) slotFor(w);
     clearTimeout(prefetchTimer);
     prefetchTimer = setTimeout(pumpPrefetch, PREFETCH_DELAY_MS);
   }
@@ -1057,12 +1082,12 @@ void main() {`)
 
   return {
     setWard, prefetch, draw, drawNeighbour, poke, active: () => Boolean(plate),
-    /** True while the first plate compiles or a reported failure is waiting for the still picture. */
-    loading: () => failed || (Boolean(plate) && !compiled),
+    /** True during the first build and compile, or while a failure waits for the still picture. */
+    loading: () => failed || Boolean(foreground || (plate && !compiled)),
     dispose() {
       disposed = true;
-      cancelIdle(idleHandle); clearTimeout(prefetchTimer);
-      idleHandle = null;
+      pausePrefetch();
+      cancelForeground();
       freePlate();
       evict(new Set());
       if (cordMesh) cordMesh.geometry.dispose();

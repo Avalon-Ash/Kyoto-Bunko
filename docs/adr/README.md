@@ -94,3 +94,4 @@
 - [0022 著色器編譯或連結失敗時退回降級圖](0022-shader-failure-falls-back-to-still-picture.md)：`three-renderer.js` 的 `reportFailure` 是唯一的失敗通知，`renderer.js` 的 `fallback` 換成同區同日夜的降級圖；`?plate=shaderfail`（只在開發時）可重現。
 - [0023 歲時記活動資料：主檔、年度場次與雙語內容分離](0023-seasonal-events-catalog-occurrences-locales.md)：活動放 `src/data/events/`，主檔、年度場次、中日 locale 分開，和地點的關係只在 `venues`，畫面只經 `loader.ts`，不改受保護檔。
 - [0024 歲時記的日期語意：東京曆日、場次展開與狀態規則](0024-seasonal-dates-tokyo-sessions-status.md)：東京曆日字串、多筆 session、日期判斷只在 `seasonal-query.ts`、狀態規則一張表、例年日期算已確認但要標示。
+- [0025 首盤在第一次編譯前分步建造，步與步之間讓出主執行緒](0025-first-plate-builds-in-tasks.md)：`ward-build.js` 是唯一的讓出工具，`setWard` 回傳布林或 Promise，換區取消建造；溫快取首盤最長任務約 1.3 秒 → 330 ms。
