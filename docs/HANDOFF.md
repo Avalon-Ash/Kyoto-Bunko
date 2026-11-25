@@ -131,6 +131,7 @@ npm run dev -- --host 127.0.0.1 --strictPort
 - 把整張照片的亮度中位數當成地的目標是錯的（地被調太亮過一次）；目標要分層量。
 - `npm test` 在重裝依賴（`npm ci`）後第一次偶發 1 個失敗，之後連跑 11 次都過，沒定位；再出現先存完整輸出（開案書 B9）。
 - 本機有 ThreeRT（`C:\Git\_ext\ThreeRT`，RTX 4070 走 Vulkan 硬體光追，南區 64 spp 約 1.1 秒），可以算參考圖；沒有烘焙模式、沒有正交相機。
+- **Codex 沙箱跑不起 `tsx`**（`uv_os_get_passwd` 回 `ENOMEM`；11/25 連續四包都這樣）：`validate_data.js` 與 `npm test` 的 TS 部分它會改用 node 補跑。它回報的數字只當參考，主席在沙箱外重跑四項檢查才算。
 - 整合子代理成果的流程：在工作樹 `git add -A scripts src docs && git commit`，主資料夾 `git cherry-pick`，主資料夾重跑四項驗收，複製截圖到主資料夾 `.shots/`。
 
 ### 4.6 待辦
