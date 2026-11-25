@@ -7,6 +7,7 @@ export const NAV_MODES = [
   ['ward', 'mode_bunko'],
   ['area', 'mode_area'],
   ['tag', 'mode_tag'],
+  ['seasonal', 'mode_seasonal'],
 ] as const;
 
 export type NavMode = typeof NAV_MODES[number][0];

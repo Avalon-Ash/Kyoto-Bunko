@@ -55,6 +55,28 @@
 .leaf-number { display:none; font-size:11px; color:var(--entry-muted); }
 .leaf-name { flex:1; font:500 17px var(--title-font); letter-spacing:.09em; }
 
+/* Seasonal index. */
+.seasonal-index { max-width:900px; }
+.seasonal-title { margin:0 0 6px; font:600 24px/1.5 var(--title-font); letter-spacing:.09em; }
+.seasonal-controls { display:flex; flex-wrap:wrap; gap:6px; }
+.seasonal-controls small { color:var(--entry-muted); font-size:11px; font-variant-numeric:tabular-nums; }
+.seasonal-fields { display:flex; flex-wrap:wrap; gap:10px 12px; }
+.seasonal-fields label { display:grid; gap:4px; flex:1 1 140px; max-width:200px; min-width:0; font-size:13px; }
+.seasonal-fields input { width:100%; min-width:0; min-height:44px; padding:6px 8px; border:1px solid var(--entry-line); border-radius:4px; background:var(--entry-surface); color:var(--entry-ink); font:inherit; font-size:16px; }
+.seasonal-fields input[aria-invalid="true"] { border-color:var(--entry-accent); }
+.seasonal-error { margin:8px 0 0; color:var(--entry-accent); font-size:13px; }
+.seasonal-actions { margin-top:12px; }
+.seasonal-actions button[type="submit"] { border-color:var(--hira-gold); }
+.seasonal-result-summary { margin:0 0 8px; font-size:13px; }
+.seasonal-results { margin:0; padding:0; list-style:none; }
+.seasonal-entry { padding:16px 0; border-bottom:1px solid var(--entry-line); overflow-wrap:anywhere; }
+.seasonal-entry h3 { margin:0 0 5px; font:500 17px/1.5 var(--title-font); }
+.seasonal-entry p { margin:0 0 5px; }
+.seasonal-status { display:flex; flex-wrap:wrap; gap:4px 8px; font-size:12px; }
+.seasonal-status span { padding:1px 6px; border:1px solid var(--entry-line); border-radius:3px; color:var(--entry-muted); }
+.seasonal-time { font-variant-numeric:tabular-nums; }
+.seasonal-official { display:inline-flex; align-items:center; gap:4px; min-height:44px; color:var(--hira-gold); text-decoration:underline; text-underline-offset:3px; }
+
 /* Theme results sheet. */
 .catalog-overlay { position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; background:var(--entry-paper); color:var(--entry-ink); }
 .catalog-heading { flex-shrink:0; display:flex; align-items:center; gap:8px; min-height:72px; padding:12px 16px; padding-top:max(12px,env(safe-area-inset-top)); border-bottom:1px solid var(--entry-line); }
