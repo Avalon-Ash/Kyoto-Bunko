@@ -9,7 +9,7 @@
  * 管理的核心狀態
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  * - lang          : 當前語系（'zh' | 'ja'），影響 locale 載入與排序
- * - mode          : 導航模式（'ward' | 'area' | 'tag'），三條互斥路徑
+ * - mode          : 導航模式（`NavMode`，集合只定義在 src/lib/nav-modes.ts），互斥路徑
  * - activeId      : 當前選中的 wardId 或 areaId（null 表示在首頁）
  * - activeType    : 主 Tab 類型篩選（'T_ALL' 或具體 typeId）
  * - activeTag     : 副標籤篩選（null 表示未篩選）
@@ -46,6 +46,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Lang, FlatSpot, WardKey } from '../types';
 import { loadSpotsByWard, WARD_BY_AREA, getTagCounts, getWardStats } from '../data/index';
 import { WARD_KEY_LIST, isWardKey } from '../lib/ward-keys';
+import { DEFAULT_NAV_MODE, type NavMode } from '../lib/nav-modes';
 import { translate } from '../data/i18n';
 import { TYPES } from '../data/types';
 
@@ -59,7 +60,7 @@ function sortSpots(spots: FlatSpot[], lang: Lang): FlatSpot[] {
 
 export function useKyotoEngine() {
   const [lang, setLang] = useState<Lang>('zh');
-  const [mode, setMode] = useState<'ward' | 'area' | 'tag'>('ward');
+  const [mode, setMode] = useState<NavMode>(DEFAULT_NAV_MODE);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<string>('T_ALL');
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -137,7 +138,7 @@ export function useKyotoEngine() {
 
   const toggleLang = useCallback(() => setLang(prev => (prev === 'zh' ? 'ja' : 'zh')), []);
 
-  const switchMode = (newMode: 'ward' | 'area' | 'tag') => {
+  const switchMode = (newMode: NavMode) => {
     setActiveId(null);
     setActiveType('T_ALL');
     setActiveTag(null);
@@ -196,7 +197,8 @@ export function useKyotoEngine() {
 
   const tagCounts = useMemo<Record<string, number>>(() => getTagCounts(), []);
 
-  const openDetail = (id: string, viewMode: 'ward' | 'area') => {
+  /** Only the modes whose list opens a volume (a ward or an area) come here. */
+  const openDetail = (id: string, viewMode: Extract<NavMode, 'ward' | 'area'>) => {
     setReturnFocusId(id);
     setActiveId(id);
     setMode(viewMode);
@@ -207,7 +209,7 @@ export function useKyotoEngine() {
   const closeDetail = () => {
     setActiveId(null);
     setActiveTag(null);
-    setMode('ward');  // 防護的リセット
+    setMode(DEFAULT_NAV_MODE);  // 防護的リセット
   };
 
   return {

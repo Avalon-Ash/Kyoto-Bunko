@@ -9,10 +9,10 @@ import { ScrollRoller } from './ScrollRoller';
 import { BunkoTools } from './BunkoTools';
 import { MakieIcon } from './MakieIcon';
 import type { MakieMotif } from '../lib/makie-icons';
+import { NAV_MODES } from '../lib/nav-modes';
 
 const GROUPS = ['food', 'misc', 'culture', 'nature', 'transport', 'acg'] as const;
 const GROUP_MOTIFS: Record<string, MakieMotif> = { food: 'food', misc: 'all', culture: 'temple', nature: 'nature', transport: 'transport', acg: 'acg' };
-const MODES = [['ward', 'mode_bunko'], ['area', 'mode_area'], ['tag', 'mode_tag']] as const;
 const AREA_STATS = getAreaStats();
 
 interface HomeViewProps {
@@ -63,7 +63,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ engine, cabinetWard, onCabin
       </header>
 
       <nav inert={overlayOpen} className="mode-tabs" aria-label={t('mode_label')}>
-        {MODES.map(([id, label]) => (
+        {NAV_MODES.map(([id, label]) => (
           <button key={id} type="button" aria-pressed={mode === id} onClick={() => engine.switchMode(id)}>{t(label)}</button>
         ))}
       </nav>
