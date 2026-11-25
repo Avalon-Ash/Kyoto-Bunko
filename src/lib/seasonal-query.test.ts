@@ -1,14 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { LoadedEvent } from '../data/events/loader';
-import { SEASON_MONTHS } from '../data/events/seasons';
+import { SEASON_MONTHS, SEASONS, seasonOfMonth } from '../data/events/seasons';
 import type { EventOccurrence, EventSession, IsoDate } from '../data/events/types';
 import { DEFAULT_MUNICIPALITY } from '../data/municipalities';
 import {
   STALE_AFTER_DAYS,
+  earliestSessionStart,
   isStale,
   listSeason,
+  listYear,
   queryRange,
+  seasonBounds,
   sessionDates,
   tokyoToday,
   validateRange,
@@ -342,4 +345,70 @@ test('延期（postponed）有場次進查詢、無場次不進查詢', () => {
 
   const matches = queryRange([rescheduled, unscheduled], '2027-09-01', '2027-09-30');
   assert.deepEqual(matches.map(m => m.event.id), ['EV-940']);
+});
+
+test('全年收錄一、二月待公告活動，並依場次日期或第一個慣例月份排序', () => {
+  const [december, january, february] = SEASON_MONTHS.winter;
+  const [march] = SEASON_MONTHS.spring;
+  const tba: Partial<EventOccurrence> = { year: BASE_YEAR, status: 'tba', basis: undefined, sessions: [] };
+  const janTba = makeItem({ id: 'EV-950', usualMonths: [january] }, tba);
+  const febTba = makeItem({ id: 'EV-951', usualMonths: [february, january] }, tba);
+  const marchCancelled = makeItem({ id: 'EV-952', usualMonths: [march] }, {
+    year: BASE_YEAR, status: 'cancelled', basis: undefined, sessions: [],
+  });
+  const janDay = `${BASE_YEAR}-${String(january).padStart(2, '0')}-15`;
+  const januarySession = makeItem({ id: 'EV-953', usualMonths: [december] }, {}, { start: janDay });
+  const { from, to } = seasonBounds(BASE_YEAR, 'winter');
+  const crossYear = makeItem({ id: 'EV-954' }, { status: 'postponed', basis: undefined }, { start: from, end: to });
+  const nextYear = makeItem({ id: 'EV-955' }, {}, { start: to });
+
+  const matches = listYear([nextYear, crossYear, marchCancelled, febTba, januarySession, janTba], BASE_YEAR);
+  assert.deepEqual(matches.map(match => match.event.id), ['EV-950', 'EV-953', 'EV-951', 'EV-952', 'EV-954']);
+  assert.deepEqual(matches.map(({ dates }) => dates[0]), [undefined, janDay, undefined, undefined, from]);
+  assert.equal(matches.at(-1)?.dates.at(-1), to);
+});
+
+test('季節列表依日期收錄有場次的延期與取消，無場次則依慣例月份', () => {
+  const { from } = seasonBounds(BASE_YEAR, 'autumn');
+  const usualMonths = [SEASON_MONTHS.spring[0]];
+  const items = (['cancelled', 'postponed'] as const).flatMap((status, index) => {
+    const dated = makeItem({ id: `EV-96${index}`, usualMonths }, { status, basis: undefined }, { start: from });
+    const undated = makeItem({ id: `EV-97${index}`, usualMonths }, {
+      year: BASE_YEAR, status, basis: undefined, sessions: [],
+    });
+    return [dated, undated];
+  });
+
+  const results = (season: keyof typeof SEASON_MONTHS) => listSeason(items, BASE_YEAR, season)
+    .map(({ event, dates }) => [event.id, dates]);
+  assert.deepEqual(results('autumn'), [['EV-960', [from]], ['EV-961', [from]]]);
+  assert.deepEqual(results('spring'), [['EV-970', []], ['EV-971', []]]);
+  assert.deepEqual(results('summer'), []);
+});
+
+test('季節列表只在實際舉辦日被裁切時附上全期', () => {
+  const winter = seasonBounds(BASE_YEAR, 'winter');
+  const autumn = seasonBounds(BASE_YEAR, 'autumn');
+  const session = { start: autumn.to, end: winter.from };
+  const clipped = makeItem({ id: 'EV-980' }, {}, session);
+  const excluded = makeItem({ id: 'EV-981' }, {}, { ...session, except: [autumn.to] });
+
+  const matches = listSeason([clipped, excluded], BASE_YEAR, 'winter');
+  assert.deepEqual(matches.map(({ dates, fullPeriod }) => ({ dates, fullPeriod })), [
+    { dates: [winter.from], fullPeriod: { from: autumn.to, to: winter.from } },
+    { dates: [winter.from], fullPeriod: undefined },
+  ]);
+});
+
+test('月份查季節沿用四季月份表', () => {
+  for (const season of SEASONS) {
+    for (const month of SEASON_MONTHS[season]) assert.equal(seasonOfMonth(month), season);
+  }
+  assert.equal(seasonOfMonth(0), undefined);
+});
+
+test('取最早的 session 起始日與排列順序無關', () => {
+  const { from, to } = seasonBounds(BASE_YEAR, 'winter');
+  const sessions = [{ start: to, end: to }, { start: from, end: from }];
+  assert.equal(earliestSessionStart(sessions)?.toISOString().slice(0, from.length), from);
 });

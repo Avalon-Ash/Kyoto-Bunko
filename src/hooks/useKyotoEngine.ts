@@ -46,7 +46,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Lang, FlatSpot, WardKey } from '../types';
 import { loadSpotsByWard, WARD_BY_AREA, getTagCounts, getWardStats } from '../data/index';
 import { WARD_KEY_LIST, isWardKey } from '../lib/ward-keys';
-import { DEFAULT_NAV_MODE, type NavMode } from '../lib/nav-modes';
+import { DEFAULT_NAV_MODE, type NavMode, type VolumeMode } from '../lib/nav-modes';
 import { translate } from '../data/i18n';
 import { TYPES } from '../data/types';
 
@@ -198,7 +198,7 @@ export function useKyotoEngine() {
   const tagCounts = useMemo<Record<string, number>>(() => getTagCounts(), []);
 
   /** Only the modes whose list opens a volume (a ward or an area) come here. */
-  const openDetail = (id: string, viewMode: Extract<NavMode, 'ward' | 'area'>) => {
+  const openDetail = (id: string, viewMode: VolumeMode) => {
     setReturnFocusId(id);
     setActiveId(id);
     setMode(viewMode);

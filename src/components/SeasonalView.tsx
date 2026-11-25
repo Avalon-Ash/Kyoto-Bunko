@@ -1,19 +1,18 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { EVENT_OCCURRENCES, loadEvents, type LoadedEvent } from '../data/events/loader';
-import { SEASON_MONTHS, type Season } from '../data/events/seasons';
+import { SEASONS, type Season } from '../data/events/seasons';
 import { STATUS_RULES, type IsoDate } from '../data/events/types';
 import { translate } from '../data/i18n';
 import { getSpotLocation } from '../data/municipalities';
 import { loadSpotsByWard } from '../data/spots-loader';
 import {
-  isStale, listSeason, queryRange, seasonBounds, sessionDates, tokyoToday, validateRange,
+  isStale, listSeason, listYear, parseIsoDay, queryRange, seasonBounds, sessionDates, tokyoToday, validateRange,
   type RangeErrorCode, type SeasonalQueryMatch,
 } from '../lib/seasonal-query';
 import type { Lang } from '../types';
 
-const SEASONS = Object.keys(SEASON_MONTHS) as Season[];
+const BROWSE_OPTIONS = ['year', ...SEASONS] as const;
 const CATALOG_YEAR = Math.max(...Object.keys(EVENT_OCCURRENCES).map(Number));
-const WINTER_BOUNDS = seasonBounds(CATALOG_YEAR, 'winter');
 const LOCALES: Record<Lang, string> = { zh: 'zh-TW', ja: 'ja-JP' };
 
 interface DateRange {
@@ -44,7 +43,9 @@ async function loadCatalog(lang: Lang): Promise<SeasonalCatalog> {
 }
 
 function calendarDay(date: IsoDate): Date {
-  return new Date(`${date}T00:00:00Z`);
+  const day = parseIsoDay(date);
+  if (!day) throw new Error(`Invalid calendar day: ${date}`);
+  return day;
 }
 
 function seasonalFormats(lang: Lang) {
@@ -57,14 +58,24 @@ function seasonalFormats(lang: Lang) {
   };
 }
 
+function formatDateRange({ from, to }: DateRange, format: Intl.DateTimeFormat): string {
+  return `${format.format(calendarDay(from))} – ${format.format(calendarDay(to))}`;
+}
+
 function formatDates(dates: IsoDate[], formats: ReturnType<typeof seasonalFormats>): string {
   const first = dates[0];
   const last = dates[dates.length - 1];
   if (first !== last && sessionDates({ start: first, end: last }).length === dates.length) {
-    // formatRange falls back to a numeric style in some browsers (2027/10/1至2027/10/5); format both ends like single days.
-    return `${formats.date.format(calendarDay(first))} – ${formats.date.format(calendarDay(last))}`;
+    return formatDateRange({ from: first, to: last }, formats.date);
   }
   return formats.list.format(dates.map(date => formats.date.format(calendarDay(date))));
+}
+
+function seasonRangeLabel(season: Season, number: Intl.NumberFormat): string | undefined {
+  const { from, to } = seasonBounds(CATALOG_YEAR, season);
+  const days = [calendarDay(from), calendarDay(to)];
+  if (days[0].getUTCFullYear() === days[1].getUTCFullYear()) return undefined;
+  return days.map(day => `${number.format(day.getUTCFullYear())}/${number.format(day.getUTCMonth() + 1)}`).join('–');
 }
 
 function SeasonalEntry({ match, lang, today, spotNames, formats }: {
@@ -74,7 +85,7 @@ function SeasonalEntry({ match, lang, today, spotNames, formats }: {
   spotNames: SeasonalCatalog['spotNames'];
   formats: ReturnType<typeof seasonalFormats>;
 }) {
-  const { event, occurrence, dates } = match;
+  const { event, occurrence, dates, fullPeriod } = match;
   const rule = STATUS_RULES[occurrence.status];
   const summary = occurrence.basis === 'usual' ? rule.usualSummary ?? rule.summary : rule.summary;
   const showDates = rule.dateQuery === 'with-sessions' && dates.length > 0;
@@ -84,6 +95,9 @@ function SeasonalEntry({ match, lang, today, spotNames, formats }: {
     const days = sessionDates(session).filter(date => matchedDays.has(date));
     return days.length ? [{ days, ...session.hours }] : [];
   }) : [];
+  const access = [];
+  if (occurrence.admission !== 'unknown') access.push(translate(`seasonal_admission_${occurrence.admission}`, lang));
+  if (occurrence.reservation === 'required') access.push(translate('reservation', lang));
 
   const venues = event.venues.map(venue => {
     const location = getSpotLocation(venue);
@@ -108,13 +122,15 @@ function SeasonalEntry({ match, lang, today, spotNames, formats }: {
           event.usualMonths.map(month => formats.month.format(new Date(Date.UTC(CATALOG_YEAR, month - 1, 1)))),
         ))}</p>
       )}
-      {showDates && <p>{formatDates(dates, formats)}</p>}
+      {showDates && <p>{formatDates(dates, formats)}{fullPeriod && translate('seasonal_full_period', lang)
+        .replace('{dates}', formatDateRange(fullPeriod, formats.date))}</p>}
       {times.map(({ days, open, close }, index) => (
         <p key={index} className="seasonal-time">
           {days.length !== dates.length && <>{formatDates(days, formats)}<br /></>}
           <time dateTime={open}>{open}</time>–<time dateTime={close}>{close}</time>
         </p>
       ))}
+      {access.length > 0 && <p className="ui-muted"><small>{formats.list.format(access)}</small></p>}
       <a className="seasonal-official" href={event.officialUrl} target="_blank" rel="noopener"
         aria-label={translate('seasonal_official_event', lang).replace('{name}', event.name)}>
         {translate('seasonal_official', lang)} <span aria-hidden="true">↗</span>
@@ -125,10 +141,7 @@ function SeasonalEntry({ match, lang, today, spotNames, formats }: {
 
 export function SeasonalView({ lang }: { lang: Lang }) {
   const today = tokyoToday(new Date());
-  const [season, setSeason] = useState<Season>(() => {
-    const currentMonth = Number(today.split('-')[1]);
-    return SEASONS.find(key => SEASON_MONTHS[key].some(month => month === currentMonth)) ?? SEASONS[0];
-  });
+  const [browse, setBrowse] = useState<typeof BROWSE_OPTIONS[number]>('year');
   const [draft, setDraft] = useState<DateRange>({ from: '', to: '' });
   const { from, to } = draft;
   const [range, setRange] = useState<DateRange | null>(null);
@@ -155,7 +168,7 @@ export function SeasonalView({ lang }: { lang: Lang }) {
   const formats = seasonalFormats(lang);
   const matches = data ? (range
     ? queryRange(data.events, range.from, range.to)
-    : listSeason(data.events, CATALOG_YEAR, season)) : [];
+    : browse === 'year' ? listYear(data.events, CATALOG_YEAR) : listSeason(data.events, CATALOG_YEAR, browse)) : [];
 
   function submitRange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -184,10 +197,7 @@ export function SeasonalView({ lang }: { lang: Lang }) {
   const errorId = `${id}-range-error`;
   const fromInvalid = error === 'invalid-date' && !from;
   const toInvalid = error === 'end-before-start' || (error === 'invalid-date' && !to);
-  const winterRange = [WINTER_BOUNDS.from, WINTER_BOUNDS.to].map(date => {
-    const [year, month] = date.split('-');
-    return `${formats.number.format(Number(year))}/${formats.number.format(Number(month))}`;
-  }).join('–');
+  const emptyKey = range ? 'seasonal_empty_range' : browse === 'year' ? 'seasonal_empty_year' : 'seasonal_empty_season';
 
   return (
     <section className="bunko-index seasonal-index" aria-labelledby={`${id}-title`}>
@@ -200,12 +210,15 @@ export function SeasonalView({ lang }: { lang: Lang }) {
       <section className="index-group">
         <h2 id={`${id}-seasons`}>{t('seasonal_seasons')}</h2>
         <div className="seasonal-controls" role="group" aria-labelledby={`${id}-seasons`}>
-          {SEASONS.map(key => (
-            <button key={key} className="ui-button" type="button" aria-pressed={!range && key === season}
-              onClick={() => { setSeason(key); clearRange(); }}>
-              {t(`seasonal_${key}`)}{key === 'winter' && <small>{winterRange}</small>}
-            </button>
-          ))}
+          {BROWSE_OPTIONS.map(key => {
+            const label = key === 'year' ? undefined : seasonRangeLabel(key, formats.number);
+            return (
+              <button key={key} className="ui-button" type="button" aria-pressed={!range && key === browse}
+                onClick={() => { setBrowse(key); clearRange(); }}>
+                {t(`seasonal_${key}`)}{label && <small>{label}</small>}
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -234,12 +247,12 @@ export function SeasonalView({ lang }: { lang: Lang }) {
 
       <section className="index-group" aria-labelledby={`${id}-results`}>
         <h2 id={`${id}-results`}>{range
-          ? formats.date.formatRange(calendarDay(range.from), calendarDay(range.to))
-          : t(`seasonal_${season}`)}</h2>
+          ? formatDateRange(range, formats.date)
+          : t(`seasonal_${browse}`)}</h2>
         <p className="ui-muted seasonal-result-summary" role="status">
           {data === null ? t('seasonal_load_failed') : !data ? t('loading')
             : matches.length ? t('seasonal_result_count').replace('{n}', formats.number.format(matches.length))
-              : t(range ? 'seasonal_empty_range' : 'seasonal_empty_season')}
+              : t(emptyKey)}
         </p>
         {data && matches.length > 0 && (
           <ul className="seasonal-results" role="list">

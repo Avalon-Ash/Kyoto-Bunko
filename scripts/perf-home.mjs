@@ -93,49 +93,55 @@ try {
           await sleep(TAP_EVERY_MS);
         }
       })();
-      let fallbackMs = 0, readyMs = 0;
-      const deadline = Date.now() + READY_TIMEOUT_MS;
-      while (Date.now() < deadline) {
-        const s = await evalJs(`(() => { const c = document.querySelector('#scene'), l = document.querySelector('#loading');
-          return {now: performance.now(), r: c?.dataset.renderer ?? '', bg: Boolean(c && getComputedStyle(c).backgroundImage !== 'none'), hidden: Boolean(l?.hidden), plate: c?.dataset.plate}; })()`);
-        if (s && !fallbackMs && (s.bg || s.r === 'static')) fallbackMs = Math.round(s.now);
-        if (s && s.hidden && s.r && s.plate === 'true') { readyMs = Math.round(s.now); break; }
-        await sleep(POLL_MS);
-      }
-      const upToReady = await evalJs(`__perf.long.filter(([t]) => t <= ${readyMs || 1e9})`);
-      const row = {label: LABEL, load, cache: load === 1 ? 'cold' : 'warm', fallbackMs, readyMs,
-        longTasks: upToReady.length, longTaskMs: Math.round(upToReady.reduce((a, [, d]) => a + d, 0)),
-        longestTaskMs: Math.round(Math.max(0, ...upToReady.map(([, d]) => d)))};
-      row.gpu = await evalJs(`(() => { const g = document.createElement('canvas').getContext('webgl2'), x = g?.getExtension('WEBGL_debug_renderer_info');
-        return x ? g.getParameter(x.UNMASKED_RENDERER_WEBGL) : ''; })()`);
-      if (readyMs) {
-        await sleep(PREFETCH_SETTLE_MS);
-        // Idle frame time: nothing pressed, the idle light may be moving.
-        const idleFrom = await evalJs('performance.now()');
-        await sleep(IDLE_WINDOW_MS);
-        const gaps = (await evalJs(`__perf.gaps.filter(([t]) => t > ${idleFrom}).map(([, d]) => d)`)).sort((a, b) => a - b);
-        const q = p => Math.round(10 * (gaps[Math.min(gaps.length - 1, Math.floor(p * gaps.length))] ?? 0)) / 10;
-        row.idle = {frames: gaps.length, p50: q(.5), p95: q(.95), max: q(1)};
-        // One switch with the right arrow.
-        const before = await evalJs(`document.querySelector('#scene').dataset.renderedWard`);
-        await evalJs(`document.querySelector('#scene').focus({preventScroll: true})`);
-        const keyAt = await evalJs('performance.now()');
-        const key = {key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39, nativeVirtualKeyCode: 39};
-        await send('Input.dispatchKeyEvent', {type: 'keyDown', ...key});
-        await send('Input.dispatchKeyEvent', {type: 'keyUp', ...key});
-        let changedMs = 0;
-        while (await evalJs('performance.now()') - keyAt < SWITCH_WINDOW_MS) {
-          const now = await evalJs(`[performance.now(), document.querySelector('#scene').dataset.renderedWard]`);
-          if (!changedMs && now[1] !== before) changedMs = Math.round(now[0] - keyAt);
+      const row = {label: LABEL, load, cache: load === 1 ? 'cold' : 'warm'};
+      try {
+        let fallbackMs = 0, readyMs = 0;
+        const deadline = Date.now() + READY_TIMEOUT_MS;
+        while (Date.now() < deadline) {
+          const s = await evalJs(`(() => { const c = document.querySelector('#scene'), l = document.querySelector('#loading');
+            return {now: performance.now(), r: c?.dataset.renderer ?? '', bg: Boolean(c && getComputedStyle(c).backgroundImage !== 'none'), hidden: Boolean(l?.hidden), plate: c?.dataset.plate}; })()`);
+          if (s && !fallbackMs && (s.bg || s.r === 'static')) fallbackMs = Math.round(s.now);
+          if (s && s.hidden && s.r && s.plate === 'true') { readyMs = Math.round(s.now); break; }
           await sleep(POLL_MS);
         }
-        const sw = await evalJs(`({long: __perf.long.filter(([t]) => t >= ${keyAt}), gaps: __perf.gaps.filter(([t]) => t >= ${keyAt}).map(([, d]) => d)})`);
-        row.switch = {from: before, to: await evalJs(`document.querySelector('#scene').dataset.renderedWard`), changedMs,
-          maxGapMs: Math.round(Math.max(0, ...sw.gaps)), gapsOver50: sw.gaps.filter(d => d > LONG_TASK_MS).length,
-          longTasks: sw.long.length, longestTaskMs: Math.round(Math.max(0, ...sw.long.map(([, d]) => d)))};
+        const upToReady = await evalJs(`__perf.long.filter(([t]) => t <= ${readyMs || 1e9})`);
+        row.fallbackMs = fallbackMs;
+        row.readyMs = readyMs;
+        row.longTasks = upToReady.length;
+        row.longTaskMs = Math.round(upToReady.reduce((a, [, d]) => a + d, 0));
+        row.longestTaskMs = Math.round(Math.max(0, ...upToReady.map(([, d]) => d)));
+        row.gpu = await evalJs(`(() => { const g = document.createElement('canvas').getContext('webgl2'), x = g?.getExtension('WEBGL_debug_renderer_info');
+          return x ? g.getParameter(x.UNMASKED_RENDERER_WEBGL) : ''; })()`);
+        if (readyMs) {
+          await sleep(PREFETCH_SETTLE_MS);
+          // Idle frame time: nothing pressed, the idle light may be moving.
+          const idleFrom = await evalJs('performance.now()');
+          await sleep(IDLE_WINDOW_MS);
+          const gaps = (await evalJs(`__perf.gaps.filter(([t]) => t > ${idleFrom}).map(([, d]) => d)`)).sort((a, b) => a - b);
+          const q = p => Math.round(10 * (gaps[Math.min(gaps.length - 1, Math.floor(p * gaps.length))] ?? 0)) / 10;
+          row.idle = {frames: gaps.length, p50: q(.5), p95: q(.95), max: q(1)};
+          // One switch with the right arrow.
+          const before = await evalJs(`document.querySelector('#scene').dataset.renderedWard`);
+          await evalJs(`document.querySelector('#scene').focus({preventScroll: true})`);
+          const keyAt = await evalJs('performance.now()');
+          const key = {key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39, nativeVirtualKeyCode: 39};
+          await send('Input.dispatchKeyEvent', {type: 'keyDown', ...key});
+          await send('Input.dispatchKeyEvent', {type: 'keyUp', ...key});
+          let changedMs = 0;
+          while (await evalJs('performance.now()') - keyAt < SWITCH_WINDOW_MS) {
+            const now = await evalJs(`[performance.now(), document.querySelector('#scene').dataset.renderedWard]`);
+            if (!changedMs && now[1] !== before) changedMs = Math.round(now[0] - keyAt);
+            await sleep(POLL_MS);
+          }
+          const sw = await evalJs(`({long: __perf.long.filter(([t]) => t >= ${keyAt}), gaps: __perf.gaps.filter(([t]) => t >= ${keyAt}).map(([, d]) => d)})`);
+          row.switch = {from: before, to: await evalJs(`document.querySelector('#scene').dataset.renderedWard`), changedMs,
+            maxGapMs: Math.round(Math.max(0, ...sw.gaps)), gapsOver50: sw.gaps.filter(d => d > LONG_TASK_MS).length,
+            longTasks: sw.long.length, longestTaskMs: Math.round(Math.max(0, ...sw.long.map(([, d]) => d)))};
+        }
+      } finally {
+        tapping = false;
+        await tapLoop;
       }
-      tapping = false;
-      await tapLoop;
       if (TAPS) {
         // One interaction is a keydown and a keyup with the same id; its duration is the longer of the two.
         const ev = await evalJs('__perf.events');
@@ -148,7 +154,7 @@ try {
         row.input = {sentApprox: sent, reported: durs.length, p95Reported: q(.95), max: q(1),
           over200: durs.filter(d => d > INP_GOOD_MS).length, gateMs: INP_GOOD_MS};
       }
-      if (readyMs && COMPILE && load === LOADS) row.compile = await evalJs(COMPILE_BENCH);
+      if (row.readyMs && COMPILE && load === LOADS) row.compile = await evalJs(COMPILE_BENCH);
       const problems = logs.filter(l => !/^\[vite\]/.test(l.text)).map(l => `${l.level}: ${l.text}`);
       row.consoleErrors = problems.length;
       if (problems.length) row.console = problems.slice(0, 3).map(l => l.slice(0, 200));

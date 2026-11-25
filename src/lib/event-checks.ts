@@ -1,7 +1,8 @@
 import { CALENDAR_MONTHS } from '../data/events/seasons';
 import { EVENT_KINDS, OCCURRENCE_BASES, STATUS_RULES } from '../data/events/types';
-import type { EventLocale, EventOccurrence, EventOccurrencesByYear, EventSchema, EventSession, IsoDate } from '../data/events/types';
+import type { EventLocale, EventOccurrence, EventOccurrencesByYear, EventSchema, EventSession } from '../data/events/types';
 import type { Lang } from '../types';
+import { earliestSessionStart, iterateSessionDates, parseIsoDay } from './seasonal-query';
 
 export interface EventIssue {
   level: 'ERROR' | 'WARN';
@@ -19,7 +20,6 @@ interface EventCheckInput {
 }
 
 const EVENT_ID = /^EV-\d{3}$/;
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const CLOCK_TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const DAYS_PER_WEEK = 7;
 const EVENT_FIELDS = {
@@ -29,27 +29,6 @@ const VENUE_FIELDS = {
   spot: { kind: true, spotId: true },
   ward: { kind: true, wardId: true, municipalityId: true },
 };
-
-/** UTC midnight is used for arithmetic on Tokyo calendar dates. */
-export function parseIsoDay(date: IsoDate): Date | undefined {
-  if (!ISO_DAY.test(date)) return undefined;
-  const day = new Date(`${date}T00:00:00Z`);
-  if (!Number.isFinite(day.getTime()) || day.toISOString().slice(0, date.length) !== date) return undefined;
-  return day;
-}
-
-/** Shared expansion for validation and date queries. */
-export function* iterateSessionDates({ start, end, weekdays, except }: EventSession): Generator<IsoDate> {
-  const day = parseIsoDay(start);
-  const last = parseIsoDay(end);
-  if (!day || !last || weekdays?.length === 0) return;
-  const excluded = new Set(except);
-  for (; day <= last; day.setUTCDate(day.getUTCDate() + 1)) {
-    if (weekdays && !weekdays.includes(day.getUTCDay())) continue;
-    const date = day.toISOString().slice(0, start.length);
-    if (!excluded.has(date)) yield date;
-  }
-}
 
 type ReportIssue = (code: string, message: string) => void;
 
@@ -90,7 +69,7 @@ function checkOccurrence(row: EventOccurrence, label: string, error: ReportIssue
     error('occurrence-basis', `${label}: 未知的日期依據 ${basis}`);
   }
 
-  const firstDay = sessions.length ? parseIsoDay(sessions[0].start) : undefined;
+  const firstDay = earliestSessionStart(sessions);
   if (firstDay && firstDay.getUTCFullYear() !== year) error('occurrence-year', `${label}: 年度與首場開始日不符`);
   sessions.forEach((session, i) => checkSession(session, `${label} 第 ${i + 1} 場`, error, warn));
 

@@ -7,4 +7,11 @@ export const SEASON_MONTHS = {
 } as const;
 
 export type Season = keyof typeof SEASON_MONTHS;
+export const SEASONS = Object.keys(SEASON_MONTHS) as Season[];
 export const CALENDAR_MONTHS: readonly number[] = Object.values(SEASON_MONTHS).flat().sort((a, b) => a - b);
+
+export function seasonOfMonth(month: number): Season | undefined {
+  return SEASONS.find(season =>
+    SEASON_MONTHS[season].some(seasonMonth => seasonMonth === month),
+  );
+}

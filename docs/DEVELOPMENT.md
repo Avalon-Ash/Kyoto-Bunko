@@ -172,7 +172,7 @@ Area 粒度比 Ward 更細，適合依據旅遊動線規劃單日行程。
   - **Kyoto Engine (`useKyotoEngine.ts`)**: 應用的「大腦」。負責管理過濾邏輯（Filtering）、語系狀態、以及計數器更新。
 
 ### 3. 季節子系統 (Seasonal Architecture)
-原獨立頁面 `public/seasonal.html` 已移除（可自 Git 歷史取回），目前無獨立季節網頁。新方向計畫見 `docs/SEASONAL_PLAN.md`。
+首頁第四個檢索模式「歲時記」（2026-11-25）：2027 年京都十一區＋大津的年中行事精選 51 項，可依季節瀏覽或查日期區間。資料在 `src/data/events/`（主檔、年度場次、中日 locale 分開，ADR 0023），日期語意與狀態規則見 ADR 0024，查詢是 `src/lib/seasonal-query.ts` 的純函式，畫面是 `src/components/SeasonalView.tsx`。開案書：`docs/plans/2026-11-25-seasonal.md`。
 
 ### 🗺 Query Assembly System — 地圖搜尋規則
 
@@ -364,10 +364,14 @@ public/                 # 【子系統】seasonal.html 已移除（計畫見 doc
 ### 5. 地標景點真確性定位約束 (Landmark Coordinates)
 當新增或修改具有「世界遺產」、「國寶」、「經典寺院 / 神社」等超重要地位的景點時（如金閣寺、清水寺、平安神宮等），**強制必須**在 `src/data/map-centers.ts` 的 `SPOT_POSITIONS` 常數中，新增該 `spot.id` 對應的真實經緯度坐標。以利 `ClusterMap.tsx` 在地圖上直接繪製專屬的地名圖示（Landmark Icon + Name）。
 
-### 6. 歲時記（已移除，計畫見 `docs/SEASONAL_PLAN.md`）
-舊頁 `public/seasonal.html` 已移除（可自 Git 歷史取回），首頁入口亦已移除。
-
-新方向為已知活動年度總表、季節分類、使用者日期區間內的活動清單，詳見 [年度製作計畫](SEASONAL_PLAN.md)。尚未製作年度資料或查詢頁；恢復入口前需完成日期／來源查核與驗收。
+### 6. 歲時記（`src/data/events/`）
+- **主檔** `catalog.ts`：`EV-NNN`，穩定、退役不重編；只存結構（類型、場地、慣例月份、官方網址）。場地掛景點 ID，沒有對應景點才只掛區（大津帶 `municipalityId: 'M_OTSU'`）；景點已帶出的區不要再掛一次。不為活動新增景點。
+- **年度場次** `occurrences/<年>.ts`：一年一檔；年度＝首場開始日的年。日期是東京曆日字串；多日、限定星期、排除日、分段照實拆成多筆 session。
+- **狀態**：官方公告當年日期 → `confirmed`＋`basis: 'announced'`；官方只寫固定日（例如「毎年8月16日」）→ `confirmed`＋`basis: 'usual'`（畫面標例年）；日期每年變而當年未公告 → `tba`、sessions 空。**不可把前一年的日期改年份**。
+- **來源**：每筆場次附官方或主辦者網址與查核日；觀光協會只當線索。遇到人機驗證不繞過。票價只存免費／收費／部分收費／不明。
+- **中日 locale** `locales/{zh,ja}.ts`：名稱、一句描述、主辦者；不誇飾、不推測。
+- 驗證在 `src/lib/event-checks.ts`，由 `validate_data.js` 呼叫；查核日超過 90 天，頁面顯示過期提示。換年：新增 `occurrences/<新年>.ts`，逐筆重查。
+- 計畫與歷史：[開案書](plans/2026-11-25-seasonal.md)、[S1 名單與來源](agent-runs/2026-11-25-seasonal-s1.md)、[舊計畫](SEASONAL_PLAN.md)。
 
 ### 7. 執行前自我檢查與回報 (Automated Validation)
 
