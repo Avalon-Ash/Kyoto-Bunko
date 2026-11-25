@@ -10,6 +10,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit && tsc -p tsconfig.js.json --noEmit && eslint . && node scripts/check-adr.mjs",
     "adr:check": "node scripts/check-adr.mjs",
+    "audit:events": "tsx scripts/audit-events.ts",
     "test": "node scripts/run-tests.mjs",
     "smoke": "node scripts/smoke.mjs"
   },

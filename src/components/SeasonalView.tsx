@@ -6,13 +6,16 @@ import { translate } from '../data/i18n';
 import { getSpotLocation } from '../data/municipalities';
 import { loadSpotsByWard } from '../data/spots-loader';
 import {
-  isStale, listSeason, listYear, parseIsoDay, queryRange, seasonBounds, sessionDates, tokyoToday, validateRange,
+  isStale, listSeason, listYear, parseIsoDay, queryRange, seasonBounds, selectCatalogYear, sessionDates, tokyoToday,
+  validateRange,
   type RangeErrorCode, type SeasonalQueryMatch,
 } from '../lib/seasonal-query';
 import type { Lang } from '../types';
 
 const BROWSE_OPTIONS = ['year', ...SEASONS] as const;
-const CATALOG_YEAR = Math.max(...Object.keys(EVENT_OCCURRENCES).map(Number));
+const OCCURRENCE_YEARS = Object.entries(EVENT_OCCURRENCES)
+  .filter(([, occurrences]) => occurrences.length > 0)
+  .map(([year]) => Number(year));
 const LOCALES: Record<Lang, string> = { zh: 'zh-TW', ja: 'ja-JP' };
 
 interface DateRange {
@@ -26,9 +29,9 @@ interface SeasonalCatalog {
   checkedOn: IsoDate;
 }
 
-async function loadCatalog(lang: Lang): Promise<SeasonalCatalog> {
+async function loadCatalog(lang: Lang, year: number | undefined): Promise<SeasonalCatalog> {
   const events = (await loadEvents(lang)).flatMap(event => {
-    const occurrences = event.occurrences.filter(occurrence => occurrence.year === CATALOG_YEAR);
+    const occurrences = event.occurrences.filter(occurrence => occurrence.year === year);
     return occurrences.length ? [{ ...event, occurrences }] : [];
   });
   const venues = events.flatMap(event => event.venues).filter(venue => venue.kind === 'spot');
@@ -71,8 +74,8 @@ function formatDates(dates: IsoDate[], formats: ReturnType<typeof seasonalFormat
   return formats.list.format(dates.map(date => formats.date.format(calendarDay(date))));
 }
 
-function seasonRangeLabel(season: Season, number: Intl.NumberFormat): string | undefined {
-  const { from, to } = seasonBounds(CATALOG_YEAR, season);
+function seasonRangeLabel(year: number, season: Season, number: Intl.NumberFormat): string | undefined {
+  const { from, to } = seasonBounds(year, season);
   const days = [calendarDay(from), calendarDay(to)];
   if (days[0].getUTCFullYear() === days[1].getUTCFullYear()) return undefined;
   return days.map(day => `${number.format(day.getUTCFullYear())}/${number.format(day.getUTCMonth() + 1)}`).join('–');
@@ -111,6 +114,7 @@ function SeasonalEntry({ match, lang, today, spotNames, formats }: {
     <li className="seasonal-entry">
       <h3>{event.name}</h3>
       <p className="ui-muted">{formats.list.format([...new Set(venues)])}</p>
+      <p>{event.desc}</p>
       <p className="seasonal-status">
         <span>{translate(`seasonal_status_${summary}`, lang)}</span>
         {isStale(occurrence.source.checkedOn, today) && (
@@ -119,7 +123,7 @@ function SeasonalEntry({ match, lang, today, spotNames, formats }: {
       </p>
       {summary === 'usual-months' && (
         <p>{translate('seasonal_usual_months', lang).replace('{months}', formats.list.format(
-          event.usualMonths.map(month => formats.month.format(new Date(Date.UTC(CATALOG_YEAR, month - 1, 1)))),
+          event.usualMonths.map(month => formats.month.format(new Date(Date.UTC(occurrence.year, month - 1, 1)))),
         ))}</p>
       )}
       {showDates && <p>{formatDates(dates, formats)}{fullPeriod && translate('seasonal_full_period', lang)
@@ -131,6 +135,9 @@ function SeasonalEntry({ match, lang, today, spotNames, formats }: {
         </p>
       ))}
       {access.length > 0 && <p className="ui-muted"><small>{formats.list.format(access)}</small></p>}
+      <p className="ui-muted"><small>{translate('seasonal_organizer', lang)
+        .replace('{name}', event.organizer)}</small></p>
+      {event.note && <p className="ui-muted"><small>{event.note}</small></p>}
       <a className="seasonal-official" href={event.officialUrl} target="_blank" rel="noopener"
         aria-label={translate('seasonal_official_event', lang).replace('{name}', event.name)}>
         {translate('seasonal_official', lang)} <span aria-hidden="true">↗</span>
@@ -141,34 +148,35 @@ function SeasonalEntry({ match, lang, today, spotNames, formats }: {
 
 export function SeasonalView({ lang }: { lang: Lang }) {
   const today = tokyoToday(new Date());
+  const year = selectCatalogYear(today, OCCURRENCE_YEARS);
   const [browse, setBrowse] = useState<typeof BROWSE_OPTIONS[number]>('year');
   const [draft, setDraft] = useState<DateRange>({ from: '', to: '' });
   const { from, to } = draft;
   const [range, setRange] = useState<DateRange | null>(null);
   const [error, setError] = useState<RangeErrorCode | null>(null);
-  const [catalog, setCatalog] = useState<{ lang: Lang; data: SeasonalCatalog | null } | null>(null);
+  const [catalog, setCatalog] = useState<{ lang: Lang; year: number | undefined; data: SeasonalCatalog | null } | null>(null);
   const id = useId();
 
   useEffect(() => {
     let current = true;
-    loadCatalog(lang).then(data => {
-      if (current) setCatalog({ lang, data });
+    loadCatalog(lang, year).then(data => {
+      if (current) setCatalog({ lang, year, data });
     }).catch((error: unknown) => {
       if (current) {
         console.error(error);
-        setCatalog({ lang, data: null });
+        setCatalog({ lang, year, data: null });
       }
     });
     return () => { current = false; };
-  }, [lang]);
+  }, [lang, year]);
 
-  const currentCatalog = catalog?.lang === lang ? catalog : null;
+  const currentCatalog = catalog?.lang === lang && catalog.year === year ? catalog : null;
   const data = currentCatalog?.data;
   const t = (key: string) => translate(key, lang);
   const formats = seasonalFormats(lang);
-  const matches = data ? (range
+  const matches = data && year !== undefined ? (range
     ? queryRange(data.events, range.from, range.to)
-    : browse === 'year' ? listYear(data.events, CATALOG_YEAR) : listSeason(data.events, CATALOG_YEAR, browse)) : [];
+    : browse === 'year' ? listYear(data.events, year) : listSeason(data.events, year, browse)) : [];
 
   function submitRange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -202,16 +210,16 @@ export function SeasonalView({ lang }: { lang: Lang }) {
   return (
     <section className="bunko-index seasonal-index" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`} className="seasonal-title">
-        {t('seasonal_title').replace('{year}', formats.number.format(CATALOG_YEAR))}
+        {year === undefined ? t('mode_seasonal') : t('seasonal_title').replace('{year}', formats.number.format(year))}
       </h2>
-      {data && <p className="index-caption">{t('seasonal_caption')
+      {data && year !== undefined && <p className="index-caption">{t('seasonal_caption')
         .replace('{n}', formats.number.format(data.events.length)).replace('{date}', data.checkedOn)}</p>}
 
       <section className="index-group">
         <h2 id={`${id}-seasons`}>{t('seasonal_seasons')}</h2>
         <div className="seasonal-controls" role="group" aria-labelledby={`${id}-seasons`}>
           {BROWSE_OPTIONS.map(key => {
-            const label = key === 'year' ? undefined : seasonRangeLabel(key, formats.number);
+            const label = key === 'year' || year === undefined ? undefined : seasonRangeLabel(year, key, formats.number);
             return (
               <button key={key} className="ui-button" type="button" aria-pressed={!range && key === browse}
                 onClick={() => { setBrowse(key); clearRange(); }}>

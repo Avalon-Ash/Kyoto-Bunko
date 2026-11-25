@@ -9,6 +9,7 @@ const TOKYO_TIME_ZONE = 'Asia/Tokyo';
 const MS_PER_DAY = 86_400_000;
 const ISO_YEAR_DIGITS = 4;
 const ISO_MONTH_DAY_DIGITS = 2;
+const ISO_MONTH_LENGTH = ISO_YEAR_DIGITS + '-'.length + ISO_MONTH_DAY_DIGITS;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const TOKYO_DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -165,6 +166,32 @@ export function tokyoToday(now: Date): IsoDate {
   const month = parts.find(part => part.type === 'month')?.value ?? '';
   const day = parts.find(part => part.type === 'day')?.value ?? '';
   return `${year}-${month}-${day}`;
+}
+
+/** Select the current or nearest later catalog year, falling back to the latest recorded year. */
+export function selectCatalogYear(today: IsoDate, availableYears: readonly number[]): number | undefined {
+  const year = parseIsoDay(today)?.getUTCFullYear();
+  if (year === undefined) return undefined;
+  const sorted = [...availableYears].sort((a, b) => a - b);
+  return sorted.find(candidate => candidate >= year) ?? sorted.at(-1);
+}
+
+/** Return YYYY-MM values whose calendar month overlaps the inclusive window starting today. */
+export function usualMonthsInWindow(
+  year: number,
+  months: readonly number[],
+  today: IsoDate,
+  daysAhead: number,
+): string[] {
+  const end = parseIsoDay(today);
+  if (!end) return [];
+  end.setUTCDate(end.getUTCDate() + daysAhead);
+  const from = today.slice(0, ISO_MONTH_LENGTH);
+  const to = end.toISOString().slice(0, ISO_MONTH_LENGTH);
+  return months
+    .map(month => formatYearMonthDay(year, month, 1).slice(0, ISO_MONTH_LENGTH))
+    .filter(month => month >= from && month <= to)
+    .sort();
 }
 
 /** Expand a session into actual calendar dates (UTC arithmetic, weekday and exception filters applied). */

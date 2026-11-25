@@ -42,6 +42,7 @@ export const UI_DICT: Record<string, I18nText> = {
   seasonal_admission_paid: { zh: "收費", ja: "有料" },
   seasonal_admission_mixed: { zh: "部分收費", ja: "一部有料" },
   seasonal_stale: { zh: "資料可能過期", ja: "情報が古くなっている可能性があります" },
+  seasonal_organizer: { zh: "主辦：{name}", ja: "主催：{name}" },
   seasonal_official: { zh: "官方網站", ja: "公式サイト" },
   seasonal_official_event: { zh: "{name}的官方網站（另開分頁）", ja: "{name}の公式サイト（新しいタブで開く）" },
   btn_back: { zh: "歸、", ja: "帰る" },

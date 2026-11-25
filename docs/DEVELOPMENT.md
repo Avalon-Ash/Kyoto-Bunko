@@ -228,6 +228,7 @@ src/
 │   ├── type-tag-groups.ts   # 【元數據】TYPE_TAG_GROUP_MAP：主 Tab → 副標籤 group 白名單
 │   ├── types.ts             # 【元數據】景點分類定義 (HUB, SHOP, TEMPLE...)
 │   ├── i18n.ts              # 全部介面文案（UI_DICT）與 translate()；元件內不寫中日文三元運算
+│   ├── events/              # 歲時記：主檔、年度場次 occurrences/、中日 locales/（ADR 0023）
 │   ├── spots/               # 【SSOT: 結構】純地理/分類資料 (.ts)
 │   └── locales/             # 【SSOT: 內容】各語系文本夾 (zh, ja)
 ├── components/
@@ -238,6 +239,7 @@ src/
 │   ├── HomeView.tsx    # 地圖選擇與分區引導
 │   ├── MakieIcon.tsx    # 金銀圖紋圖示
 │   ├── ScrollRoller.tsx # 卷軸軸頭裝飾元件
+│   ├── SeasonalView.tsx # 歲時記查詢頁（全年、四季、日期區間）
 │   ├── SpotCard.tsx    # 景點任務卡片 (漆藝視覺風格)
 │   └── TagSelector.tsx  # 水平可拖曳的 Tag 篩選條
 ├── studies/toji/       # 【文庫核心與展示頁】
@@ -257,14 +259,18 @@ src/
 │   ├── view.js          # 放大與平移的純函式
 │   └── ward-art.js      # 十一區紋樣與短句
 └── lib/
+    ├── nav-modes.ts    # 首頁檢索模式的集合（唯一定義處）
+    ├── seasonal-query.ts # 歲時記的日期、年度與查詢純函式（ADR 0024）
+    ├── event-checks.ts # 歲時記資料驗證（validate_data.js 呼叫）
     ├── numerals.ts     # 漢數字轉換工具
     ├── makie-scene.ts  # 十一區地標座標與區域命中（文庫函目使用）
     ├── map-geometry.ts # 保留洞與 MultiPolygon 的區外遮罩
     └── map-labels.ts   # 螢幕像素標記避讓，不更改地理座標
 scripts/
+├── audit-events.ts         # 歲時記稽核報告（npm run audit:events）
 ├── fetch-ward-geo.mjs      # 開發時抓取／離線重建 11 區邊界
 └── fetch-ward-geo.test.mjs # 幾何與身分拒收測試
-public/                 # 【子系統】seasonal.html 已移除（計畫見 docs/SEASONAL_PLAN.md）
+public/                 # 舊 seasonal.html 已移除；歲時記改在首頁第四模式（docs/plans/2026-11-25-seasonal.md）
 ```
 
 ---
@@ -371,6 +377,8 @@ public/                 # 【子系統】seasonal.html 已移除（計畫見 doc
 - **來源**：每筆場次附官方或主辦者網址與查核日；觀光協會只當線索。遇到人機驗證不繞過。票價只存免費／收費／部分收費／不明。
 - **中日 locale** `locales/{zh,ja}.ts`：名稱、一句描述、主辦者；不誇飾、不推測。
 - 驗證在 `src/lib/event-checks.ts`，由 `validate_data.js` 呼叫；查核日超過 90 天，頁面顯示過期提示。換年：新增 `occurrences/<新年>.ts`，逐筆重查。
+- 每次開始京都工作階段，先跑 `npm run audit:events`，查看查核過期、近期仍待公告與仍採例年日期的場次。
+- 查到當年公告或其他更新後，依本節的狀態、來源與雙語錄入規範更新資料，並記錄查核日。
 - 計畫與歷史：[開案書](plans/2026-11-25-seasonal.md)、[S1 名單與來源](agent-runs/2026-11-25-seasonal-s1.md)、[舊計畫](SEASONAL_PLAN.md)。
 
 ### 7. 執行前自我檢查與回報 (Automated Validation)
