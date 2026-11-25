@@ -6,6 +6,7 @@ import type { EventOccurrence, EventSession, IsoDate } from '../data/events/type
 import { DEFAULT_MUNICIPALITY } from '../data/municipalities';
 import {
   STALE_AFTER_DAYS,
+  consecutiveRuns,
   earliestSessionStart,
   isStale,
   listSeason,
@@ -449,4 +450,17 @@ test('取最早的 session 起始日與排列順序無關', () => {
   const { from, to } = seasonBounds(BASE_YEAR, 'winter');
   const sessions = [{ start: to, end: to }, { start: from, end: from }];
   assert.equal(earliestSessionStart(sessions)?.toISOString().slice(0, from.length), from);
+});
+
+test('連續的日子合成一段，跨月、跨年也算連續，重複與亂序不影響', () => {
+  const { from, to } = seasonBounds(BASE_YEAR, 'winter'); // 12/1 to the end of February the next year
+  const newYearsEve: IsoDate = `${BASE_YEAR}-12-31`;
+  const newYear: IsoDate = `${BASE_YEAR + 1}-01-01`;
+  assert.deepEqual(consecutiveRuns([newYear, BASE_DAY, newYearsEve, BASE_DAY, from]), [
+    { from: BASE_DAY, to: BASE_DAY },
+    { from, to: from },
+    { from: newYearsEve, to: newYear },
+  ]);
+  assert.deepEqual(consecutiveRuns(sessionDates({ start: from, end: to })), [{ from, to }]);
+  assert.deepEqual(consecutiveRuns([]), []);
 });

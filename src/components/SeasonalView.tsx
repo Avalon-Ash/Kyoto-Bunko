@@ -6,7 +6,8 @@ import { translate } from '../data/i18n';
 import { getSpotLocation } from '../data/municipalities';
 import { loadSpotsByWard } from '../data/spots-loader';
 import {
-  isStale, listSeason, listYear, parseIsoDay, queryRange, seasonBounds, selectCatalogYear, sessionDates, tokyoToday,
+  consecutiveRuns, isStale, listSeason, listYear, parseIsoDay, queryRange, seasonBounds, selectCatalogYear, sessionDates,
+  tokyoToday,
   validateRange,
   type RangeErrorCode, type SeasonalQueryMatch,
 } from '../lib/seasonal-query';
@@ -55,6 +56,7 @@ function seasonalFormats(lang: Lang) {
   const locale = LOCALES[lang];
   return {
     date: new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: 'UTC' }),
+    day: new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric', timeZone: 'UTC' }),
     month: new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' }),
     list: new Intl.ListFormat(locale, { type: 'unit' }),
     number: new Intl.NumberFormat(locale, { useGrouping: false }),
@@ -65,13 +67,25 @@ function formatDateRange({ from, to }: DateRange, format: Intl.DateTimeFormat): 
   return `${format.format(calendarDay(from))} – ${format.format(calendarDay(to))}`;
 }
 
-function formatDates(dates: IsoDate[], formats: ReturnType<typeof seasonalFormats>): string {
-  const first = dates[0];
-  const last = dates[dates.length - 1];
-  if (first !== last && sessionDates({ start: first, end: last }).length === dates.length) {
-    return formatDateRange({ from: first, to: last }, formats.date);
-  }
-  return formats.list.format(dates.map(date => formats.date.format(calendarDay(date))));
+/** The dates as runs of consecutive days, one tag each; the year is left out where it is the catalogue's (the title says it). */
+function DateRuns({ dates, year, formats }: {
+  dates: IsoDate[];
+  year: number;
+  formats: ReturnType<typeof seasonalFormats>;
+}) {
+  return (
+    <ul className="seasonal-dates">
+      {consecutiveRuns(dates).map(({ from, to }) => {
+        const [start, end] = [calendarDay(from), calendarDay(to)];
+        const format = start.getUTCFullYear() === year && end.getUTCFullYear() === year ? formats.day : formats.date;
+        return (
+          <li key={from}>
+            <time dateTime={from}>{from === to ? format.format(start) : `${format.format(start)}–${format.format(end)}`}</time>
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 function seasonRangeLabel(year: number, season: Season, number: Intl.NumberFormat): string | undefined {
@@ -126,13 +140,14 @@ function SeasonalEntry({ match, lang, today, spotNames, formats }: {
           event.usualMonths.map(month => formats.month.format(new Date(Date.UTC(occurrence.year, month - 1, 1)))),
         ))}</p>
       )}
-      {showDates && <p>{formatDates(dates, formats)}{fullPeriod && translate('seasonal_full_period', lang)
-        .replace('{dates}', formatDateRange(fullPeriod, formats.date))}</p>}
+      {showDates && <DateRuns dates={dates} year={occurrence.year} formats={formats} />}
+      {showDates && fullPeriod && <p className="ui-muted"><small>{translate('seasonal_full_period', lang)
+        .replace('{dates}', formatDateRange(fullPeriod, formats.date))}</small></p>}
       {times.map(({ days, open, close }, index) => (
-        <p key={index} className="seasonal-time">
-          {days.length !== dates.length && <>{formatDates(days, formats)}<br /></>}
-          <time dateTime={open}>{open}</time>–<time dateTime={close}>{close}</time>
-        </p>
+        <div key={index} className="seasonal-time">
+          {days.length !== dates.length && <DateRuns dates={days} year={occurrence.year} formats={formats} />}
+          <p><time dateTime={open}>{open}</time>–<time dateTime={close}>{close}</time></p>
+        </div>
       ))}
       {access.length > 0 && <p className="ui-muted"><small>{formats.list.format(access)}</small></p>}
       <p className="ui-muted"><small>{translate('seasonal_organizer', lang)

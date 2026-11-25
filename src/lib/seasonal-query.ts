@@ -21,7 +21,7 @@ const TOKYO_DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
 
 export type RangeErrorCode = 'invalid-date' | 'end-before-start';
 
-interface DateRange {
+export interface DateRange {
   from: IsoDate;
   to: IsoDate;
 }
@@ -197,6 +197,19 @@ export function usualMonthsInWindow(
 /** Expand a session into actual calendar dates (UTC arithmetic, weekday and exception filters applied). */
 export function sessionDates(session: EventSession): IsoDate[] {
   return [...iterateSessionDates(session)];
+}
+
+/** Group calendar days into runs of consecutive days, in order (for display: one range instead of each day). */
+export function consecutiveRuns(dates: readonly IsoDate[]): DateRange[] {
+  const runs: DateRange[] = [];
+  for (const date of [...new Set(dates)].sort()) {
+    const last = runs.at(-1);
+    const day = parseIsoDay(date);
+    const previous = last && parseIsoDay(last.to);
+    if (last && day && previous && day.getTime() - previous.getTime() === MS_PER_DAY) last.to = date;
+    else runs.push({ from: date, to: date });
+  }
+  return runs;
 }
 
 /** Validate an inclusive date range against real calendar dates. */

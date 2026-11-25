@@ -74,6 +74,8 @@
 .seasonal-entry p { margin:0 0 5px; }
 .seasonal-status { display:flex; flex-wrap:wrap; gap:4px 8px; font-size:12px; }
 .seasonal-status span { padding:1px 6px; border:1px solid var(--entry-line); border-radius:3px; color:var(--entry-muted); }
+.seasonal-dates { display:flex; flex-wrap:wrap; gap:4px 6px; margin:2px 0 6px; padding:0; list-style:none; font-variant-numeric:tabular-nums; }
+.seasonal-dates li { padding:1px 8px; border:1px solid var(--entry-line); border-radius:3px; white-space:nowrap; }
 .seasonal-time { font-variant-numeric:tabular-nums; }
 .seasonal-official { display:inline-flex; align-items:center; gap:4px; min-height:44px; color:var(--hira-gold); text-decoration:underline; text-underline-offset:3px; }
 
