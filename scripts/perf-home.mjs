@@ -1,5 +1,5 @@
 // Measures the home page's makie cabinet: first load (cold and warm shader cache), one cabinet switch, and idle frame time.
-// Usage: node scripts/perf-home.mjs [--cpu 4] [--size 375x812] [--mobile] [--loads 2] [--label name] [--url http://127.0.0.1:4173/] [--compile]
+// Usage: node scripts/perf-home.mjs [--cpu 4] [--size 375x812] [--mobile] [--loads 2] [--label name] [--url http://127.0.0.1:4173/] [--compile] [--taps] [--gpu]
 //   Dev server must be on 127.0.0.1:3000. Starts its own headless Chrome (PERF_DEBUG_PORT, fresh temp profile, ANGLE D3D11)
 //   and kills only that process on exit. Load 1 runs on the empty profile (cold shader cache), later loads reuse it (warm).
 //   --cpu throttles the main thread through CDP; the GPU is not throttled, so this is a desktop GPU with a slow CPU, not a phone.
@@ -19,6 +19,9 @@ const MOBILE = process.argv.includes('--mobile');
 const LOADS = Number(arg('loads', '2'));
 const URL_ = arg('url', DEV_HOME_URL);
 const LABEL = arg('label', `cpu${CPU_RATE}-${WIDTH}x${HEIGHT}${MOBILE ? '-mobile' : ''}`);
+/** --gpu: ask Chrome for the discrete GPU (on this machine headless Chrome otherwise picks the integrated one, ~20x slower);
+ * every row then records the WebGL renderer string so a number is tied to the GPU that produced it. */
+const GPU_FLAGS = process.argv.includes('--gpu') ? ['--force_high_performance_gpu'] : [];
 const READY_TIMEOUT_MS = 90_000;
 /** Neighbours are built and compiled in the background after the first plate (ADR 0020); a switch before that measures the build. */
 const PREFETCH_SETTLE_MS = 4_000;
@@ -46,11 +49,22 @@ const COMPILE_BENCH = `(() => {
   return out.sort((a, b) => b.ms - a.ms);
 })()`;
 const LONG_TASK_MS = 50;
+// --taps: from navigation until the end of the switch window, press Shift (no handler anywhere) every TAP_EVERY_MS and read
+// Event Timing: an interaction's duration is input delay + handlers + time to the next frame, so it shows how long a key
+// waits behind the long tasks (INP-like; L3 step one, plans/2026-11-24-chain-3.md §9.2).
+const TAPS = process.argv.includes('--taps');
+const TAP_EVERY_MS = 250;
+/** The smallest durationThreshold Event Timing accepts; shorter interactions are not reported and count as fast. */
+const EVENT_THRESHOLD_MS = 16;
+/** web.dev's "good" INP bound; the L3 gate the user accepted (p95 at or under this, 2026-11-25). */
+const INP_GOOD_MS = 200;
 
 // Installed before any page script: long tasks and rAF gaps, timed from navigation start.
 const PROBE = `(() => {
   const w = window; w.__perf = {long: [], gaps: [], lastRaf: 0, fallbackAt: 0};
   try { new PerformanceObserver(l => { for (const e of l.getEntries()) w.__perf.long.push([e.startTime, e.duration]); }).observe({type: 'longtask', buffered: true}); } catch {}
+  w.__perf.events = [];
+  try { new PerformanceObserver(l => { for (const e of l.getEntries()) if (e.interactionId) w.__perf.events.push([e.startTime, e.duration, e.interactionId]); }).observe({type: 'event', buffered: true, durationThreshold: ${EVENT_THRESHOLD_MS}}); } catch {}
   const tick = t => { const p = w.__perf; if (p.lastRaf) p.gaps.push([t, t - p.lastRaf]); p.lastRaf = t; requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
 })();`;
@@ -58,7 +72,7 @@ const PROBE = `(() => {
 // A Chrome left on the port would answer instead of ours, with a warm cache: the cold row would be wrong without a sign.
 if (await isChromeAlive(PERF_DEBUG_PORT)) { console.error(`Port ${PERF_DEBUG_PORT} already has a Chrome; close it first.`); process.exit(2); }
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'kyoto-perf-'));
-const chrome = launchChrome({port: PERF_DEBUG_PORT, profileDir: profile, width: WIDTH, height: HEIGHT});
+const chrome = launchChrome({port: PERF_DEBUG_PORT, profileDir: profile, width: WIDTH, height: HEIGHT, extraArgs: GPU_FLAGS});
 const results = [];
 try {
   await waitForChrome(PERF_DEBUG_PORT);
@@ -70,6 +84,15 @@ try {
       if (CPU_RATE > 1) await send('Emulation.setCPUThrottlingRate', {rate: CPU_RATE});
       await send('Page.addScriptToEvaluateOnNewDocument', {source: PROBE});
       await send('Page.navigate', {url: URL_});
+      let tapping = TAPS;
+      const shift = {key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16, nativeVirtualKeyCode: 16};
+      const tapLoop = (async () => {
+        while (tapping) {
+          await send('Input.dispatchKeyEvent', {type: 'rawKeyDown', ...shift}).catch(() => {});
+          await send('Input.dispatchKeyEvent', {type: 'keyUp', ...shift}).catch(() => {});
+          await sleep(TAP_EVERY_MS);
+        }
+      })();
       let fallbackMs = 0, readyMs = 0;
       const deadline = Date.now() + READY_TIMEOUT_MS;
       while (Date.now() < deadline) {
@@ -83,6 +106,8 @@ try {
       const row = {label: LABEL, load, cache: load === 1 ? 'cold' : 'warm', fallbackMs, readyMs,
         longTasks: upToReady.length, longTaskMs: Math.round(upToReady.reduce((a, [, d]) => a + d, 0)),
         longestTaskMs: Math.round(Math.max(0, ...upToReady.map(([, d]) => d)))};
+      row.gpu = await evalJs(`(() => { const g = document.createElement('canvas').getContext('webgl2'), x = g?.getExtension('WEBGL_debug_renderer_info');
+        return x ? g.getParameter(x.UNMASKED_RENDERER_WEBGL) : ''; })()`);
       if (readyMs) {
         await sleep(PREFETCH_SETTLE_MS);
         // Idle frame time: nothing pressed, the idle light may be moving.
@@ -108,6 +133,20 @@ try {
         row.switch = {from: before, to: await evalJs(`document.querySelector('#scene').dataset.renderedWard`), changedMs,
           maxGapMs: Math.round(Math.max(0, ...sw.gaps)), gapsOver50: sw.gaps.filter(d => d > LONG_TASK_MS).length,
           longTasks: sw.long.length, longestTaskMs: Math.round(Math.max(0, ...sw.long.map(([, d]) => d)))};
+      }
+      tapping = false;
+      await tapLoop;
+      if (TAPS) {
+        // One interaction is a keydown and a keyup with the same id; its duration is the longer of the two.
+        const ev = await evalJs('__perf.events');
+        const byId = new Map();
+        for (const [, d, id] of ev) byId.set(id, Math.max(byId.get(id) ?? 0, d));
+        const durs = [...byId.values()].sort((a, b) => a - b);
+        const sent = Math.round((await evalJs('performance.now()')) / TAP_EVERY_MS);
+        const q = p => Math.round(durs[Math.min(durs.length - 1, Math.floor(p * durs.length))] ?? 0);
+        // Taps shorter than the threshold are not reported, so p95 over the reported ones is an upper bound.
+        row.input = {sentApprox: sent, reported: durs.length, p95Reported: q(.95), max: q(1),
+          over200: durs.filter(d => d > INP_GOOD_MS).length, gateMs: INP_GOOD_MS};
       }
       if (readyMs && COMPILE && load === LOADS) row.compile = await evalJs(COMPILE_BENCH);
       const problems = logs.filter(l => !/^\[vite\]/.test(l.text)).map(l => `${l.level}: ${l.text}`);
