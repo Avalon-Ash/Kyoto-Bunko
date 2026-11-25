@@ -75,7 +75,9 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
       if (wasPending && !pending()) ready();
       return;
     }
-    canvas.dataset.plate = 'false';
+    // The ward has a plate that is still being built: 'true' as before, so the still picture standing in for it (which has
+    // its own shadow) gets no second one from bunko.css. A cancelled build leaves it to the setMesh that cancelled it.
+    canvas.dataset.plate = 'true';
     void result.then(ok => {
       if (ok !== undefined && isCurrent()) apply(ok);
     }).catch(error => {
