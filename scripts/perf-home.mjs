@@ -6,7 +6,8 @@
 // Prints one JSON line per load and a summary line. Times are milliseconds from navigation (or from the key press, for the switch).
 //   fallbackMs: the still picture is on screen; readyMs: #loading hidden (three.js draws the real plate);
 //   longTasks / longTaskMs: count and sum of main-thread tasks over 50 ms up to readyMs;
-//   switch: key -> renderedWard changes, the longest rAF gap and long tasks in the 3 s after the key; idle: rAF interval p50/p95/max.
+//   switch: key -> renderedWard changes, the longest rAF gap and long tasks in the 3 s after the key, and whether the ward
+//   it went to had been prefetched; idle: rAF interval p50/p95/max.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -134,7 +135,10 @@ try {
             await sleep(POLL_MS);
           }
           const sw = await evalJs(`({long: __perf.long.filter(([t]) => t >= ${keyAt}), gaps: __perf.gaps.filter(([t]) => t >= ${keyAt}).map(([, d]) => d)})`);
-          row.switch = {from: before, to: await evalJs(`document.querySelector('#scene').dataset.renderedWard`), changedMs,
+          // prefetched (written by three-renderer activate(); null when the canvas has none, e.g. the still picture) false: the neighbour was still unbuilt and the switch built it in one task, so its numbers measure the
+          // build, not the switch (under --cpu 4 with --taps the idle-time prefetch may not finish in PREFETCH_SETTLE_MS).
+          const shown = await evalJs(`(({renderedWard, prefetched}) => ({renderedWard, prefetched}))(document.querySelector('#scene').dataset)`);
+          row.switch = {from: before, to: shown.renderedWard, prefetched: shown.prefetched === undefined ? null : shown.prefetched === 'true', changedMs,
             maxGapMs: Math.round(Math.max(0, ...sw.gaps)), gapsOver50: sw.gaps.filter(d => d > LONG_TASK_MS).length,
             longTasks: sw.long.length, longestTaskMs: Math.round(Math.max(0, ...sw.long.map(([, d]) => d)))};
         }

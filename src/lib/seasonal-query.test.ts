@@ -17,6 +17,7 @@ import {
   sessionDates,
   tokyoToday,
   usualMonthsInWindow,
+  usualMonthsPassed,
   validateRange,
 } from './seasonal-query';
 import { WARD_KEY_LIST } from './ward-keys';
@@ -334,6 +335,16 @@ test('稽核的慣例月份包含與期間重疊的兩端，並區分場次年�
   assert.deepEqual(usualMonthsInWindow(BASE_YEAR, [january, december], today, 1), [`${BASE_YEAR}-12`]);
   assert.deepEqual(usualMonthsInWindow(BASE_YEAR + 1, [january, february], today, 1), [`${BASE_YEAR + 1}-01`]);
   assert.deepEqual(usualMonthsInWindow(BASE_YEAR + 1, [january], today, 0), []);
+});
+
+test('稽核列出已過的慣例月份：當月不算已過，並跨年度比較', () => {
+  const [december, january, february] = SEASON_MONTHS.winter;
+  const ym = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}`;
+  const today = `${ym(BASE_YEAR + 1, february)}-10`;
+  assert.deepEqual(usualMonthsPassed(BASE_YEAR, [december], today), [ym(BASE_YEAR, december)]);
+  assert.deepEqual(usualMonthsPassed(BASE_YEAR + 1, [february, january], today), [ym(BASE_YEAR + 1, january)]);
+  assert.deepEqual(usualMonthsPassed(BASE_YEAR + 2, [january], today), []);
+  assert.deepEqual(usualMonthsPassed(BASE_YEAR, [december], `${BASE_YEAR}-13-01`), []);
 });
 
 test('依第一個可參加日期與 hours.open 排序', () => {
