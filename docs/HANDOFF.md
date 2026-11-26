@@ -88,6 +88,8 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 **11/26 晚的積壓對帳**（第三條鏈開案書 §9.9）：使用者定了 L3 全部結案（L3c、L3d、P4）；這一輪只做 C1 草的葉片形狀（Opus 主席，需要時問 Fable 顧問），驗收過就合併 `main`、push 另問。分支 `claude/grass-1126`。C1 做完（開案書 §9.10）：原因是葉形本身（根距不到 1 單位，四片疊成一團），不是貼圖解析度；葉形收成 `vocab.js` 的 `BLADE` 表，草與葦各一列。
 
+**K1「房間收成同一個來源」開案（2026-11-27）**：來源是 `C:\Git\_art_study\kyoto-bunko.md`（Fable 的美術研究提案；使用者 11/27「Kyoto 的解耦我同意」）。開案書 [`plans/2026-11-28-room.md`](plans/2026-11-28-room.md)（Fable 經 API）。已證實：材質表的 `envMapIntensity` 沒有作用（three 0.186.1 在材質沒有自己的 `envMap` 時用 `scene.environmentIntensity`）。實作使用者 11/28 開工，主席 Opus 做，開工前先看開案書 §9 的使用者回答。
+
 誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與目前開案書（`plans/2026-11-24-chain-2.md`）§1 的額度表、§3 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
 
 ### 4.2 下一個工作階段照這樣開始
