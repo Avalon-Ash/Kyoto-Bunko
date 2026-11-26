@@ -9,7 +9,8 @@
 //   the rocks     only in the near land, each against something: see ROCKS.
 import {suyari, branchPine as pine, bird, shell, torii, romon, fox, pawPrints, steppingStones, lantern} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {crags} from './crag-mesh.js';
+import {cragSteps} from './crag-mesh.js';
+import {composition} from './compose.js';
 
 /** Five gates up the slope, each smaller than the one before and clear of its neighbours. */
 function climb() {
@@ -106,34 +107,32 @@ export const ROCKS = [
 const PIECES = {MOUNTAIN, FAR, COURT, FOX};
 export {PIECES};
 
-export function fushimi() {
-  return [
-    // Layer 0: Inari-yama, the far range, and the near land.
-    ...mountain('inari', MOUNTAIN),
-    ...mountain('range-far', FAR),
-    ...tongues('court', COURT),
-    ...tongues('fox-land', FOX),
-    ...shell('shell', [[-128, 132, 5, 8], [58, 122, 4.2, 2], [176, 58, 4.6, 5], [268, -12, 4, 3]]),
-    // The approach: stones of cut silver under the gates, so the eye climbs with them.
-    ...steppingStones('sando', [[-47, 154, 7], [-17, 153, 7], [14, 153, 7], [45, 112, 6.5], [76, 71, 6.5], [104, 34, 6], [132, -3, 6], [158, -36, 5.5], [181, -69, 5.5], [204, -98, 5], [224, -127, 5]]),
-    // The fox's own trail, in cut silver, from the gates to its stone.
-    ...pawPrints('trail', [[34, 126], [56, 136], [80, 142], [104, 152], [128, 158], [146, 168]]),
-    // Slot 1: mist, then the rocks. The mist across the mountain's flank dissolves its foot.
-    ...suyari('mist-sky', -372, -128, -222, 15, 6),
-    ...suyari('mist-gate', -372, -190, -40, 13, 12),
-    ...suyari('mist-foot', 78, 336, 92, 14, 4),
-    ...crags(ROCKS),
-    // Slot 2: the gates, the fox and the trunks. These stand up from the lid.
-    ...torii('torii', -232, 204, 1.22, {cap: true}),
-    // A stone lantern at the great torii's west foot, outside the post: the way in. Only this side has room: between the
-    // torii (to x -161) and the pine's crown (from x -135) there are 26 units, and a lantern at this scale is 56 wide.
-    ...lantern('torii-lantern', -334, 212, .8).map(p => ({...p, on: 'torii'})),
-    ...romon('romon', -250, 40, 62),
-    ...climb(),
-    ...fox('kitsune', 176, 200, -1, 1.5),
-    ...pine('pine-a', -100, 214, 100, 16, 3),
-    ...pine('pine-b', 288, 206, 112, -14, 6),
-    // The bird sits on the crown pad of either pine: on the pad, not above its edge, or it hangs in the air.
-    ...bird('uguisu', [[-77.76, 173.28, 1, 'pine-a', 10], [266.22, 160.00, -1, 'pine-b', 10]]),
-  ];
-}
+export const fushimi = composition([
+  // Layer 0: Inari-yama, the far range, and the near land.
+  () => mountain('inari', MOUNTAIN),
+  () => mountain('range-far', FAR),
+  () => tongues('court', COURT),
+  () => tongues('fox-land', FOX),
+  () => shell('shell', [[-128, 132, 5, 8], [58, 122, 4.2, 2], [176, 58, 4.6, 5], [268, -12, 4, 3]]),
+  // The approach: stones of cut silver under the gates, so the eye climbs with them.
+  () => steppingStones('sando', [[-47, 154, 7], [-17, 153, 7], [14, 153, 7], [45, 112, 6.5], [76, 71, 6.5], [104, 34, 6], [132, -3, 6], [158, -36, 5.5], [181, -69, 5.5], [204, -98, 5], [224, -127, 5]]),
+  // The fox's own trail, in cut silver, from the gates to its stone.
+  () => pawPrints('trail', [[34, 126], [56, 136], [80, 142], [104, 152], [128, 158], [146, 168]]),
+  // Slot 1: mist, then the rocks. The mist across the mountain's flank dissolves its foot.
+  () => suyari('mist-sky', -372, -128, -222, 15, 6),
+  () => suyari('mist-gate', -372, -190, -40, 13, 12),
+  () => suyari('mist-foot', 78, 336, 92, 14, 4),
+  ...cragSteps(ROCKS),
+  // Slot 2: the gates, the fox and the trunks. These stand up from the lid.
+  () => torii('torii', -232, 204, 1.22, {cap: true}),
+  // A stone lantern at the great torii's west foot, outside the post: the way in. Only this side has room: between the
+  // torii (to x -161) and the pine's crown (from x -135) there are 26 units, and a lantern at this scale is 56 wide.
+  () => lantern('torii-lantern', -334, 212, .8).map(p => ({...p, on: 'torii'})),
+  () => romon('romon', -250, 40, 62),
+  () => climb(),
+  () => fox('kitsune', 176, 200, -1, 1.5),
+  () => pine('pine-a', -100, 214, 100, 16, 3),
+  () => pine('pine-b', 288, 206, 112, -14, 6),
+  // The bird sits on the crown pad of either pine: on the pad, not above its edge, or it hangs in the air.
+  () => bird('uguisu', [[-77.76, 173.28, 1, 'pine-a', 10], [266.22, 160.00, -1, 'pine-b', 10]]),
+]);

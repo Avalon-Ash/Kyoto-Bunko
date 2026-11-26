@@ -12,7 +12,8 @@ import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.j
 import {PLATE, MAT, KIND, rand} from './vocab.js';
 import {PLATES, LAYERS, hasPlate, preparePlate, createLife, partAt} from './parts.js';
 import {paintLayer, identMaps, bakeDensityField, bakeContactField, bakeSoftField} from './bake.js';
-import {cancelBuild, finishBuildInTasks, stepBuild} from './ward-build.js';
+import {cancelBuild, finishBuildInTasks, stepBuild, TASK_SLICE_MS} from './ward-build.js';
+import {composeInSteps} from './compose.js';
 import {blankStats} from './fillers.js';
 import {buildBox, FITTINGS} from './box.js';
 import {bakeStamps} from './stamps.js';
@@ -670,16 +671,16 @@ void main() {`)
     }
   }
 
-  /** Incrementally builds a ward's textures, meshes, and stats, yielding after each heavy step. */
+  /** Incrementally builds a ward's textures, meshes, and stats, yielding after each heavy step and within the heavy ones once a
+   * slice is due (ward-build.js): the same steps whether it is the first plate, a prefetch or a switch (ADR 0027). */
   function* buildWard(ward) {
     const group = new THREE.Group();
     const textures = [];
     const scratch = doc.createElement('canvas');
-    const canYield = () => foreground?.ward === ward;
     let committed = false;
     try {
-      const composition = PLATES[ward]();
-      if (canYield()) yield 'compose-plate';
+      const composition = yield* composeInSteps(PLATES[ward]);
+      yield 'compose-plate';
       const {parts, errors} = preparePlate(composition);
       if (errors.length) throw Error(`Plate ${ward}: ${errors.join('; ')}`);
       const w = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), canvas.clientWidth < 700 ? 1152 : 1536), h = Math.round(w * PLATE.halfH / PLATE.halfW);
@@ -687,8 +688,8 @@ void main() {`)
 
       scratch.width = w; scratch.height = h;
       const ctx = scratch.getContext('2d', {willReadFrequently: true});
-      yield* paintLayer(ctx, w, h, parts, 0, canYield);
-      if (canYield()) yield 'paint-ground';
+      yield* paintLayer(ctx, w, h, parts, 0);
+      yield 'paint-ground';
       let fine0Img = new Uint8Array(ctx.getImageData(0, 0, w, h).data.buffer); // a view of the readback's own bytes, not a copy of them
       const fine0Tex = new THREE.DataTexture(fine0Img, w, h, THREE.RGBAFormat, THREE.UnsignedByteType);
       fine0Tex.minFilter = THREE.LinearMipmapLinearFilter; fine0Tex.magFilter = THREE.LinearFilter;
@@ -706,7 +707,7 @@ void main() {`)
       yield 'soft-field';
 
       const mw = Math.round(w / 2), mh = Math.round(h / 2);
-      const {maps, packed} = yield* identMaps(doc, parts, mw, mh, LAYERS, MAT.ground, canYield);
+      const {maps, packed} = yield* identMaps(doc, parts, mw, mh, LAYERS, MAT.ground);
       // The ident map is (part, material) byte pairs: the swap rewrites the material byte only.
       if (matSwap.size) for (let i = 1; i < packed[0].length; i += 2) { const to = matSwap.get(packed[0][i]); if (to !== undefined) packed[0][i] = to; }
       const ident0Tex = new THREE.DataTexture(packed[0], mw, mh, THREE.RGFormat, THREE.UnsignedByteType);
@@ -723,7 +724,7 @@ void main() {`)
         densTex = new THREE.DataTexture(field, dw, dh, THREE.RedFormat, THREE.UnsignedByteType);
         densTex.minFilter = densTex.magFilter = THREE.LinearFilter; densTex.unpackAlignment = 1; densTex.needsUpdate = true;
         textures.push(densTex);
-        if (canYield()) yield 'density-field';
+        yield 'density-field';
       }
       // Where things stand on the lid: age gathers dirt there. Not baked for a box as new.
       let contactTex = dummyRgba;
@@ -757,7 +758,7 @@ void main() {`)
         return vertices;
       };
       const meshVertices = addInterleaved(meshesByMaterial(parts), partMaterial, partDepth);
-      if (canYield()) yield 'part-meshes';
+      yield 'part-meshes';
       const treeVertices = addInterleaved(limbsByMaterial(parts), limbMaterial, limbDepth);
       yield 'tree-limbs';
 
@@ -784,16 +785,16 @@ void main() {`)
       const uniforms = {uFine0: fine0Tex, uSoft0: soft0Tex, uIdent0: ident0Tex, uDens: densTex, uContact: contactTex};
       const mistParts = parts.filter(p => p.kind === KIND.mist);
       if (mistParts.length) {
-        yield* paintLayer(ctx, w, h, mistParts.map(p => ({...p, layer: 1})), 1, canYield);
-        if (canYield()) yield 'paint-mist';
+        yield* paintLayer(ctx, w, h, mistParts.map(p => ({...p, layer: 1})), 1);
+        yield 'paint-mist';
         const mistFineImg = new Uint8Array(ctx.getImageData(0, 0, w, h).data.buffer);
         const mistFineTex = new THREE.DataTexture(mistFineImg, w, h, THREE.RGBAFormat, THREE.UnsignedByteType);
         mistFineTex.minFilter = THREE.LinearMipmapLinearFilter; mistFineTex.magFilter = THREE.LinearFilter;
         mistFineTex.generateMipmaps = true; mistFineTex.anisotropy = maxAniso; mistFineTex.unpackAlignment = 1; mistFineTex.needsUpdate = true;
         textures.push(mistFineTex);
-        if (canYield()) yield 'mist-fine-texture';
+        yield 'mist-fine-texture';
 
-        const {packed: mistPacked} = yield* identMaps(doc, mistParts.map(p => ({...p, layer: 0})), mw, mh, 1, 0, canYield);
+        const {packed: mistPacked} = yield* identMaps(doc, mistParts.map(p => ({...p, layer: 0})), mw, mh, 1, 0);
         const mistIdentTex = new THREE.DataTexture(mistPacked[0], mw, mh, THREE.RGFormat, THREE.UnsignedByteType);
         mistIdentTex.minFilter = mistIdentTex.magFilter = THREE.NearestFilter; mistIdentTex.unpackAlignment = 1; mistIdentTex.needsUpdate = true;
 
@@ -968,7 +969,7 @@ void main() {`)
       return slot && (!slot.entry || !slot.warmed);
     });
     if (!hasPending) return;
-    idleHandle = idle(() => {
+    idleHandle = idle(deadline => {
       idleHandle = null;
       if (disposed) return;
       for (const w of lastNeighbours) {
@@ -977,7 +978,8 @@ void main() {`)
         if (!slot) continue;
         if (!slot.entry) {
           try {
-            stepBuild(slot);
+            // As many steps as the idle period has room for (a step is about one slice); one when there is no deadline.
+            do stepBuild(slot); while (slot.gen && (deadline?.timeRemaining() ?? 0) >= TASK_SLICE_MS);
             if (slot.entry) warmEntry(slot);
           } catch (error) {
             dropSlot(w, slot);

@@ -7,7 +7,8 @@
 //                  north waterline, a thin gold tongue from the south-east that carries the island pine.
 import {MAT, blob, pond, phoenix, storey, roof, branchPine as pine, bird, suyari, grassTufts, BLADE_W} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {crags} from './crag-mesh.js';
+import {cragSteps} from './crag-mesh.js';
+import {composition} from './compose.js';
 
 // The outline pond() draws for 'kyoko' (same arguments): the reeds are set on its north-west bank.
 const POND = [-5, 68, 244, 82, 3];
@@ -84,7 +85,8 @@ export const ROCKS = [
 const PIECES = {KINUGASA, SHORE};
 export {PIECES};
 
-export function kita() {
+/** The pavilion: three storeys, each a wall and its roof. */
+function kinkaku() {
   const pavilion = [];
   for (let i = 0; i < 3; i++) {
     const eave = -45 - i * 48, w = 94 - i * 17;
@@ -93,20 +95,22 @@ export function kita() {
     pavilion.push(...roof(`kinkaku-roof-${i}`, -85, eave, w, 27,
       {group: 'kinkaku', order: i * 2 + 1, ridgeHalf: w * .48, motionWith: `kinkaku-wall-${i}`}));
   }
-  return [
-    ...mountain('kinugasa', KINUGASA),
-    ...tongues('suhama', SHORE, {toward: [[-150, 68], [-5, 68], [140, 68]]}),
-    ...pond('kyoko', -5, 68, 244, 82, 3, {reflection: {x: -85, z: 9, width: 78, height: 90}}),
-    // Reeds in bright silver sheet on the north-west bank, from the pavilion's west foot toward the shore stone. Why sheet: silver powder
-    // blades tarnish to the colour of the ground and were lost; the reeds are what say the pavilion stands at a water's edge.
-    ...grassTufts('kyoko-reeds', [reed(45, 30, 6), reed(47, 40, 7), reed(49, 46, 7), reed(51, 32, 6)], {on: 'kyoko', mat: MAT.hyomonSilver, seed: 5, w: BLADE_W.reed, spread: .13}),
-    ...suyari('mist-west', -350, -196, -98, 10, 2),
-    ...suyari('mist-east', 232, 352, -84, 10, 7),
-    ...crags(ROCKS),
-    ...pavilion,
-    ...phoenix('ho-o', -85, -168, 1.25, {group: 'kinkaku', order: 6}).map(p => ({...p, motionWith: 'kinkaku-wall-2'})),
-    ...pine('island-pine', 171, 97, 124, -15, 6),
-    ...pine('west-pine', -291, -28, 114, 12, 2),
-    ...bird('uguisu', [[148.36, 45.72, -1, 'island-pine', 10], [-270.03, -74.88, 1, 'west-pine', 10]]),
-  ];
+  return pavilion;
 }
+
+export const kita = composition([
+  () => mountain('kinugasa', KINUGASA),
+  () => tongues('suhama', SHORE, {toward: [[-150, 68], [-5, 68], [140, 68]]}),
+  () => pond('kyoko', -5, 68, 244, 82, 3, {reflection: {x: -85, z: 9, width: 78, height: 90}}),
+  // Reeds in bright silver sheet on the north-west bank, from the pavilion's west foot toward the shore stone. Why sheet: silver powder
+  // blades tarnish to the colour of the ground and were lost; the reeds are what say the pavilion stands at a water's edge.
+  () => grassTufts('kyoko-reeds', [reed(45, 30, 6), reed(47, 40, 7), reed(49, 46, 7), reed(51, 32, 6)], {on: 'kyoko', mat: MAT.hyomonSilver, seed: 5, w: BLADE_W.reed, spread: .13}),
+  () => suyari('mist-west', -350, -196, -98, 10, 2),
+  () => suyari('mist-east', 232, 352, -84, 10, 7),
+  ...cragSteps(ROCKS),
+  () => kinkaku(),
+  () => phoenix('ho-o', -85, -168, 1.25, {group: 'kinkaku', order: 6}).map(p => ({...p, motionWith: 'kinkaku-wall-2'})),
+  () => pine('island-pine', 171, 97, 124, -15, 6),
+  () => pine('west-pine', -291, -28, 114, 12, 2),
+  () => bird('uguisu', [[148.36, 45.72, -1, 'island-pine', 10], [-270.03, -74.88, 1, 'west-pine', 10]]),
+]);

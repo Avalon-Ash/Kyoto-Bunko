@@ -2,7 +2,8 @@
 // The foreground between ginkgo and pine is an unpainted court; the back wall supplies a quiet horizontal limit.
 import {hall, corridor, branchGinkgo as ginkgo, fallenFans, branchPine as pine, bird, suyari, lantern} from './vocab.js';
 import {tongues} from './doha.js';
-import {crags} from './crag-mesh.js';
+import {cragSteps} from './crag-mesh.js';
+import {composition} from './compose.js';
 
 // The ground (doha.js) is drawn piece by piece, every outline written here as control points. There is no mountain in this ward.
 //   the bank  one long, shallow bank across the near end of the lid, in three pieces, each lying over the end of the one before: the ginkgo stands at its
@@ -66,23 +67,21 @@ export const ROCKS = [
 const PIECES = {BANK};
 export {PIECES};
 
-export function shimogyo() {
-  return [
-    ...tongues('bank', BANK),
-    // The mist is behind the halls, between them and the back wall: the roofs rise out of it.
-    ...suyari('mist-west', -338, -171, -140, 12, 4),
-    ...suyari('mist-east', 122, 329, -156, 15, 8),
-    ...corridor('back-wall', -290, 290, -181, {open: false, height: 16}),
-    ...hall('amidado', -154, -65, 101, 43, {wallH: 26, group: 'twin-halls'}),
-    ...hall('goeido', 128, -80, 135, 59, {wallH: 41, bays: 9, group: 'twin-halls'}),
-    ...corridor('watari', -62, 32, -39, {height: 17, group: 'twin-halls'}),
-    // Stone lanterns before the Goei-do's steps, a pair: only the great hall has them, the smaller one beside it has none.
-    ...lantern('goeido-lantern-west', 88, 46, .8).map(p => ({...p, on: 'goeido-wall'})),
-    ...lantern('goeido-lantern-east', 168, 46, .8).map(p => ({...p, on: 'goeido-wall'})),
-    ...fallenFans('ginkgo-fall', -170, 190, 150, 32, 42, 6, {size: 12}),
-    ...ginkgo('great-ginkgo', -224, 198, 139),
-    ...pine('east-pine', 284, 201, 112, -12, 6),
-    ...crags(ROCKS),
-    ...bird('uguisu', [[263.10, 155.00, -1, 'east-pine', 10], [-192.73, 129.80, 1, 'great-ginkgo', 21]]),
-  ];
-}
+export const shimogyo = composition([
+  () => tongues('bank', BANK),
+  // The mist is behind the halls, between them and the back wall: the roofs rise out of it.
+  () => suyari('mist-west', -338, -171, -140, 12, 4),
+  () => suyari('mist-east', 122, 329, -156, 15, 8),
+  () => corridor('back-wall', -290, 290, -181, {open: false, height: 16}),
+  () => hall('amidado', -154, -65, 101, 43, {wallH: 26, group: 'twin-halls'}),
+  () => hall('goeido', 128, -80, 135, 59, {wallH: 41, bays: 9, group: 'twin-halls'}),
+  () => corridor('watari', -62, 32, -39, {height: 17, group: 'twin-halls'}),
+  // Stone lanterns before the Goei-do's steps, a pair: only the great hall has them, the smaller one beside it has none.
+  () => lantern('goeido-lantern-west', 88, 46, .8).map(p => ({...p, on: 'goeido-wall'})),
+  () => lantern('goeido-lantern-east', 168, 46, .8).map(p => ({...p, on: 'goeido-wall'})),
+  () => fallenFans('ginkgo-fall', -170, 190, 150, 32, 42, 6, {size: 12}),
+  () => ginkgo('great-ginkgo', -224, 198, 139),
+  () => pine('east-pine', 284, 201, 112, -12, 6),
+  ...cragSteps(ROCKS),
+  () => bird('uguisu', [[263.10, 155.00, -1, 'east-pine', 10], [-192.73, 129.80, 1, 'great-ginkgo', 21]]),
+]);

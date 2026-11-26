@@ -6,7 +6,8 @@
 //                on the east, each reaching to the water; a thin silver ribbon lies along the waterline on each side.
 import {stream, streamEdge, suyari, pagoda, hall, stampedPine as pine, bird, shell, grassTufts, silverPlum} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {crags} from './crag-mesh.js';
+import {cragSteps} from './crag-mesh.js';
+import {composition} from './compose.js';
 
 // The stream's own points and widths, kept here so its banks can be found again for the grass.
 const STREAM = [[[-8, -150], [22, -70], [-30, 20], [14, 110], [-26, 232]], [7, 11, 17, 25, 36]];
@@ -111,30 +112,28 @@ export const ROCKS = [
 const PIECES = {RANGE, SHORES};
 export {PIECES};
 
-export function minami() {
-  return [
-    // Layer 0: the range, the shores and the water.
-    ...mountain('range', RANGE),
-    ...tongues('shore', SHORES),
-    ...stream('stream', ...STREAM),
-    ...shell('shell', [[14, -44, 4.2, 2], [-22, 34, 5, 5], [6, 96, 4.4, 8], [-12, 168, 5.6, 3]]),
-    // Grass on both banks: gold line work, two tufts carrying a small silver flower.
-    ...grassTufts('stream-grass', [bankTuft(.38, -1, 12, 4), bankTuft(.58, -1, 11, 4, true), bankTuft(.78, -1, 12, 4), bankTuft(.5, 1, 12, 4), bankTuft(.68, 1, 11, 4, true)], {on: 'stream', seed: 4}),
-    // A silver plum by the hall's west roof corner.
-    ...silverPlum('plum', -222, 4, 1.4, {on: 'kondo'}),
-    // Slot 1: mist and stones.
-    ...suyari('mist-hall', -360, -18, -34, 17, 5),
-    ...suyari('mist-sky', 196, 372, -186, 15, 9),
-    ...suyari('mist-far', -372, -250, -118, 13, 14),
-    ...crags(ROCKS),
-    // Slot 2: the hall, the pagoda and the trunks. These stand up from the lid.
-    ...hall('kondo', -150, -72, 104, 44),
-    ...pagoda('pagoda', 176, 128),
-    ...pine('pine-a', -288, 172, 150, 26, 2),
-    ...pine('pine-b', -134, 190, 104, -18, 7),
-    ...pine('pine-c', 300, 150, 96, -14, 5),
-    // Slot 3 holds the foliage pads (from pine). The bird's two perches ride on their pines but are painted in
-    // slot 1, clear of the stones and the mist, so the pad under a sleeping bird stays whole.
-    ...bird('uguisu', [[-259.61, 109.28, 1, 'pine-a', 10], [-157.26, 147.52, -1, 'pine-b', 10]]),
-  ];
-}
+export const minami = composition([
+  // Layer 0: the range, the shores and the water.
+  () => mountain('range', RANGE),
+  () => tongues('shore', SHORES),
+  () => stream('stream', ...STREAM),
+  () => shell('shell', [[14, -44, 4.2, 2], [-22, 34, 5, 5], [6, 96, 4.4, 8], [-12, 168, 5.6, 3]]),
+  // Grass on both banks: gold line work, two tufts carrying a small silver flower.
+  () => grassTufts('stream-grass', [bankTuft(.38, -1, 12, 4), bankTuft(.58, -1, 11, 4, true), bankTuft(.78, -1, 12, 4), bankTuft(.5, 1, 12, 4), bankTuft(.68, 1, 11, 4, true)], {on: 'stream', seed: 4}),
+  // A silver plum by the hall's west roof corner.
+  () => silverPlum('plum', -222, 4, 1.4, {on: 'kondo'}),
+  // Slot 1: mist and stones.
+  () => suyari('mist-hall', -360, -18, -34, 17, 5),
+  () => suyari('mist-sky', 196, 372, -186, 15, 9),
+  () => suyari('mist-far', -372, -250, -118, 13, 14),
+  ...cragSteps(ROCKS),
+  // Slot 2: the hall, the pagoda and the trunks. These stand up from the lid.
+  () => hall('kondo', -150, -72, 104, 44),
+  () => pagoda('pagoda', 176, 128),
+  () => pine('pine-a', -288, 172, 150, 26, 2),
+  () => pine('pine-b', -134, 190, 104, -18, 7),
+  () => pine('pine-c', 300, 150, 96, -14, 5),
+  // Slot 3 holds the foliage pads (from pine). The bird's two perches ride on their pines but are painted in
+  // slot 1, clear of the stones and the mist, so the pad under a sleeping bird stays whole.
+  () => bird('uguisu', [[-259.61, 109.28, 1, 'pine-a', 10], [-157.26, 147.52, -1, 'pine-b', 10]]),
+]);
