@@ -89,6 +89,20 @@ function bakeStampTexture(doc, maxAniso) {
  * @param {(error: unknown) => void} onFailure switches the owning renderer to the still picture
  */
 export function createThreeRenderer(gl, canvas, onReady, onFailure) {
+  const steps = createThreeRendererInSteps(gl, canvas, onReady, onFailure);
+  for (;;) { const step = steps.next(); if (step.done) return step.value; }
+}
+
+/**
+ * The same renderer, set up in steps: it yields after each heavy part (the environment map, the baked textures, the box) so the
+ * page can drive it with ward-build.js and stay responsive while three.js starts (L3d P2, docs/plans/2026-11-26-boot.md).
+ * Closing it early (return()) frees what it had built.
+ * @param {WebGL2RenderingContext} gl
+ * @param {HTMLCanvasElement} canvas
+ * @param {() => void} onReady
+ * @param {(error: unknown) => void} onFailure
+ */
+export function* createThreeRendererInSteps(gl, canvas, onReady, onFailure) {
   const doc = canvas.ownerDocument;
   const renderer = new THREE.WebGLRenderer({canvas, context: gl, antialias: true, alpha: true});
   let disposed = false, failed = false;
@@ -113,10 +127,14 @@ export function createThreeRenderer(gl, canvas, onReady, onFailure) {
   const own = object => { disposables.push(object); return object; };
 
   const scene = new THREE.Scene();
+  let built = false;
+  // Not re-indented: the whole setup below runs inside this try, whose finally frees a setup that was closed or threw.
+  try {
   try {
     const pmrem = new THREE.PMREMGenerator(renderer), room = new RoomEnvironment(), env = pmrem.fromScene(room, .04);
     scene.environment = env.texture; own(env); pmrem.dispose(); room.dispose?.();
   } catch (error) { if (!failed) console.warn('Environment map unavailable:', error); }
+  yield 'renderer-environment';
 
   // The camera is the page's: view and projection come in as one matrix and are split into three's two.
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, NEAR, FAR);
@@ -159,6 +177,7 @@ export function createThreeRenderer(gl, canvas, onReady, onFailure) {
   const neutralDens = own(new THREE.DataTexture(new Uint8Array([128]), 1, 1, THREE.RedFormat, THREE.UnsignedByteType)); neutralDens.unpackAlignment = 1; neutralDens.needsUpdate = true;
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const stampTex = own(bakeStampTexture(doc, maxAniso));
+  yield 'stamp-texture';
   const trails = Array.from({length: 20}, () => new THREE.Vector3());
   const shared = {
     uState: {value: stateTexture}, uTilt: {value: new THREE.Matrix3()}, uOpening: {value: 0},
@@ -179,6 +198,7 @@ export function createThreeRenderer(gl, canvas, onReady, onFailure) {
   if (import.meta.env.DEV) window.__kyotoPlateProbe = opts => import('./clip-probe.js').then(m => m.probeClip(window.__kyotoPlatePose(), opts));
 
   const flake = own(bakeFlakeNormal(doc));
+  yield 'flake-normal';
   const NORMAL_FIX = THREE.ShaderChunk.normal_fragment_begin.replace('gl_FrontFacing ? 1.0 : - 1.0', '1.0');
   const bindGlow = (shader, spec) => {
     Object.assign(shader.uniforms, shared);
@@ -462,6 +482,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
 
   // The box: lid top (ground relief, water, sand, steps, border), then everything from the lid's edge down to the tray and packets.
   const box = buildBox(), boxGroup = new THREE.Group(); scene.add(boxGroup);
+  yield 'box-geometry';
   const groundMaterial = physical(GROUND_LID);
   groundMaterial.customProgramCacheKey = () => 'kyoto-ground';
   groundMaterial.onBeforeCompile = shader => {
@@ -536,6 +557,7 @@ void main() {`)
     boxVertices += slice.position.length / 3;
   }
 
+  yield 'box-meshes';
   // The cords: a few hundred vertices rewritten every frame, already tilted on the CPU (as before).
   const cords = FITTINGS.map(f => ({...f, cord: createCord(f)}));
   for (const c of cords) c.cord.settle();
@@ -1080,6 +1102,7 @@ void main() {`)
     return index && life.act(index, time) ? plate.parts[index - 1].id : '';
   }
 
+  built = true;
   return {
     setWard, prefetch, draw, drawNeighbour, poke, active: () => Boolean(plate),
     /** True during the first build and compile, or while a failure waits for the still picture. */
@@ -1096,4 +1119,7 @@ void main() {`)
       renderer.dispose();
     },
   };
+  } finally {
+    if (!built) { for (const d of disposables.splice(0)) d.dispose?.(); scene.environment = null; renderer.dispose(); }
+  }
 }
