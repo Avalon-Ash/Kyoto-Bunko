@@ -62,7 +62,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     canvas.dataset.renderer = 'static';
     setMesh(ward);
   };
-  /** The step a failed ward build reports, in tasks or in the call (ADR 0026). */
+  /** The step a failed ward build reports, in tasks or in the call (ADR 0027). */
   const BUILD_WARD_STEP = 'build ward';
   const setMesh = id => {
     ward = id;
@@ -112,7 +112,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     loading = true;
     let step = 'load';
     // Loaded on demand: three.js is large and the home page may never need it. It starts in steps (still loading meanwhile, so
-    // the still picture stands in), yielding between them like the first plate's build (ADR 0026, L3d P2).
+    // the still picture stands in), yielding between them like every ward build (ADR 0027).
     import('./plate/three-renderer.js').then(async ({createThreeRendererInSteps}) => {
       if (disposed) return;
       step = 'start';

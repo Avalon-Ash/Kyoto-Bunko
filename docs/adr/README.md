@@ -95,4 +95,5 @@
 - [0023 歲時記活動資料：主檔、年度場次與雙語內容分離](0023-seasonal-events-catalog-occurrences-locales.md)：活動放 `src/data/events/`，主檔、年度場次、中日 locale 分開，和地點的關係只在 `venues`，畫面只經 `loader.ts`，不改受保護檔。
 - [0024 歲時記的日期語意：東京曆日、場次展開與狀態規則](0024-seasonal-dates-tokyo-sessions-status.md)：東京曆日字串、多筆 session、日期判斷只在 `seasonal-query.ts`、狀態規則一張表、例年日期算已確認但要標示。
 - [0025 首盤在第一次編譯前分步建造，步與步之間讓出主執行緒](0025-first-plate-builds-in-tasks.md)：`ward-build.js` 是唯一的讓出工具，`setWard` 回傳布林或 Promise，換區取消建造；溫快取首盤最長任務約 1.3 秒 → 330 ms（已由 0026 取代）。
-- [0026 首盤分步建造；任何一次建造失敗都退回降級圖](0026-ward-builds-in-tasks-and-failed-builds-fall-back.md)：沿用 0025 的分步建造，換函時同步建造丟錯也交 `fallback`，顯示該區降級圖（取代 0025）。
+- [0026 首盤分步建造；任何一次建造失敗都退回降級圖](0026-ward-builds-in-tasks-and-failed-builds-fall-back.md)：沿用 0025 的分步建造，換函時同步建造丟錯也交 `fallback`，顯示該區降級圖（取代 0025；已由 0027 取代）。
+- [0027 首頁第一次載入全程分步：渲染器啟動、構圖與每一次建造都依同一個切片預算讓出](0027-first-load-in-steps-one-slice-budget.md)：`TASK_SLICE_MS`／`taskSlice` 只在 `ward-build.js`；渲染器啟動是生成器；構圖是 `composition(steps)`；預建依 idle deadline 跑細步（取代 0026）。
