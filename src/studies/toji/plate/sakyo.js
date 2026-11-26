@@ -84,7 +84,7 @@ export const sakyo = composition([
   () => pond('kinkyo', -182, 36, 112, 67, 5),
   () => sandGarden('ginshadan', 14, 249, 0, 102),
   // Grass at the pond's edge: a few tufts of gold line work on the west, south and east banks, none on the pavilion's side.
-  () => grassTufts('kinkyo-grass', [bank(3, 11, 4), bank(15, 12, 4), bank(25, 11, 4), bank(28, 12, 4, true), bank(40, 12, 4), bank(47, 11, 4)], {on: 'kinkyo', seed: 3}),
+  () => grassTufts('kinkyo-grass', [bank(3, 11, 4), bank(15, 12, 4), bank(25, 11, 4), bank(27, 11, 4, true), bank(40, 12, 4), bank(47, 11, 4)], {on: 'kinkyo', seed: 3}),
   () => sandCone('kogetsudai', 190, 160, 50, 62),
   () => moonBowl('moon', 190, 98, 'kogetsudai'),
   () => suyari('mist-west', -336, -213, -37, 12, 6),

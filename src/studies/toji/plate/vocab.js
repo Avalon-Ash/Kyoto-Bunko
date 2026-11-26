@@ -515,30 +515,73 @@ export function streamEdge(points, widths, t, side) {
 }
 const five = (cx, cz, r, turn) => Array.from({length: 5}, (_, i) => blob(cx + Math.cos(turn + i * 1.2566) * r * .95, cz + Math.sin(turn + i * 1.2566) * r * .95, r * .8, r * .8, 1, 0, 9));
 /**
- * Blade width at the root (plate units). At the home page's zoom one unit is about 1.5 px at 1440 wide, and a blade tapers to its tip:
- * under about 2 units a blade is lost unless the lid is zoomed (chain-2 V2). Grass 3.2, reed (narrow silver) 2.2.
+ * How a tuft's blades are drawn, one row per kind (the only place the two kinds differ). Each blade is a leaf along a
+ * quadratic curve from its root to its tip, w wide at the root, full through its middle and pointed at the tip (BLADE_BELLY).
+ * u runs -1..1 across the tuft (outer blades at ±1); h is the height a ward file gives the tuft; "the tallest blade" is h * rise.
+ * - mat: gold sheet = grass, silver sheet = reed. Why sheet: the grass stands on gold banks and powder; in the ground's own gold
+ *   (MAT.gold) it melted into them, and polished sheet is the one flat gold brighter than any powder it lies on (chain-3 P4).
+ * - w: root width (plate units). At the home page's zoom one unit is about 1.5 px at 1440 wide: under about 2 units a blade is
+ *   lost unless the lid is zoomed (chain-2 V2).
+ * - rise: the tallest blade over h. The lid is seen from above at a slant, so height on the lid reads at about .6 of width.
+ * - gap: distance between neighbouring roots, in root widths (w). Grass roots stand a little over a blade apart so the blades
+ *   part low and the ground shows between them (C1: with roots under one unit apart the old grass blades overlapped up to two
+ *   thirds of their height and read as one lump, at any texture size). Reed roots crowd together (.2).
+ * - fan, bend: where the tip and the curve's control point sit across, times the tallest blade.
+ * - bow: the control point's height over the blade's own height; above 1 the blade climbs and then bends over.
+ * - arch: how far the outer blades' tips sink back (times u², so the middle blade stays upright).
+ * - short: how much shorter the outer blades are (times |u|).
+ * @typedef {{mat: number, w: number, rise: number, gap: number, fan: number, bend: number, bow: number, arch: number, short: number}} BladeLook
+ * @type {Readonly<{grass: Readonly<BladeLook>, reed: Readonly<BladeLook>}>}
  */
-export const BLADE_W = Object.freeze({grass: 3.2, reed: 2.2});
+export const BLADE = Object.freeze({
+  grass: Object.freeze({mat: MAT.hyomonGold, w: 3, rise: 1.8, gap: 1.05, fan: .6, bend: .2, bow: 1.1, arch: .4, short: .3}),
+  reed: Object.freeze({mat: MAT.hyomonSilver, w: 2.2, rise: 1, gap: .2, fan: .13, bend: .14, bow: .55, arch: 0, short: .38}),
+});
+/** How far a blade's tip and control point move with the tuft's lean, times the tallest blade (outer blades lean further). */
+const LEAN_TIP = .6, LEAN_TIP_OUTER = .4, LEAN_BEND = .15;
+/** The blades' random height change, as a share of the tallest blade (whole range). */
+const BLADE_JITTER = .16;
 /**
- * Tufts of grass or reed at the places given: [x, z, height, blades, lean?, flower?]. Blades fan from one root and curve
- * with the lean; a tuft with a flower carries one five-petalled silver blossom on its middle blade.
- * Gold sheet = grass, silver sheet = reed (narrow spread). Each blade is a thin leaf of sheet metal inlaid flat (hyomon), not a raised
- * stalk. Why sheet: the grass stands on gold banks and powder; in the ground's own gold (MAT.gold) it melted into them, and polished
- * sheet is the one flat gold brighter than any powder it lies on (chain-3 P4).
+ * A blade's width at t (0 root .. 1 tip) is w * (1 - t) * (1 + BLADE_BELLY * t): full through the middle, then pointed. .84 is the
+ * profile of the earlier two-curve outline (control points pushed out .46 w on each side), so a blade is as wide at half height
+ * (.71 w) as it was when chain-2 V2 sized the widths. A straight taper (0) is .5 w there and the reed, 1.1 units, falls under
+ * the 2-unit floor in BLADE's w.
+ */
+const BLADE_BELLY = .84;
+/** Points along a blade's centre line. */
+const BLADE_STEPS = 12;
+/** A blade's closed outline along its centre line pts (root first), w wide at the root (BLADE_BELLY). */
+function bladeOutline(pts, w) {
+  const left = [], right = [], n = pts.length - 1;
+  pts.forEach(([x, z], i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, t = i / n;
+    const half = w * (1 - t) * (1 + BLADE_BELLY * t) / 2;
+    left.push([x - (b[1] - a[1]) / l * half, z + (b[0] - a[0]) / l * half]); right.push([x + (b[1] - a[1]) / l * half, z - (b[0] - a[0]) / l * half]);
+  });
+  return [...left, ...right.reverse().slice(1)]; // the tip once: both sides meet there
+}
+/**
+ * Tufts of grass or reed at the places given: [x, z, height, blades, lean?, flower?]. Blades rise from roots set side by side
+ * (BLADE's gap) and curve with the lean; a tuft with a flower carries one five-petalled silver blossom on its middle blade (with
+ * an even count, the one just right of the middle).
+ * Each blade is a thin leaf of sheet metal inlaid flat (hyomon), not a raised stalk; its shape is the BLADE row given.
  * @param {string} id
  * @param {Array<[number, number, number, number, number?, boolean?]>} spots
- * @param {{on?: string, mat?: number, seed?: number, w?: number, spread?: number}} [opts]
+ * @param {{on?: string, seed?: number, blade?: Readonly<BladeLook>}} [opts]
  */
-export function grassTufts(id, spots, {on, mat = MAT.hyomonGold, seed = 1, w = BLADE_W.grass, spread = .42} = {}) {
+export function grassTufts(id, spots, {on, seed = 1, blade = BLADE.grass} = {}) {
   need('grassTufts', id, on);
   if (!spots.length) throw new Error(`grassTufts(${id}): spots must not be empty`);
+  const {mat, w, rise, gap, fan, bend, bow, arch, short} = blade;
   const r = rand(seed), grass = part(id, KIND.still, 0, mat, spots[0].slice(0, 2), {reach: .5, on}), bloom = [];
   for (const [x, z, h, n, lean = 0, flower = false] of spots) {
+    const top = h * rise;
     for (let k = 0; k < n; k++) {
-      const u = n === 1 ? 0 : k / (n - 1) * 2 - 1, hh = h * (.62 + .38 * (1 - Math.abs(u)) + (r() - .5) * .16);
-      const tip = [x + u * h * spread + lean * h * (.6 + .4 * Math.abs(u)), z - hh], mid = [x + u * h * .14 + lean * h * .15, z - hh * .55];
-      const left = quad([x + u * 1.4 - w / 2, z], [mid[0] - w * .46, mid[1]], tip, 8), right = quad(tip, [mid[0] + w * .46, mid[1]], [x + u * 1.4 + w / 2, z], 8);
-      grass.fills.push({d: [...left, ...right.slice(1)], soft: 0, crisp: 1});
+      const u = n === 1 ? 0 : k / (n - 1) * 2 - 1, a = Math.abs(u), hh = top * (1 - short * a + (r() - .5) * BLADE_JITTER);
+      const root = [x + u * gap * w * (n - 1) / 2, z];
+      const tip = [x + u * top * fan + lean * top * (LEAN_TIP + LEAN_TIP_OUTER * a), z - hh * (1 - arch * u * u)];
+      const ctrl = [x + u * top * bend + lean * top * LEAN_BEND, z - hh * bow];
+      grass.fills.push({d: bladeOutline(quad(root, ctrl, tip, BLADE_STEPS), w), soft: 0, crisp: 1});
       if (flower && k === Math.floor(n / 2)) bloom.push(tip);
     }
   }
