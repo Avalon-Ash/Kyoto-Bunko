@@ -12,6 +12,7 @@ import {viewBox, renderDpr} from './view.js';
 import {createStaticPlate} from './plate/static-plate.js';
 import {adjacentCabinet} from './collection';
 import {EYE, TARGET, NEAR, FAR} from './plate/camera.js';
+import {cancelBuild, finishBuildInTasks} from './plate/ward-build.js';
 
 // Fixed home camera; the backdrop's cabinet keepout shares it.
 const CAMERA_VIEW = lookAt(EYE, TARGET);
@@ -36,6 +37,8 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
   if (!forced) { try { gl2 = canvas.getContext('webgl2', {alpha: true, antialias: true, stencil: true, powerPreference: 'low-power'}); } catch { gl2 = null; } }
   let ward = wardId, night = Boolean(options.night), draws = 0, loading = false, disposed = false, plate = null;
   const ready = () => { if (!disposed) onReady?.(); };
+  /** three.js starting in steps (a ward-build.js slot), until it can take the plate; null otherwise. @type {import('./plate/ward-build.js').WardBuild<ReturnType<typeof import('./plate/three-renderer.js').createThreeRenderer>> | null} */
+  let setup = null;
   /** The one place that says the renderer is still getting its first picture ready. */
   const pending = () => loading || Boolean(plate?.loading?.());
   /** The still picture laid under the canvas while three.js cannot draw yet; gone at the first frame three.js draws. */
@@ -45,6 +48,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
   /** The still picture: the canvas keeps its (empty) buffer and carries the picture as its CSS background. */
   const useStatic = () => {
     loading = false;
+    if (setup) { cancelBuild(setup); setup = null; } // a three.js still starting is not needed any more (its finally frees it)
     dropPlaceholder();
     plate?.dispose();
     // A failed frame may have left pixels over the CSS background or left GL state from a render pass. This is the path taken when
@@ -59,7 +63,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     canvas.dataset.renderer = 'static';
     setMesh(ward);
   };
-  /** The step a failed ward build reports, in tasks or in the call (ADR 0026). */
+  /** The step a failed ward build reports, in tasks or in the call (ADR 0027). */
   const BUILD_WARD_STEP = 'build ward';
   const setMesh = id => {
     ward = id;
@@ -108,12 +112,20 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
   } else {
     loading = true;
     let step = 'load';
-    // Loaded on demand: three.js is large and the home page may never need it.
-    import('./plate/three-renderer.js').then(({createThreeRenderer}) => {
+    // Loaded on demand: three.js is large and the home page may never need it. It starts in steps (still loading meanwhile, so
+    // the still picture stands in), yielding between them like every ward build (ADR 0027).
+    import('./plate/three-renderer.js').then(async ({createThreeRendererInSteps}) => {
       if (disposed) return;
-      loading = false;
       step = 'start';
-      plate = createThreeRenderer(gl2, canvas, ready, error => fallback(error, step));
+      setup = {gen: createThreeRendererInSteps(gl2, canvas, ready, error => fallback(error, step)), entry: null, buildMs: 0};
+      const started = setup;
+      await finishBuildInTasks(started);
+      if (setup === started) setup = null;
+      const three = started.entry;
+      if (!three) return; // closed by dispose()
+      if (disposed || plate) { three.dispose(); return; } // disposed, or already showing the still picture
+      loading = false;
+      plate = three;
       step = 'first ward';
       setMesh(ward); ready();
       step = 'compile or draw';
@@ -174,6 +186,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
     dispose() {
       if (disposed) return;
       disposed = true;
+      if (setup) { cancelBuild(setup); setup = null; }
       plate?.dispose();
       dropPlaceholder();
     },

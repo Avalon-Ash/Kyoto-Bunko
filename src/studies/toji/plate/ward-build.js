@@ -1,6 +1,21 @@
 /** @template T @typedef {{gen: Generator<string, T, void> | null, entry: T | null, buildMs: number}} WardBuild */
 /** @typedef {(step: string, start: number, end: number) => void} MeasureStep */
 
+/**
+ * How long a stepped build runs before it yields: room below the browser's 50 ms long-task threshold for the next indivisible
+ * operation (one canvas fill, one composition step). The one slice budget for every stepped build (bake.js, compose.js).
+ */
+export const TASK_SLICE_MS = 32;
+
+/** A time slice: due() once TASK_SLICE_MS have run since it began; restart() after the yield. */
+export function taskSlice() {
+  let start = performance.now();
+  return {
+    due: () => performance.now() - start >= TASK_SLICE_MS,
+    restart() { start = performance.now(); },
+  };
+}
+
 function yieldToMain() {
   const scheduler = /** @type {{yield?: () => Promise<void>}} */ ('scheduler' in globalThis ? globalThis.scheduler : undefined);
   // A zero-delay timer also starts a new task in browsers without the Scheduling API.

@@ -2,7 +2,8 @@
 // The pavilion stays at the far left, the cone at the near right; an open lower-left wedge separates them.
 import {MAT, blob, pond, sandGarden, sandCone, moonBowl, storey, roof, hall, branchPine as pine, bird, suyari, grassTufts, daimonji} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {crags} from './crag-mesh.js';
+import {cragSteps} from './crag-mesh.js';
+import {composition} from './compose.js';
 
 // The outline pond() draws for 'kinkyo' (same arguments): the grass is set on it.
 const POND = [-182, 36, 112, 67, 5];
@@ -74,29 +75,27 @@ export const ROCKS = [
 const PIECES = {HEADS, SHORES};
 export {PIECES};
 
-export function sakyo() {
-  return [
-    // Layer 0: the mountain body, the pond's banks, and the water.
-    ...mountain('higashiyama', HEADS),
-    // Daimonji: the character 大 in cut gold on the tall head's flank, right of the pavilion's roof.
-    ...daimonji('daimonji', -30, -190, 60, {on: 'higashiyama-blue', tile: 6.4, stretch: 1.7}),
-    ...tongues('shore', SHORES, {toward: [[-230, 36], [-182, 36], [-130, 36]]}),
-    ...pond('kinkyo', -182, 36, 112, 67, 5),
-    ...sandGarden('ginshadan', 14, 249, 0, 102),
-    // Grass at the pond's edge: a few tufts of gold line work on the west, south and east banks, none on the pavilion's side.
-    ...grassTufts('kinkyo-grass', [bank(3, 11, 4), bank(15, 12, 4), bank(25, 11, 4), bank(28, 12, 4, true), bank(40, 12, 4), bank(47, 11, 4)], {on: 'kinkyo', seed: 3}),
-    ...sandCone('kogetsudai', 190, 160, 50, 62),
-    ...moonBowl('moon', 190, 98, 'kogetsudai'),
-    ...suyari('mist-west', -336, -213, -37, 12, 6),
-    ...suyari('mist-east', 59, 331, -198, 13, 11),
-    ...crags(ROCKS),
-    ...storey('ginkaku-lower', -163, -88, -57, 64, {group: 'ginkaku', bays: 5}),
-    ...roof('ginkaku-eave', -163, -90, 85, 27, {group: 'ginkaku', order: 1, mat: MAT.lacquer, ridgeHalf: 40, motionWith: 'ginkaku-lower'}),
-    ...storey('ginkaku-upper', -163, -138, -113, 46, {group: 'ginkaku', order: 2, windowMat: MAT.lacquer}),
-    ...roof('ginkaku-crown', -163, -140, 63, 34, {group: 'ginkaku', order: 3, mat: MAT.lacquer, ridgeHalf: 25, motionWith: 'ginkaku-upper'}),
-    ...hall('togudo', 84, -102, 82, 32, {wallH: 24}),
-    ...pine('near-pine', -293, 178, 99, 12, 2),
-    ...pine('east-pine', 282, -54, 112, -12, 6),
-    ...bird('uguisu', [[-272.56, 137.72, 1, 'near-pine', 10], [261.10, -100.00, -1, 'east-pine', 10]]),
-  ];
-}
+export const sakyo = composition([
+  // Layer 0: the mountain body, the pond's banks, and the water.
+  () => mountain('higashiyama', HEADS),
+  // Daimonji: the character 大 in cut gold on the tall head's flank, right of the pavilion's roof.
+  () => daimonji('daimonji', -30, -190, 60, {on: 'higashiyama-blue', tile: 6.4, stretch: 1.7}),
+  () => tongues('shore', SHORES, {toward: [[-230, 36], [-182, 36], [-130, 36]]}),
+  () => pond('kinkyo', -182, 36, 112, 67, 5),
+  () => sandGarden('ginshadan', 14, 249, 0, 102),
+  // Grass at the pond's edge: a few tufts of gold line work on the west, south and east banks, none on the pavilion's side.
+  () => grassTufts('kinkyo-grass', [bank(3, 11, 4), bank(15, 12, 4), bank(25, 11, 4), bank(28, 12, 4, true), bank(40, 12, 4), bank(47, 11, 4)], {on: 'kinkyo', seed: 3}),
+  () => sandCone('kogetsudai', 190, 160, 50, 62),
+  () => moonBowl('moon', 190, 98, 'kogetsudai'),
+  () => suyari('mist-west', -336, -213, -37, 12, 6),
+  () => suyari('mist-east', 59, 331, -198, 13, 11),
+  ...cragSteps(ROCKS),
+  () => storey('ginkaku-lower', -163, -88, -57, 64, {group: 'ginkaku', bays: 5}),
+  () => roof('ginkaku-eave', -163, -90, 85, 27, {group: 'ginkaku', order: 1, mat: MAT.lacquer, ridgeHalf: 40, motionWith: 'ginkaku-lower'}),
+  () => storey('ginkaku-upper', -163, -138, -113, 46, {group: 'ginkaku', order: 2, windowMat: MAT.lacquer}),
+  () => roof('ginkaku-crown', -163, -140, 63, 34, {group: 'ginkaku', order: 3, mat: MAT.lacquer, ridgeHalf: 25, motionWith: 'ginkaku-upper'}),
+  () => hall('togudo', 84, -102, 82, 32, {wallH: 24}),
+  () => pine('near-pine', -293, 178, 99, 12, 2),
+  () => pine('east-pine', 282, -54, 112, -12, 6),
+  () => bird('uguisu', [[-272.56, 137.72, 1, 'near-pine', 10], [261.10, -100.00, -1, 'east-pine', 10]]),
+]);

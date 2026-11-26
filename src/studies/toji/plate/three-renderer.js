@@ -12,7 +12,8 @@ import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.j
 import {PLATE, MAT, KIND, rand} from './vocab.js';
 import {PLATES, LAYERS, hasPlate, preparePlate, createLife, partAt} from './parts.js';
 import {paintLayer, identMaps, bakeDensityField, bakeContactField, bakeSoftField} from './bake.js';
-import {cancelBuild, finishBuildInTasks, stepBuild} from './ward-build.js';
+import {cancelBuild, finishBuildInTasks, stepBuild, TASK_SLICE_MS} from './ward-build.js';
+import {composeInSteps, COMPOSE_STEP} from './compose.js';
 import {blankStats} from './fillers.js';
 import {buildBox, FITTINGS} from './box.js';
 import {bakeStamps} from './stamps.js';
@@ -89,6 +90,20 @@ function bakeStampTexture(doc, maxAniso) {
  * @param {(error: unknown) => void} onFailure switches the owning renderer to the still picture
  */
 export function createThreeRenderer(gl, canvas, onReady, onFailure) {
+  const steps = createThreeRendererInSteps(gl, canvas, onReady, onFailure);
+  for (;;) { const step = steps.next(); if (step.done) return step.value; }
+}
+
+/**
+ * The same renderer, set up in steps: it yields after each heavy part (the environment map, the baked textures, the box) so the
+ * page can drive it with ward-build.js and stay responsive while three.js starts (L3d P2, docs/plans/2026-11-26-boot.md).
+ * Closing it early (return()) frees what it had built.
+ * @param {WebGL2RenderingContext} gl
+ * @param {HTMLCanvasElement} canvas
+ * @param {() => void} onReady
+ * @param {(error: unknown) => void} onFailure
+ */
+export function* createThreeRendererInSteps(gl, canvas, onReady, onFailure) {
   const doc = canvas.ownerDocument;
   const renderer = new THREE.WebGLRenderer({canvas, context: gl, antialias: true, alpha: true});
   let disposed = false, failed = false;
@@ -113,10 +128,14 @@ export function createThreeRenderer(gl, canvas, onReady, onFailure) {
   const own = object => { disposables.push(object); return object; };
 
   const scene = new THREE.Scene();
+  let built = false;
+  // Not re-indented: the whole setup below runs inside this try, whose finally frees a setup that was closed or threw.
+  try {
   try {
     const pmrem = new THREE.PMREMGenerator(renderer), room = new RoomEnvironment(), env = pmrem.fromScene(room, .04);
     scene.environment = env.texture; own(env); pmrem.dispose(); room.dispose?.();
   } catch (error) { if (!failed) console.warn('Environment map unavailable:', error); }
+  yield 'renderer-environment';
 
   // The camera is the page's: view and projection come in as one matrix and are split into three's two.
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, NEAR, FAR);
@@ -159,6 +178,7 @@ export function createThreeRenderer(gl, canvas, onReady, onFailure) {
   const neutralDens = own(new THREE.DataTexture(new Uint8Array([128]), 1, 1, THREE.RedFormat, THREE.UnsignedByteType)); neutralDens.unpackAlignment = 1; neutralDens.needsUpdate = true;
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const stampTex = own(bakeStampTexture(doc, maxAniso));
+  yield 'stamp-texture';
   const trails = Array.from({length: 20}, () => new THREE.Vector3());
   const shared = {
     uState: {value: stateTexture}, uTilt: {value: new THREE.Matrix3()}, uOpening: {value: 0},
@@ -179,6 +199,7 @@ export function createThreeRenderer(gl, canvas, onReady, onFailure) {
   if (import.meta.env.DEV) window.__kyotoPlateProbe = opts => import('./clip-probe.js').then(m => m.probeClip(window.__kyotoPlatePose(), opts));
 
   const flake = own(bakeFlakeNormal(doc));
+  yield 'flake-normal';
   const NORMAL_FIX = THREE.ShaderChunk.normal_fragment_begin.replace('gl_FrontFacing ? 1.0 : - 1.0', '1.0');
   const bindGlow = (shader, spec) => {
     Object.assign(shader.uniforms, shared);
@@ -462,6 +483,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
 
   // The box: lid top (ground relief, water, sand, steps, border), then everything from the lid's edge down to the tray and packets.
   const box = buildBox(), boxGroup = new THREE.Group(); scene.add(boxGroup);
+  yield 'box-geometry';
   const groundMaterial = physical(GROUND_LID);
   groundMaterial.customProgramCacheKey = () => 'kyoto-ground';
   groundMaterial.onBeforeCompile = shader => {
@@ -536,6 +558,7 @@ void main() {`)
     boxVertices += slice.position.length / 3;
   }
 
+  yield 'box-meshes';
   // The cords: a few hundred vertices rewritten every frame, already tilted on the CPU (as before).
   const cords = FITTINGS.map(f => ({...f, cord: createCord(f)}));
   for (const c of cords) c.cord.settle();
@@ -648,16 +671,16 @@ void main() {`)
     }
   }
 
-  /** Incrementally builds a ward's textures, meshes, and stats, yielding after each heavy step. */
+  /** Incrementally builds a ward's textures, meshes, and stats, yielding after each heavy step and within the heavy ones once a
+   * slice is due (ward-build.js): the same steps whether it is the first plate, a prefetch or a switch (ADR 0027). */
   function* buildWard(ward) {
     const group = new THREE.Group();
     const textures = [];
     const scratch = doc.createElement('canvas');
-    const canYield = () => foreground?.ward === ward;
     let committed = false;
     try {
-      const composition = PLATES[ward]();
-      if (canYield()) yield 'compose-plate';
+      const composition = yield* composeInSteps(PLATES[ward]);
+      yield COMPOSE_STEP;
       const {parts, errors} = preparePlate(composition);
       if (errors.length) throw Error(`Plate ${ward}: ${errors.join('; ')}`);
       const w = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), canvas.clientWidth < 700 ? 1152 : 1536), h = Math.round(w * PLATE.halfH / PLATE.halfW);
@@ -665,8 +688,8 @@ void main() {`)
 
       scratch.width = w; scratch.height = h;
       const ctx = scratch.getContext('2d', {willReadFrequently: true});
-      yield* paintLayer(ctx, w, h, parts, 0, canYield);
-      if (canYield()) yield 'paint-ground';
+      yield* paintLayer(ctx, w, h, parts, 0);
+      yield 'paint-ground';
       let fine0Img = new Uint8Array(ctx.getImageData(0, 0, w, h).data.buffer); // a view of the readback's own bytes, not a copy of them
       const fine0Tex = new THREE.DataTexture(fine0Img, w, h, THREE.RGBAFormat, THREE.UnsignedByteType);
       fine0Tex.minFilter = THREE.LinearMipmapLinearFilter; fine0Tex.magFilter = THREE.LinearFilter;
@@ -684,7 +707,7 @@ void main() {`)
       yield 'soft-field';
 
       const mw = Math.round(w / 2), mh = Math.round(h / 2);
-      const {maps, packed} = yield* identMaps(doc, parts, mw, mh, LAYERS, MAT.ground, canYield);
+      const {maps, packed} = yield* identMaps(doc, parts, mw, mh, LAYERS, MAT.ground);
       // The ident map is (part, material) byte pairs: the swap rewrites the material byte only.
       if (matSwap.size) for (let i = 1; i < packed[0].length; i += 2) { const to = matSwap.get(packed[0][i]); if (to !== undefined) packed[0][i] = to; }
       const ident0Tex = new THREE.DataTexture(packed[0], mw, mh, THREE.RGFormat, THREE.UnsignedByteType);
@@ -701,7 +724,7 @@ void main() {`)
         densTex = new THREE.DataTexture(field, dw, dh, THREE.RedFormat, THREE.UnsignedByteType);
         densTex.minFilter = densTex.magFilter = THREE.LinearFilter; densTex.unpackAlignment = 1; densTex.needsUpdate = true;
         textures.push(densTex);
-        if (canYield()) yield 'density-field';
+        yield 'density-field';
       }
       // Where things stand on the lid: age gathers dirt there. Not baked for a box as new.
       let contactTex = dummyRgba;
@@ -735,7 +758,7 @@ void main() {`)
         return vertices;
       };
       const meshVertices = addInterleaved(meshesByMaterial(parts), partMaterial, partDepth);
-      if (canYield()) yield 'part-meshes';
+      yield 'part-meshes';
       const treeVertices = addInterleaved(limbsByMaterial(parts), limbMaterial, limbDepth);
       yield 'tree-limbs';
 
@@ -762,16 +785,16 @@ void main() {`)
       const uniforms = {uFine0: fine0Tex, uSoft0: soft0Tex, uIdent0: ident0Tex, uDens: densTex, uContact: contactTex};
       const mistParts = parts.filter(p => p.kind === KIND.mist);
       if (mistParts.length) {
-        yield* paintLayer(ctx, w, h, mistParts.map(p => ({...p, layer: 1})), 1, canYield);
-        if (canYield()) yield 'paint-mist';
+        yield* paintLayer(ctx, w, h, mistParts.map(p => ({...p, layer: 1})), 1);
+        yield 'paint-mist';
         const mistFineImg = new Uint8Array(ctx.getImageData(0, 0, w, h).data.buffer);
         const mistFineTex = new THREE.DataTexture(mistFineImg, w, h, THREE.RGBAFormat, THREE.UnsignedByteType);
         mistFineTex.minFilter = THREE.LinearMipmapLinearFilter; mistFineTex.magFilter = THREE.LinearFilter;
         mistFineTex.generateMipmaps = true; mistFineTex.anisotropy = maxAniso; mistFineTex.unpackAlignment = 1; mistFineTex.needsUpdate = true;
         textures.push(mistFineTex);
-        if (canYield()) yield 'mist-fine-texture';
+        yield 'mist-fine-texture';
 
-        const {packed: mistPacked} = yield* identMaps(doc, mistParts.map(p => ({...p, layer: 0})), mw, mh, 1, 0, canYield);
+        const {packed: mistPacked} = yield* identMaps(doc, mistParts.map(p => ({...p, layer: 0})), mw, mh, 1, 0);
         const mistIdentTex = new THREE.DataTexture(mistPacked[0], mw, mh, THREE.RGFormat, THREE.UnsignedByteType);
         mistIdentTex.minFilter = mistIdentTex.magFilter = THREE.NearestFilter; mistIdentTex.unpackAlignment = 1; mistIdentTex.needsUpdate = true;
 
@@ -946,7 +969,7 @@ void main() {`)
       return slot && (!slot.entry || !slot.warmed);
     });
     if (!hasPending) return;
-    idleHandle = idle(() => {
+    idleHandle = idle(deadline => {
       idleHandle = null;
       if (disposed) return;
       for (const w of lastNeighbours) {
@@ -955,7 +978,9 @@ void main() {`)
         if (!slot) continue;
         if (!slot.entry) {
           try {
-            stepBuild(slot);
+            // As many steps as the idle period has room for (a sliced step is about TASK_SLICE_MS; a few unsliced ones, the soft field
+            // and the part meshes, can be longer); one step when there is no deadline (the setTimeout fallback passes none).
+            do stepBuild(slot); while (slot.gen && (deadline?.timeRemaining() ?? 0) >= TASK_SLICE_MS);
             if (slot.entry) warmEntry(slot);
           } catch (error) {
             dropSlot(w, slot);
@@ -1080,6 +1105,7 @@ void main() {`)
     return index && life.act(index, time) ? plate.parts[index - 1].id : '';
   }
 
+  built = true;
   return {
     setWard, prefetch, draw, drawNeighbour, poke, active: () => Boolean(plate),
     /** True during the first build and compile, or while a failure waits for the still picture. */
@@ -1096,4 +1122,7 @@ void main() {`)
       renderer.dispose();
     },
   };
+  } finally {
+    if (!built) { for (const d of disposables.splice(0)) d.dispose?.(); scene.environment = null; renderer.dispose(); }
+  }
 }

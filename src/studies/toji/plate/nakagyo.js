@@ -5,7 +5,8 @@
 // the forecourt of the gate, the east pine, the west pine. A few rocks, each against something: see ROCKS.
 import {hall, karamon, moatWall, branchPine as pine, bird, suyari} from './vocab.js';
 import {tongues} from './doha.js';
-import {crags} from './crag-mesh.js';
+import {cragSteps} from './crag-mesh.js';
+import {composition} from './compose.js';
 
 // The ground is one shore (岸) along the moat and the stone wall, laid as a gold bank over a thin silver ribbon over a front gold
 // bank, with a long gold arm up the east side to the pine. Their outlines are the scalloped waves of a Shioyama-style suhama: a
@@ -76,20 +77,20 @@ export const ROCKS = [
 const PIECES = {SHORE};
 export {PIECES};
 
-export function nakagyo() {
-  const rooms = [[-248, -172, 62], [-161, -110, 64], [-74, -48, 66], [13, 14, 62], [100, 76, 58], [187, 138, 58]];
-  return [
-    ...tongues('shore', SHORE),
-    // The halls rise out of the mist: two bands across the staircase, one among the far halls, one among the near.
-    ...suyari('mist-court', -205, 15, -212, 11, 8),
-    ...suyari('mist-far', -358, 40, -118, 13, 3),
-    ...suyari('mist-near', -90, 358, 62, 13, 5),
-    ...moatWall('ishigaki', -333, 333, 201, 218, 232),
-    ...crags(ROCKS),
-    ...rooms.flatMap(([x, z, w], i) => hall(`ninomaru-${i}`, x, z, w, 22, {wallH: 22, bays: 5})),
-    ...karamon('karamon', -172, 184, 69),
-    ...pine('west-pine', -305, 62, 99, 12, 2),
-    ...pine('east-pine', 282, -79, 112, -12, 6),
-    ...bird('uguisu', [[-284.56, 21.72, 1, 'west-pine', 10], [261.10, -125.00, -1, 'east-pine', 10]]),
-  ];
-}
+/** The halls of the staircase, far to near (z grows toward the viewer): [x, z, width]. */
+const ROOMS = [[-248, -172, 62], [-161, -110, 64], [-74, -48, 66], [13, 14, 62], [100, 76, 58], [187, 138, 58]];
+
+export const nakagyo = composition([
+  () => tongues('shore', SHORE),
+  // The halls rise out of the mist: two bands across the staircase, one among the far halls, one among the near.
+  () => suyari('mist-court', -205, 15, -212, 11, 8),
+  () => suyari('mist-far', -358, 40, -118, 13, 3),
+  () => suyari('mist-near', -90, 358, 62, 13, 5),
+  () => moatWall('ishigaki', -333, 333, 201, 218, 232),
+  ...cragSteps(ROCKS),
+  () => ROOMS.flatMap(([x, z, w], i) => hall(`ninomaru-${i}`, x, z, w, 22, {wallH: 22, bays: 5})),
+  () => karamon('karamon', -172, 184, 69),
+  () => pine('west-pine', -305, 62, 99, 12, 2),
+  () => pine('east-pine', 282, -79, 112, -12, 6),
+  () => bird('uguisu', [[-284.56, 21.72, 1, 'west-pine', 10], [261.10, -125.00, -1, 'east-pine', 10]]),
+]);

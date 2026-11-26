@@ -8,7 +8,8 @@
 //   behind the shoin  bare lacquer and the mist: nothing is laid there.
 import {pond, hall, moonDeck, moon, steppingStones, lantern, branchPine as pine, bird, suyari, bambooFence} from './vocab.js';
 import {tongues} from './doha.js';
-import {crags} from './crag-mesh.js';
+import {cragSteps} from './crag-mesh.js';
+import {composition} from './compose.js';
 
 /// The shores, far to near (a later piece lies over an earlier one). Each outline is written as a few broad lobes (a big lobe 40-70 wide,
 /// a small one 15-25) with bays of different depths between, the lobes toward the water.
@@ -58,25 +59,23 @@ export const ROCKS = [
 const PIECES = {SHORES};
 export {PIECES};
 
-export function nishikyo() {
-  return [
-    ...tongues('shore', SHORES, {toward: [[-120, 69], [15, 69], [150, 69]]}),
-    ...pond('garden-pond', 15, 69, 217, 71, 7),
-    // Katsura fence: a run of bamboo along the south-west shore's lower edge: this is an enclosed garden.
-    ...bambooFence('katsura-fence', [-205, 170], [-90, 159], {on: 'shore-gold'}),
-    ...suyari('mist-sky', -300, -72, -201, 13, 9),
-    // Behind the new shoin, between it and the far pine: the last roof of the line rises out of the mist.
-    ...suyari('mist-bank', 96, 320, -86, 12, 3),
-    ...crags(ROCKS),
-    ...hall('old-shoin', -205, -99, 80, 33, {wallH: 27, group: 'old-shoin'}),
-    ...hall('middle-shoin', -18, -65, 75, 31, {wallH: 25}),
-    ...hall('new-shoin', 144, -29, 62, 29, {wallH: 24}),
-    ...moon('pond-moon', -52, 50, 15),
-    ...moonDeck('tsukimi', -176, -100, -32, 20),
-    ...steppingStones('approach', [[-210, 114, 11], [-178, 129, 12], [-145, 140, 11], [-110, 146, 12], [-74, 148, 11]]),
-    ...lantern('shore-lantern', 246, 171, .9),
-    ...pine('near-pine', -291, 183, 99, 12, 2),
-    ...pine('far-pine', 286, -60, 112, -12, 6),
-    ...bird('uguisu', [[-270.56, 142.72, 1, 'near-pine', 10], [265.10, -106.00, -1, 'far-pine', 10]]),
-  ];
-}
+export const nishikyo = composition([
+  () => tongues('shore', SHORES, {toward: [[-120, 69], [15, 69], [150, 69]]}),
+  () => pond('garden-pond', 15, 69, 217, 71, 7),
+  // Katsura fence: a run of bamboo along the south-west shore's lower edge: this is an enclosed garden.
+  () => bambooFence('katsura-fence', [-205, 170], [-90, 159], {on: 'shore-gold'}),
+  () => suyari('mist-sky', -300, -72, -201, 13, 9),
+  // Behind the new shoin, between it and the far pine: the last roof of the line rises out of the mist.
+  () => suyari('mist-bank', 96, 320, -86, 12, 3),
+  ...cragSteps(ROCKS),
+  () => hall('old-shoin', -205, -99, 80, 33, {wallH: 27, group: 'old-shoin'}),
+  () => hall('middle-shoin', -18, -65, 75, 31, {wallH: 25}),
+  () => hall('new-shoin', 144, -29, 62, 29, {wallH: 24}),
+  () => moon('pond-moon', -52, 50, 15),
+  () => moonDeck('tsukimi', -176, -100, -32, 20),
+  () => steppingStones('approach', [[-210, 114, 11], [-178, 129, 12], [-145, 140, 11], [-110, 146, 12], [-74, 148, 11]]),
+  () => lantern('shore-lantern', 246, 171, .9),
+  () => pine('near-pine', -291, 183, 99, 12, 2),
+  () => pine('far-pine', 286, -60, 112, -12, 6),
+  () => bird('uguisu', [[-270.56, 142.72, 1, 'near-pine', 10], [265.10, -106.00, -1, 'far-pine', 10]]),
+]);

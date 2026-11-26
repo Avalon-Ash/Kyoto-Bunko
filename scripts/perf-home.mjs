@@ -8,6 +8,8 @@
 //   longTasks / longTaskMs: count and sum of main-thread tasks over 50 ms up to readyMs;
 //   switch: key -> renderedWard changes, the longest rAF gap and long tasks in the 3 s after the key, and whether the ward
 //   it went to had been prefetched; idle: rAF interval p50/p95/max.
+//   --taps: input (every interaction) and input.phases: beforePaint (before first contentful paint, nothing to press), load
+//   (first paint to the switch key: the L3d gate, max <= 200 ms) and switch; longOver100 lists the load's tasks over 100 ms.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -59,6 +61,8 @@ const TAP_EVERY_MS = 250;
 const EVENT_THRESHOLD_MS = 16;
 /** web.dev's "good" INP bound; the L3 gate the user accepted (p95 at or under this, 2026-11-25). */
 const INP_GOOD_MS = 200;
+/** --taps also lists the first load's tasks over this long (start, duration), to see which one a slow key waited behind. */
+const LONG_LIST_MS = 100;
 
 // Installed before any page script: long tasks and rAF gaps, timed from navigation start.
 const PROBE = `(() => {
@@ -95,6 +99,7 @@ try {
         }
       })();
       const row = {label: LABEL, load, cache: load === 1 ? 'cold' : 'warm'};
+      let switchAt = Infinity; // the switch key's time: interactions from here on belong to the switch, not the first load
       try {
         let fallbackMs = 0, readyMs = 0;
         const deadline = Date.now() + READY_TIMEOUT_MS;
@@ -125,6 +130,7 @@ try {
           const before = await evalJs(`document.querySelector('#scene').dataset.renderedWard`);
           await evalJs(`document.querySelector('#scene').focus({preventScroll: true})`);
           const keyAt = await evalJs('performance.now()');
+          switchAt = keyAt;
           const key = {key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39, nativeVirtualKeyCode: 39};
           await send('Input.dispatchKeyEvent', {type: 'keyDown', ...key});
           await send('Input.dispatchKeyEvent', {type: 'keyUp', ...key});
@@ -147,16 +153,26 @@ try {
         await tapLoop;
       }
       if (TAPS) {
-        // One interaction is a keydown and a keyup with the same id; its duration is the longer of the two.
+        // One interaction is a keydown and a keyup with the same id; its duration is the longer of the two, its time the earlier.
         const ev = await evalJs('__perf.events');
         const byId = new Map();
-        for (const [, d, id] of ev) byId.set(id, Math.max(byId.get(id) ?? 0, d));
-        const durs = [...byId.values()].sort((a, b) => a - b);
+        for (const [t, d, id] of ev) { const o = byId.get(id); byId.set(id, o ? [Math.min(o[0], t), Math.max(o[1], d)] : [t, d]); }
+        const durs = [...byId.values()].map(([, d]) => d).sort((a, b) => a - b);
         const sent = Math.round((await evalJs('performance.now()')) / TAP_EVERY_MS);
         const q = p => Math.round(durs[Math.min(durs.length - 1, Math.floor(p * durs.length))] ?? 0);
         // Taps shorter than the threshold are not reported, so p95 over the reported ones is an upper bound.
         row.input = {sentApprox: sent, reported: durs.length, p95Reported: q(.95), max: q(1),
           over200: durs.filter(d => d > INP_GOOD_MS).length, gateMs: INP_GOOD_MS};
+        // By phase (L3d, docs/plans/2026-11-26-boot.md): before the first contentful paint there is nothing to press, so the
+        // gate is the load phase (first paint to the switch key); the switch is reported apart.
+        const paintAt = await evalJs(`performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? 0`);
+        const phase = (from, to) => {
+          const ds = [...byId.values()].filter(([t]) => t >= from && t < to).map(([, d]) => d);
+          return {reported: ds.length, max: Math.round(Math.max(0, ...ds)), over200: ds.filter(d => d > INP_GOOD_MS).length};
+        };
+        row.input.phases = {paintMs: Math.round(paintAt), beforePaint: phase(0, paintAt), load: phase(paintAt, switchAt), switch: phase(switchAt, Infinity)};
+        row.longOver100 = (await evalJs(`__perf.long.filter(([t, d]) => d > ${LONG_LIST_MS} && t < ${switchAt})`))
+          .map(([t, d]) => [Math.round(t), Math.round(d)]);
       }
       if (row.readyMs && COMPILE && load === LOADS) row.compile = await evalJs(COMPILE_BENCH);
       const problems = logs.filter(l => !/^\[vite\]/.test(l.text)).map(l => `${l.level}: ${l.text}`);

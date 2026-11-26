@@ -1,0 +1,225 @@
+
+== busy 52–483 ms (431 ms, profile-relative)
+  self:
+      361 ms  (program) 
+       10 ms  (anon) :null
+        4 ms  sb nm/react-dom/cjs/react-dom-client.production.js:16049
+        3 ms  renderWithHooks nm/react-dom/cjs/react-dom-client.production.js:4333
+        2 ms  beginWork nm/react-dom/cjs/react-dom-client.production.js:7392
+        2 ms  processRootScheduleInMicrotask nm/react-dom/cjs/react-dom-client.production.js:11966
+        2 ms  setProp nm/react-dom/cjs/react-dom-client.production.js:12957
+        1 ms  flushMutationEffects nm/react-dom/cjs/react-dom-client.production.js:11524
+  inclusive (with source):
+       41 ms  performWorkOnRootViaSchedulerTask nm/react-dom/cjs/react-dom-client.production.js:12065
+       41 ms  performWorkUntilDeadline nm/scheduler/cjs/scheduler.production.js:121
+       40 ms  performWorkOnRoot nm/react-dom/cjs/react-dom-client.production.js:10681
+       33 ms  renderRootSync nm/react-dom/cjs/react-dom-client.production.js:11120
+       32 ms  performUnitOfWork nm/react-dom/cjs/react-dom-client.production.js:11304
+       32 ms  workLoopSync nm/react-dom/cjs/react-dom-client.production.js:11181
+       24 ms  (anon) :null
+       24 ms  beginWork nm/react-dom/cjs/react-dom-client.production.js:7392
+       16 ms  renderWithHooks nm/react-dom/cjs/react-dom-client.production.js:4333
+       10 ms  updateFunctionComponent nm/react-dom/cjs/react-dom-client.production.js:6489
+        8 ms  updateForwardRef nm/react-dom/cjs/react-dom-client.production.js:6126
+        8 ms  sb nm/react-dom/cjs/react-dom-client.production.js:16049
+        8 ms  commitRoot nm/react-dom/cjs/react-dom-client.production.js:11457
+        8 ms  commitRootWhenReady nm/react-dom/cjs/react-dom-client.production.js:10848
+
+== busy 485–651 ms (166 ms, profile-relative)
+  self:
+       81 ms  syncTrack src/studies/toji/study.js:139
+       14 ms  paintBand src/studies/toji/backdrop.js:406
+        8 ms  createRenderer src/studies/toji/renderer.js:33
+        8 ms  (program) 
+        6 ms  paintPaper src/studies/toji/backdrop.js:290
+        6 ms  draw src/studies/toji/backdrop.js:194
+        5 ms  (anon) src/components/HomeView.tsx:47
+        4 ms  animate src/studies/toji/backdrop.js:229
+  inclusive (with source):
+      153 ms  flushPassiveEffects nm/react-dom/cjs/react-dom-client.production.js:11741
+      153 ms  (anon) nm/react-dom/cjs/react-dom-client.production.js:11497
+      153 ms  performWorkUntilDeadline nm/scheduler/cjs/scheduler.production.js:121
+      152 ms  commitHookEffectListMount nm/react-dom/cjs/react-dom-client.production.js:8571
+      152 ms  commitPassiveMountOnFiber nm/react-dom/cjs/react-dom-client.production.js:10109
+      152 ms  recursivelyTraversePassiveMountEffects nm/react-dom/cjs/react-dom-client.production.js:10093
+      144 ms  (anon) src/components/BunkoEntrance.tsx:22
+      141 ms  mountBunko src/studies/toji/study.js:28
+       82 ms  syncLanguage src/studies/toji/study.js:204
+       81 ms  syncTrack src/studies/toji/study.js:139
+       81 ms  syncCabinet src/studies/toji/study.js:156
+       44 ms  syncBackdrop src/studies/toji/study.js:152
+       40 ms  resize src/studies/toji/backdrop.js:264
+       39 ms  draw src/studies/toji/backdrop.js:194
+
+== busy 686–1231 ms (545 ms, profile-relative)
+  self:
+       74 ms  createThreeRenderer src/studies/toji/plate/three-renderer.js:91
+       70 ms  tick src/studies/toji/study.js:216
+       57 ms  bakeFlakeNormal src/studies/toji/plate/three-renderer.js:48
+       23 ms  bakeStamps src/studies/toji/plate/stamps.js:64
+       22 ms  (program) 
+       19 ms  onFirstUse nm/three/build/three.module.js:7022
+       19 ms  e src/studies/toji/plate/box.js:14
+       19 ms  buildBox src/studies/toji/plate/box.js:12
+  inclusive (with source):
+      405 ms  (anon) src/studies/toji/renderer.js:112
+      399 ms  createThreeRenderer src/studies/toji/plate/three-renderer.js:91
+      102 ms  fromScene nm/three/build/three.module.js:2722
+       87 ms  render nm/three/build/three.module.js:17674
+       79 ms  _sceneToCubeUV nm/three/build/three.module.js:2947
+       72 ms  tick src/studies/toji/study.js:216
+       69 ms  renderScene nm/three/build/three.module.js:18015
+       68 ms  buildBox src/studies/toji/plate/box.js:12
+       66 ms  renderObject nm/three/build/three.module.js:18192
+       66 ms  renderObjects nm/three/build/three.module.js:18165
+       63 ms  renderBufferDirect nm/three/build/three.module.js:17233
+       63 ms  bakeFlakeNormal src/studies/toji/plate/three-renderer.js:48
+       56 ms  setProgram nm/three/build/three.module.js:18407
+       28 ms  bakeStampTexture src/studies/toji/plate/three-renderer.js:72
+
+== busy 1236–1654 ms (418 ms, profile-relative)
+  self:
+       37 ms  (anon) src/studies/toji/plate/crag-mesh.js:27
+       26 ms  validateMesh src/studies/toji/plate/mesh-geometry.js:284
+       21 ms  meshField src/studies/toji/plate/crag-mesh.js:132
+       18 ms  tri src/studies/toji/plate/architecture-mesh.js:32
+       17 ms  refine src/studies/toji/plate/creature-mesh.js:107
+       15 ms  blockHeight src/studies/toji/plate/crag-mesh.js:31
+       15 ms  toSeg src/studies/toji/plate/crag-mesh.js:19
+       13 ms  s src/studies/toji/plate/crag-mesh.js:186
+  inclusive (with source):
+      391 ms  buildWard src/studies/toji/plate/three-renderer.js:652
+      391 ms  stepBuild src/studies/toji/plate/ward-build.js:11
+      391 ms  finishBuildInTasks src/studies/toji/plate/ward-build.js:23
+      338 ms  minami src/studies/toji/plate/minami.js:114
+      170 ms  (anon) src/studies/toji/plate/crag-mesh.js:171
+      170 ms  rocks src/studies/toji/plate/crag-mesh.js:171
+      166 ms  meshCrag src/studies/toji/plate/crag-mesh.js:181
+      130 ms  meshField src/studies/toji/plate/crag-mesh.js:132
+       72 ms  s src/studies/toji/plate/crag-mesh.js:63
+       71 ms  (anon) src/studies/toji/plate/crag-mesh.js:65
+       70 ms  meshRoof src/studies/toji/plate/architecture-mesh.js:211
+       68 ms  blockHeight src/studies/toji/plate/crag-mesh.js:31
+       56 ms  h src/studies/toji/plate/crag-mesh.js:69
+       54 ms  meshPagoda src/studies/toji/plate/architecture-mesh.js:303
+
+== busy 1799–1988 ms (189 ms, profile-relative)
+  self:
+      109 ms  identMaps src/studies/toji/plate/bake.js:268
+       38 ms  bakeSoftField src/studies/toji/plate/bake.js:220
+       22 ms  buildWard src/studies/toji/plate/three-renderer.js:652
+        4 ms  (program) 
+        3 ms  tick src/studies/toji/study.js:216
+        2 ms  stepBuild src/studies/toji/plate/ward-build.js:11
+        2 ms  (anon) src/studies/toji/plate/bake.js:272
+        2 ms  toHalfFloat nm/three/build/three.core.js:16901
+  inclusive (with source):
+      182 ms  stepBuild src/studies/toji/plate/ward-build.js:11
+      182 ms  finishBuildInTasks src/studies/toji/plate/ward-build.js:23
+      180 ms  buildWard src/studies/toji/plate/three-renderer.js:652
+      116 ms  identMaps src/studies/toji/plate/bake.js:268
+       38 ms  bakeSoftField src/studies/toji/plate/bake.js:220
+        3 ms  tick src/studies/toji/study.js:216
+        3 ms  toHalfFloat nm/three/build/three.core.js:16901
+        2 ms  (anon) src/studies/toji/plate/bake.js:272
+        2 ms  due src/studies/toji/plate/bake.js:159
+        1 ms  Qt src/studies/toji/plate/bake.js:10
+        1 ms  toHalfFloat nm/three/build/three.core.js:16859
+        1 ms  restart src/studies/toji/plate/bake.js:160
+        1 ms  Js src/studies/toji/plate/bake.js:16
+        1 ms  U src/studies/toji/plate/three-renderer.js:656
+
+== busy 1990–2167 ms (177 ms, profile-relative)
+  self:
+       51 ms  packMeshes src/studies/toji/plate/mesh-geometry.js:319
+       20 ms  limbMesh src/studies/toji/plate/limbs.js:11
+       17 ms  bakeDensityField src/studies/toji/plate/bake.js:319
+       17 ms  h src/studies/toji/plate/bake.js:415
+       15 ms  densityFromMask src/studies/toji/plate/bake.js:411
+        9 ms  bakeContactField src/studies/toji/plate/bake.js:365
+        6 ms  (program) 
+        5 ms  meshesByMaterial src/studies/toji/plate/three-pack.js:124
+  inclusive (with source):
+      165 ms  finishBuildInTasks src/studies/toji/plate/ward-build.js:23
+      164 ms  stepBuild src/studies/toji/plate/ward-build.js:11
+      162 ms  buildWard src/studies/toji/plate/three-renderer.js:652
+       62 ms  meshesByMaterial src/studies/toji/plate/three-pack.js:124
+       51 ms  packMeshes src/studies/toji/plate/mesh-geometry.js:319
+       37 ms  densityFromMask src/studies/toji/plate/bake.js:411
+       33 ms  bakeDensityField src/studies/toji/plate/bake.js:319
+       31 ms  bakeContactField src/studies/toji/plate/bake.js:365
+       27 ms  limbsByMaterial src/studies/toji/plate/three-pack.js:144
+       22 ms  limbMesh src/studies/toji/plate/limbs.js:11
+       17 ms  h src/studies/toji/plate/bake.js:415
+        5 ms  d src/studies/toji/plate/bake.js:430
+        4 ms  p src/studies/toji/plate/three-pack.js:125
+        3 ms  tick src/studies/toji/study.js:216
+
+== busy 2169–2616 ms (447 ms, profile-relative)
+  self:
+       62 ms  (program) 
+       51 ms  replaceLightNums nm/three/build/three.module.js:6373
+       36 ms  onFirstUse nm/three/build/three.module.js:7022
+       29 ms  WebGLShader nm/three/build/three.module.js:6158
+       21 ms  blankStats src/studies/toji/plate/fillers.js:16
+       20 ms  createBuffer nm/three/build/three.module.js:66
+       12 ms  replaceClippingPlaneNums nm/three/build/three.module.js:6394
+       12 ms  computeBoundingSphere nm/three/build/three.core.js:19079
+  inclusive (with source):
+      181 ms  tick src/studies/toji/study.js:216
+      169 ms  draw src/studies/toji/renderer.js:154
+      169 ms  C src/studies/toji/study.js:476
+      167 ms  draw src/studies/toji/plate/three-renderer.js:996
+      147 ms  render nm/three/build/three.module.js:17674
+      137 ms  compilePrograms src/studies/toji/plate/three-renderer.js:583
+      131 ms  getProgram nm/three/build/three.module.js:18224
+      122 ms  activate src/studies/toji/plate/three-renderer.js:843
+      122 ms  buildFirstWard src/studies/toji/plate/three-renderer.js:869
+      120 ms  compileScene src/studies/toji/plate/three-renderer.js:601
+      118 ms  compile nm/three/build/three.module.js:17433
+      118 ms  compileAsync nm/three/build/three.module.js:17552
+      117 ms  prepareMaterial nm/three/build/three.module.js:17395
+      117 ms  (anon) nm/three/build/three.module.js:17497
+
+== busy 3224–3582 ms (358 ms, profile-relative)
+  self:
+       90 ms  buildWard src/studies/toji/plate/three-renderer.js:652
+       24 ms  bakeSoftField src/studies/toji/plate/bake.js:220
+       21 ms  tri src/studies/toji/plate/architecture-mesh.js:32
+       21 ms  validateMesh src/studies/toji/plate/mesh-geometry.js:284
+       20 ms  (program) 
+       19 ms  (anon) src/studies/toji/plate/crag-mesh.js:27
+       15 ms  (garbage collector) 
+        8 ms  h2 src/studies/toji/plate/architecture-mesh.js:169
+  inclusive (with source):
+      296 ms  stepBuild src/studies/toji/plate/ward-build.js:11
+      296 ms  (anon) src/studies/toji/plate/three-renderer.js:949
+      294 ms  buildWard src/studies/toji/plate/three-renderer.js:652
+      141 ms  shimogyo src/studies/toji/plate/shimogyo.js:69
+       51 ms  meshRoof src/studies/toji/plate/architecture-mesh.js:211
+       47 ms  (anon) src/studies/toji/plate/crag-mesh.js:171
+       47 ms  rocks src/studies/toji/plate/crag-mesh.js:171
+       46 ms  meshCrag src/studies/toji/plate/crag-mesh.js:181
+       36 ms  surfaceBand src/studies/toji/plate/architecture-mesh.js:121
+       35 ms  meshField src/studies/toji/plate/crag-mesh.js:132
+       34 ms  corridor src/studies/toji/plate/vocab.js:447
+       34 ms  meshCorridor src/studies/toji/plate/architecture-mesh.js:458
+       30 ms  preparePlate src/studies/toji/plate/parts.js:30
+       27 ms  (anon) src/studies/toji/plate/parts.js:58
+== main-CQ8vL08e.js 353 kB
+   176 kB nm/react-dom/cjs
+    94 kB nm/motion-dom/dist
+    36 kB nm/framer-motion/dist
+     8 kB nm/react/cjs
+     4 kB src/components/HomeView.tsx
+     4 kB nm/lucide-react/dist
+     4 kB src/components/SpotCard.tsx
+     3 kB nm/scheduler/cjs
+     3 kB src/components/DetailView.tsx
+     3 kB src/data/tags.ts
+     2 kB src/hooks/useKyotoEngine.ts
+     2 kB nm/motion-utils/dist
+== three-renderer-BjIHgV6N.js 789 kB
+   519 kB nm/three/build
+   263 kB src/studies/toji
+     2 kB nm/three/examples

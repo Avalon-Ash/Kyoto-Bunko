@@ -9,7 +9,8 @@
 // The mist across the lattice's middle is what makes it hang: the ground is behind it, far below.
 import {stream, suyari, hall, bird, shell, kakezukuri, stampedMaple as maple, fallenLeaves, farPagoda} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {crags} from './crag-mesh.js';
+import {cragSteps} from './crag-mesh.js';
+import {composition} from './compose.js';
 
 // Toyama maki-e: each head is one smooth arc, [x, z] from its left foot to its right: a main peak and a shoulder or two, never the
 // same either side. Far to near. Why: the Otowa hill is what the stage is built against; its crest is the brightest line on the lid.
@@ -84,29 +85,27 @@ export const ROCKS = [
 const PIECES = {OTOWA, WEST, BANKS};
 export {PIECES};
 
-export function higashiyama() {
-  return [
-    // Layer 0: Otowa, the western range, the banks, and the water.
-    ...mountain('otowa', OTOWA),
-    ...mountain('nishiyama', WEST),
-    ...tongues('bank', BANKS),
-    ...stream('otowa-water', [[-80, 138], [-150, 156], [-222, 176], [-284, 204], [-330, 238]], [5, 8, 12, 17, 24]),
-    ...shell('shell', [[-118, 146, 4, 2], [-196, 166, 4.8, 5], [-262, 192, 5.4, 8]]),
-    // Yasaka's pagoda on the crest of the western range, very small and pale: its height is under a quarter of the hall's.
-    ...farPagoda('yasaka-tower', -322, -161, 20, {on: 'nishiyama-blue'}),
-    // Fallen leaves of cut gold and silver drift from the maples down the valley toward the water.
-    ...fallenLeaves('momiji', -60, 192, 240, 34, 30, 7),
-    // Slot 1: mist and stones. The mist across the lattice is the void under the stage; the others cut the feet of the two ranges.
-    ...suyari('mist-under', -150, 290, 50, 17, 5),
-    ...suyari('mist-west', -352, -176, -88, 11, 11),
-    ...suyari('mist-hall', 210, 352, -70, 12, 8),
-    ...crags(ROCKS),
-    // Slot 2: the stage. Lattice, deck, hall and roof are one solid standing on the lattice's foot.
-    ...kakezukuri('butai', -40, 252, -8, 104, {posts: 8}),
-    ...hall('hondo', 106, -44, 132, 60, {wallH: 33, bays: 9, group: 'butai', order: 2}),
-    ...maple('maple-a', -134, 216, 96, 10, 2),
-    ...maple('maple-b', 150, 218, 78, -8, 9),
-    ...maple('maple-c', 316, 122, 72, -6, 4),
-    ...bird('uguisu', [[-111.57, 167.13, 1, 'maple-a', 12], [335.44, 83.92, -1, 'maple-c', 12]]),
-  ];
-}
+export const higashiyama = composition([
+  // Layer 0: Otowa, the western range, the banks, and the water.
+  () => mountain('otowa', OTOWA),
+  () => mountain('nishiyama', WEST),
+  () => tongues('bank', BANKS),
+  () => stream('otowa-water', [[-80, 138], [-150, 156], [-222, 176], [-284, 204], [-330, 238]], [5, 8, 12, 17, 24]),
+  () => shell('shell', [[-118, 146, 4, 2], [-196, 166, 4.8, 5], [-262, 192, 5.4, 8]]),
+  // Yasaka's pagoda on the crest of the western range, very small and pale: its height is under a quarter of the hall's.
+  () => farPagoda('yasaka-tower', -322, -161, 20, {on: 'nishiyama-blue'}),
+  // Fallen leaves of cut gold and silver drift from the maples down the valley toward the water.
+  () => fallenLeaves('momiji', -60, 192, 240, 34, 30, 7),
+  // Slot 1: mist and stones. The mist across the lattice is the void under the stage; the others cut the feet of the two ranges.
+  () => suyari('mist-under', -150, 290, 50, 17, 5),
+  () => suyari('mist-west', -352, -176, -88, 11, 11),
+  () => suyari('mist-hall', 210, 352, -70, 12, 8),
+  ...cragSteps(ROCKS),
+  // Slot 2: the stage. Lattice, deck, hall and roof are one solid standing on the lattice's foot.
+  () => kakezukuri('butai', -40, 252, -8, 104, {posts: 8}),
+  () => hall('hondo', 106, -44, 132, 60, {wallH: 33, bays: 9, group: 'butai', order: 2}),
+  () => maple('maple-a', -134, 216, 96, 10, 2),
+  () => maple('maple-b', 150, 218, 78, -8, 9),
+  () => maple('maple-c', 316, 122, 72, -6, 4),
+  () => bird('uguisu', [[-111.57, 167.13, 1, 'maple-a', 12], [335.44, 83.92, -1, 'maple-c', 12]]),
+]);

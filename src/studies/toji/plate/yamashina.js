@@ -2,7 +2,8 @@
 // The lower outer corners are empty ground; the mist cuts across the ridge rather than across the stair.
 import {hall, sanmon, stoneSteps, lantern, branchMaple as maple, fallenLeaves, bird, suyari, grassTufts} from './vocab.js';
 import {mountain, tongues} from './doha.js';
-import {crags} from './crag-mesh.js';
+import {cragSteps} from './crag-mesh.js';
+import {composition} from './compose.js';
 
 // The ground (doha.js) is drawn piece by piece, every outline written here as control points:
 //   the mountain   one body of three rounded heads behind the hall: a pale blue-gold one at the far left under the mist, the tallest with its peak to the
@@ -68,26 +69,24 @@ export const ROCKS = [
 const PIECES = {MOUNTAIN, BANKS};
 export {PIECES};
 
-export function yamashina() {
-  return [
-    // Layer 0: the mountain, the banks beside the stair, and the stair.
-    ...mountain('mountain', MOUNTAIN),
-    ...tongues('bank', BANKS),
-    ...stoneSteps('climb', 20, 42, 211, 36, 73, 12),
-    // Gold grass where the slope meets the stair's two edges: the steps come up out of the earth.
-    ...grassTufts('climb-grass-west', [[-30, 90, 10, 4], [-45, 150, 10, 4], [-56, 200, 10, 4]], {on: 'climb', seed: 4}),
-    ...grassTufts('climb-grass-east', [[70, 90, 10, 4], [85, 150, 10, 4], [96, 200, 10, 4]], {on: 'climb', seed: 5}),
-    ...fallenLeaves('west-leaves', -236, 150, 92, 52, 16, 3),
-    ...fallenLeaves('east-leaves', 252, 132, 84, 50, 14, 8),
-    ...suyari('mist-west', -340, -163, -169, 13, 4),
-    ...suyari('mist-east', 167, 339, -117, 12, 9),
-    ...hall('honden', 20, -122, 112, 43, {wallH: 31}),
-    ...sanmon('sanmon', 20, 40, 73),
-    ...lantern('west-lantern', -114, 151, .9),
-    ...lantern('east-lantern', 154, 151, .9),
-    ...maple('west-maple', -252, 113, 135, 10, 2),
-    ...maple('east-maple', 274, 89, 111, -8, 9),
-    ...crags(ROCKS),
-    ...bird('uguisu', [[-220.07, 46.60, 1, 'west-maple', 12], [302.47, 33.39, -1, 'east-maple', 12]]),
-  ];
-}
+export const yamashina = composition([
+  // Layer 0: the mountain, the banks beside the stair, and the stair.
+  () => mountain('mountain', MOUNTAIN),
+  () => tongues('bank', BANKS),
+  () => stoneSteps('climb', 20, 42, 211, 36, 73, 12),
+  // Gold grass where the slope meets the stair's two edges: the steps come up out of the earth.
+  () => grassTufts('climb-grass-west', [[-30, 90, 10, 4], [-45, 150, 10, 4], [-56, 200, 10, 4]], {on: 'climb', seed: 4}),
+  () => grassTufts('climb-grass-east', [[70, 90, 10, 4], [85, 150, 10, 4], [96, 200, 10, 4]], {on: 'climb', seed: 5}),
+  () => fallenLeaves('west-leaves', -236, 150, 92, 52, 16, 3),
+  () => fallenLeaves('east-leaves', 252, 132, 84, 50, 14, 8),
+  () => suyari('mist-west', -340, -163, -169, 13, 4),
+  () => suyari('mist-east', 167, 339, -117, 12, 9),
+  () => hall('honden', 20, -122, 112, 43, {wallH: 31}),
+  () => sanmon('sanmon', 20, 40, 73),
+  () => lantern('west-lantern', -114, 151, .9),
+  () => lantern('east-lantern', 154, 151, .9),
+  () => maple('west-maple', -252, 113, 135, 10, 2),
+  () => maple('east-maple', 274, 89, 111, -8, 9),
+  ...cragSteps(ROCKS),
+  () => bird('uguisu', [[-220.07, 46.60, 1, 'west-maple', 12], [302.47, 33.39, -1, 'east-maple', 12]]),
+]);

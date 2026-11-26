@@ -169,6 +169,8 @@ function scaled(spec) {
  * @param {Array<{id: string, x: number, z: number} & Record<string, any>>} rocks
  */
 export const crags = rocks => rocks.flatMap(({id, x, z, ...spec}) => meshCrag(`rock-${id}`, x, z, spec));
+/** The same clusters as composition steps (compose.js), one per cluster: a cluster's mesh is among the heaviest single steps of a ward. */
+export const cragSteps = rocks => rocks.map(rock => () => crags([rock]));
 
 /**
  * A crag cluster. spec:

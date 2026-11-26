@@ -3,6 +3,7 @@
 import {PLATE, KIND} from './vocab.js';
 import {WEDGE_PROFILE, fadeHeight} from './doha.js';
 import {lookOf, FINE} from './mat.js';
+import {taskSlice} from './ward-build.js';
 
 /** What a part's fine.g holds, and so how its fills are painted: its material's `fine` column (mat.js MAT_LOOK). */
 const fineOf = p => lookOf(p.mat).fine;
@@ -150,20 +151,10 @@ function paintTongue(ctx, f) {
   ctx.restore();
 }
 
-// Leave room below the browser's 50 ms long-task threshold for the next indivisible canvas operation.
-const RASTER_SLICE_MS = 32;
-/** A stepped bake's time slice: due() once RASTER_SLICE_MS have run since the slice began (and only while canYield()); restart() after the yield. */
-function rasterSlice(canYield) {
-  let start = performance.now();
-  return {
-    due: () => canYield() && performance.now() - start >= RASTER_SLICE_MS,
-    restart() { start = performance.now(); },
-  };
-}
 
 /** Paint one layer of the plate into ctx (w × h pixels). Layer 0 is opaque: it is the ground itself. */
-export function* paintLayer(ctx, w, h, parts, layer, canYield) {
-  const slice = rasterSlice(canYield);
+export function* paintLayer(ctx, w, h, parts, layer) {
+  const slice = taskSlice();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
   ctx.clearRect(0, 0, w, h);
@@ -265,8 +256,8 @@ const ALPHA_SHIFT = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1 ? 24 : 
  * and a solid has room for the wall around its drawing.
  * Returns interleaved (index, material) bytes per layer, plus the bare index maps used for picking.
  */
-export function* identMaps(doc, parts, w, h, layers, groundMat, canYield) {
-  const slice = rasterSlice(canYield);
+export function* identMaps(doc, parts, w, h, layers, groundMat) {
+  const slice = taskSlice();
   const scratch = doc.createElement('canvas'); scratch.width = w; scratch.height = h;
   const ctx = scratch.getContext('2d', {willReadFrequently: true});
   const packed = Array.from({length: layers}, (_, i) => { const a = new Uint8Array(w * h * 2); if (i === 0) for (let k = 1; k < a.length; k += 2) a[k] = groundMat; return a; });
