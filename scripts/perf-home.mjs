@@ -171,7 +171,7 @@ try {
           return {reported: ds.length, max: Math.round(Math.max(0, ...ds)), over200: ds.filter(d => d > INP_GOOD_MS).length};
         };
         row.input.phases = {paintMs: Math.round(paintAt), beforePaint: phase(0, paintAt), load: phase(paintAt, switchAt), switch: phase(switchAt, Infinity)};
-        row.longOver100 = (await evalJs(`__perf.long.filter(([t, d]) => d > ${LONG_LIST_MS} && t < ${Number.isFinite(switchAt) ? switchAt : 1e9})`))
+        row.longOver100 = (await evalJs(`__perf.long.filter(([t, d]) => d > ${LONG_LIST_MS} && t < ${switchAt})`))
           .map(([t, d]) => [Math.round(t), Math.round(d)]);
       }
       if (row.readyMs && COMPILE && load === LOADS) row.compile = await evalJs(COMPILE_BENCH);

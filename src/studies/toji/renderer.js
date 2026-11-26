@@ -48,6 +48,7 @@ export function createRenderer(canvas, wardId, onReady, options = {}) {
   /** The still picture: the canvas keeps its (empty) buffer and carries the picture as its CSS background. */
   const useStatic = () => {
     loading = false;
+    if (setup) { cancelBuild(setup); setup = null; } // a three.js still starting is not needed any more (its finally frees it)
     dropPlaceholder();
     plate?.dispose();
     // A failed frame may have left pixels over the CSS background or left GL state from a render pass. This is the path taken when

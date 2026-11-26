@@ -77,7 +77,7 @@ export const ROCKS = [
 const PIECES = {SHORE};
 export {PIECES};
 
-/** The halls of the staircase, near to far: [x, z, width]. */
+/** The halls of the staircase, far to near (z grows toward the viewer): [x, z, width]. */
 const ROOMS = [[-248, -172, 62], [-161, -110, 64], [-74, -48, 66], [13, 14, 62], [100, 76, 58], [187, 138, 58]];
 
 export const nakagyo = composition([

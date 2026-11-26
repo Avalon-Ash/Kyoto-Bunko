@@ -6,6 +6,9 @@ import {taskSlice} from './ward-build.js';
 /** @typedef {() => object[]} ComposeStep a run of parts, in the composition's order */
 /** @typedef {(() => object[]) & {steps?: readonly ComposeStep[]}} Composition */
 
+/** The name a composition's yields carry (performance measures toji:ward:<ward>:compose-plate). */
+export const COMPOSE_STEP = 'compose-plate';
+
 /** @param {readonly ComposeStep[]} steps @returns {Composition} */
 export function composition(steps) {
   const compose = () => steps.flatMap(step => step());
@@ -13,7 +16,7 @@ export function composition(steps) {
 }
 
 /**
- * The composition's parts, one step at a time: yields 'compose-plate' once a slice is due (ward-build.js). A function without
+ * The composition's parts, one step at a time: yields COMPOSE_STEP once a slice is due (ward-build.js). A function without
  * steps is called whole.
  * @param {Composition} compose
  * @returns {Generator<string, object[], void>}
@@ -23,7 +26,7 @@ export function* composeInSteps(compose) {
   const slice = taskSlice(), parts = [];
   for (const step of compose.steps) {
     for (const part of step()) parts.push(part);
-    if (slice.due()) { yield 'compose-plate'; slice.restart(); }
+    if (slice.due()) { yield COMPOSE_STEP; slice.restart(); }
   }
   return parts;
 }

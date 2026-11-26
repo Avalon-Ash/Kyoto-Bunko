@@ -13,7 +13,7 @@ import {PLATE, MAT, KIND, rand} from './vocab.js';
 import {PLATES, LAYERS, hasPlate, preparePlate, createLife, partAt} from './parts.js';
 import {paintLayer, identMaps, bakeDensityField, bakeContactField, bakeSoftField} from './bake.js';
 import {cancelBuild, finishBuildInTasks, stepBuild, TASK_SLICE_MS} from './ward-build.js';
-import {composeInSteps} from './compose.js';
+import {composeInSteps, COMPOSE_STEP} from './compose.js';
 import {blankStats} from './fillers.js';
 import {buildBox, FITTINGS} from './box.js';
 import {bakeStamps} from './stamps.js';
@@ -680,7 +680,7 @@ void main() {`)
     let committed = false;
     try {
       const composition = yield* composeInSteps(PLATES[ward]);
-      yield 'compose-plate';
+      yield COMPOSE_STEP;
       const {parts, errors} = preparePlate(composition);
       if (errors.length) throw Error(`Plate ${ward}: ${errors.join('; ')}`);
       const w = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), canvas.clientWidth < 700 ? 1152 : 1536), h = Math.round(w * PLATE.halfH / PLATE.halfW);
@@ -978,7 +978,8 @@ void main() {`)
         if (!slot) continue;
         if (!slot.entry) {
           try {
-            // As many steps as the idle period has room for (a step is about one slice); one when there is no deadline.
+            // As many steps as the idle period has room for (a sliced step is about TASK_SLICE_MS; a few unsliced ones, the soft field
+            // and the part meshes, can be longer); one step when there is no deadline (the setTimeout fallback passes none).
             do stepBuild(slot); while (slot.gen && (deadline?.timeRemaining() ?? 0) >= TASK_SLICE_MS);
             if (slot.entry) warmEntry(slot);
           } catch (error) {
