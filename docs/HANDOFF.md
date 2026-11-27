@@ -90,6 +90,8 @@ npm run dev -- --host 127.0.0.1 --strictPort
 
 **K1「房間收成同一個來源」開案（2026-11-27）**：來源是 `C:\Git\_art_study\kyoto-bunko.md`（Fable 的美術研究提案；使用者 11/27「Kyoto 的解耦我同意」）。開案書 [`plans/2026-11-28-room.md`](plans/2026-11-28-room.md)（Fable 經 API）。已證實：材質表的 `envMapIntensity` 沒有作用（three 0.186.1 在材質沒有自己的 `envMap` 時用 `scene.environmentIntensity`）。實作使用者 11/28 開工，主席 Opus 做，開工前先看開案書 §9 的使用者回答。
 
+**K1 實作（2026-11-27～28）**：K0 實測確認 `material.envMapIntensity` 無效後，A 包將房間正本收進 `plate/room.js`、S 包建量測腳本、B＋C 包改由 `room-env.js` 用與蓋面同一份 `roomLightGlsl` 公式畫球面環境貼圖，加上 `uRoomTint` 日夜色調與每材質 `uRoomGain` 接縫（K0b 採 (b)，欄位改名 `roomGain`），並把窗只留在環境裡、刪除 `kyotoWin` 與真塗窗瓣。工作在分支 `claude/room-1128`（A 包 `c995a35`／標籤 `k1-a`、S 包 `036e624`、B＋C 包 `545166c`），22 張降級圖已重拍但未提交。蓋面對 A 包在日夜、lightoff、mobile、`?coat=0`、`?matSwap` 合計 58 張皆為 0 差異，例行檢查與三種冒煙全過，新開 ADR 0028（狀態：提議）。目前尚未經使用者驗收，也未合併 `main` 或 push；待辦還有金堂窗格與底板閃爍（`claude/flicker-1128`）、README／OG 圖是否重拍、`ROOM.direct` 光色統一（Q2）與 K2 障子格。房間量測跑 `bash scripts/plate-room-shots.sh <dir>` 與 `node scripts/plate-room-stats.mjs stats|check|lid-diff|daynight`，完整數字見 [`plans/2026-11-28-room.md`](plans/2026-11-28-room.md) §11。
+
 誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與目前開案書（`plans/2026-11-24-chain-2.md`）§1 的額度表、§3 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
 
 ### 4.2 下一個工作階段照這樣開始
@@ -122,6 +124,8 @@ npm run dev -- --host 127.0.0.1 --strictPort
 ### 4.5 工具與踩過的坑
 
 - 拍圖：`node scripts/plate-shot.mjs <outDir> <job…>`，job＝`name:steps:theme:WxH:zoom:fx,fy`。步數：南 0、右京 1、西京 2、山科 3、伏見 4、北 5、上京 6、下京 -1、東山 -2、中京 -3、左京 -4。環境變數：`PLATE_TONE=1`（分層調子）、`PLATE_KIRI=1`（切金佔比）、`PLATE_CPU=4`、`PLATE_LIGHT=fx,fy`（把游標光移開）、`PLATE_SHOT_QUERY='?coat=0'`。dev server 在 127.0.0.1:3000、無頭 Chrome 用 9377。
+- 房間量測：`PLATE_MASK=gold,silver,parts,room` 搭配 `scripts/plate-shot.mjs` 拍出各組洋紅遮罩（批次用 `bash scripts/plate-room-shots.sh <dir>`），再跑 `node scripts/plate-room-stats.mjs stats <dir> | check <baseDir> <dir> | lid-diff <dirA> <dirB> | daynight <dir>` 量金銀亮度分佈、驗蓋面差異與日夜色比。
+- 逐像素比蓋面要用 `lid-diff`（部件邊緣是半透明的，洋紅遮罩外擴 2 px 不夠）。
 - 量測：`node scripts/plate-doha-measure.mjs <區…>`（佔比、留白、直線）、`plate-doha-similar.mjs`（形的相似度）、`plate-clip.mjs <out.json>`（穿插）。降級圖：`node scripts/plate-fallback-shots.mjs`（22 張；只改了幾區就把其餘 `git checkout` 還原）。
 - **冒煙測試**：`npm run smoke`（首頁 → 換函 → 開蓋進卷 → 返回，console 無錯；約 5 秒；要 dev server 與 GPU，不在 `npm test` 裡）。改了文箱或首頁的流程就跑一次。
 - **拍圖 job 可以直接寫區名**（`kita`、`W_KITA`），步數的寫法照舊能用；腳本的 dev 位址、埠與 Chrome 啟動都在 `scripts/lib/plate-env.mjs`。
