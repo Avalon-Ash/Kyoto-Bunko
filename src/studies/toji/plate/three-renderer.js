@@ -8,7 +8,6 @@
 // The creatures and small solids (rocks, fox, phoenix, uguisu, sand cone and bowl, the moat wall) are low-relief meshes
 // (creature-mesh.js, crag-mesh.js) like everything else: no part is painted on the lid any more except layer 0 and the mist.
 import * as THREE from 'three';
-import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {PLATE, MAT, KIND, rand} from './vocab.js';
 import {PLATES, LAYERS, hasPlate, preparePlate, createLife, partAt} from './parts.js';
 import {paintLayer, identMaps, bakeDensityField, bakeContactField, bakeSoftField} from './bake.js';
@@ -31,6 +30,8 @@ import {
 } from './three-pack.js';
 import {ageFromSearch} from './age.js';
 import {EYE, TARGET, NEAR, FAR} from './camera.js';
+import {ROOM, roomTime} from './room.js';
+import {ROOM_ENV, buildRoomEnvironment, roomTint} from './room-env.js';
 
 /** ?coat=0..1: the shared tinted-lacquer coat (three-pack COAT, docs/plans/2026-11-16-coat.md). 0, the default, compiles none of it. */
 const COAT_DEFAULT = 1; // the recommended strength once the user has chosen (docs/agent-runs/2026-11-16-coat.md)
@@ -40,7 +41,7 @@ const COAT_ON = Number.isFinite(COAT_PARAM) && COAT_PARAM > 0 ? Math.min(1, COAT
 const COAT_DEFINE = COAT_ON > 0 ? '#define KYOTO_COAT_ON\n' : '';
 /** Scales what lies under the coat (the base's four light terms) by the film's transmittance T. */
 const coatApply = (lift, cls) => `\n{\n  vec3 kyotoCoatNW = inverseTransformDirection(normal, viewMatrix);\n  vec3 kyotoCoatTT = kyotoCoatPart(kyotoCoatNW, ${lift}, ${cls});\n  reflectedLight.directDiffuse *= kyotoCoatTT; reflectedLight.indirectDiffuse *= kyotoCoatTT;\n  reflectedLight.directSpecular *= kyotoCoatTT; reflectedLight.indirectSpecular *= kyotoCoatTT;\n}`;
-const VIEW = normalize(EYE.map((v, i) => v - TARGET[i])), KEY = normalize([-.5, .78, .22]);
+const VIEW = normalize(EYE.map((v, i) => v - TARGET[i])), KEY = normalize(ROOM.keyDir);
 const STRIDE = 10;
 const SHADOW_SOFT = 6; // PCF shadow filter radius in texels for softer window-light penumbra
 const SHADOW_STRENGTH = .8; // Shadow intensity [0..1] so cast shadows are not pitch-black
@@ -132,8 +133,8 @@ export function* createThreeRendererInSteps(gl, canvas, onReady, onFailure) {
   // Not re-indented: the whole setup below runs inside this try, whose finally frees a setup that was closed or threw.
   try {
   try {
-    const pmrem = new THREE.PMREMGenerator(renderer), room = new RoomEnvironment(), env = pmrem.fromScene(room, .04);
-    scene.environment = env.texture; own(env); pmrem.dispose(); room.dispose?.();
+    const env = own(buildRoomEnvironment(renderer));
+    scene.environment = env.texture;
   } catch (error) { if (!failed) console.warn('Environment map unavailable:', error); }
   yield 'renderer-environment';
 
@@ -186,7 +187,7 @@ export function* createThreeRendererInSteps(gl, canvas, onReady, onFailure) {
     uMistFine: {value: dummyRgba}, uMistIdent: {value: dummyRg}, uStamps: {value: stampTex},
     uView: {value: new THREE.Vector3(...VIEW)}, uKey: {value: new THREE.Vector3(...KEY)}, uLamp: {value: new THREE.Vector3(0, 70, 0)},
     uTime: {value: 0}, uNight: {value: 1}, uPresence: {value: 0}, uPx: {value: 1}, uTrails: {value: trails},
-    uAge: {value: ageValue},
+    uAge: {value: ageValue}, uRoomTint: {value: new THREE.Vector3(...roomTint(true))},
     uCoatK: {value: 0}, uCoatUp: {value: new THREE.Vector3(0, 1, 0)}, uCoatV: {value: new THREE.Vector3(...VIEW)}, uCoatL: {value: new THREE.Vector3(...KEY)},
   };
   shared.uCoatK.value = COAT_ON * shared.uAge.value;
@@ -194,6 +195,23 @@ export function* createThreeRendererInSteps(gl, canvas, onReady, onFailure) {
   // Dev only: the three.js renderer, to read the programs' shader sources (timing a shader's compile outside the browser's caches:
   // docs/plans/2026-11-18-material-table.md 8.12).
   if (import.meta.env.DEV) window.__kyotoRenderer = renderer;
+  // Dev only: paints the materials a measurement names magenta and gives them back (scripts/plate-shot.mjs PLATE_MASK,
+  // scripts/plate-room-stats.mjs). want = {names: [material names] or null for any, kinds: [part|limb|stamp|box|cord]}; null restores.
+  if (import.meta.env.DEV) {
+    const masked = new Map();
+    window.__kyotoPlateMask = want => {
+      for (const [m, was] of masked) { m.color.copy(was.color); m.emissive.copy(was.emissive); m.emissiveIntensity = was.intensity; }
+      masked.clear();
+      if (!want) return 0;
+      scene.traverse(object => {
+        const m = object.material, tag = m?.userData?.kyoto;
+        if (!tag || masked.has(m) || !want.kinds.includes(tag.kind) || (want.names && !want.names.includes(tag.name))) return;
+        masked.set(m, {color: m.color.clone(), emissive: m.emissive.clone(), intensity: m.emissiveIntensity});
+        m.color.set(0x000000); m.emissive.set(0xff00ff); m.emissiveIntensity = 1 / tag.glowBase;
+      });
+      return masked.size;
+    };
+  }
   // scripts/plate-clip.mjs reads the settled pose of the ward on screen and measures interpenetration (clip-probe.js).
   if (import.meta.env.DEV) window.__kyotoPlatePose = () => ({ward: plate.ward, parts: plate.parts, soft: plate.soft, ident: plate.ident, mw: plate.mw, mh: plate.mh, a: Float32Array.from(life.a), b: Float32Array.from(life.b)});
   if (import.meta.env.DEV) window.__kyotoPlateProbe = opts => import('./clip-probe.js').then(m => m.probeClip(window.__kyotoPlatePose(), opts));
@@ -201,14 +219,18 @@ export function* createThreeRendererInSteps(gl, canvas, onReady, onFailure) {
   const flake = own(bakeFlakeNormal(doc));
   yield 'flake-normal';
   const NORMAL_FIX = THREE.ShaderChunk.normal_fragment_begin.replace('gl_FrontFacing ? 1.0 : - 1.0', '1.0');
+  const GLOW_BASE = {plain: 1, glow: .3}; // how much of its emissive a material shows at rest (a glowing one keeps most for the hand)
   const bindGlow = (shader, spec) => {
     Object.assign(shader.uniforms, shared);
-    shader.uniforms.uGlowBase = {value: spec.glow ? .3 : 1};
+    shader.uniforms.uGlowBase = {value: spec.glow ? GLOW_BASE.glow : GLOW_BASE.plain};
     shader.uniforms.uGlowGain = {value: spec.glow ? 1.8 : 0};
   };
+  /** Marks a material with what it is, for the dev mask (window.__kyotoPlateMask): the table's name and the kind of thing it paints. */
+  const tag = (material, spec, kind) => { material.userData.kyoto = {name: spec.name, kind, glowBase: spec.glow ? GLOW_BASE.glow : GLOW_BASE.plain}; };
   /** Faces are lit by their own normals whichever way they wind. */
   const patchMaterial = (material, spec, glsl, call) => {
     const isPart = call === 'kyotoMotion';
+    tag(material, spec, isPart ? 'part' : 'box');
     // The columns are the material's own (mat.js meshLook): this function reads them and decides nothing per material.
     // Among 3D part meshes only materials with a `rock` column (mura: the stone wall) take the rock-foil branch. Its foil is gold:
     // the silver rock and its body (muraSilver) went with rock() (2026-11-24, chain-2 F4).
@@ -308,13 +330,13 @@ diffuseColor.rgb *= 1. + (kyotoVnoise(vKyotoRest.xz * .23 + vKyotoRest.y * .1) -
   reflectedLight.indirectSpecular+=material.specularColorBlended*kyotoBounce;
   // Soft window reflection in the key-light direction for upward-facing metallic faces (e.g. gold roofs).
   vec3 kyotoR=reflect(-normalize(uView),kyotoNW);
-  float kyotoWin=smoothstep(1.-K_WIN_SOFT,1.,dot(kyotoR,normalize(uKey)));
+  float kyotoWin=smoothstep(1.-ROOM_PART_WIN_SOFT,1.,dot(kyotoR,normalize(uKey)));
   kyotoWin*=1.-smoothstep(.3,.8,material.roughness);
-  reflectedLight.directSpecular+=material.specularColorBlended*kyotoWin*K_WIN*mix(1.,.35,uNight)*kyotoContact;${isLacq ? `
+  reflectedLight.directSpecular+=material.specularColorBlended*kyotoWin*ROOM_PART_WIN_GAIN*mix(1.,ROOM_PART_WIN_NIGHT,uNight)*kyotoContact;${isLacq ? `
   // Shin-nuri: the black body shows what is around it, the gold ground below and the window above, more so at grazing angles.
   float kyotoFres=.04+.96*pow(1.-clamp(dot(kyotoNW,normalize(uView)),0.,1.),5.);
   float kyotoBelow=smoothstep(.75,.2,dot(kyotoNW,kyotoUp)); // walls and undersides face the gold ground; tops face the room
-  vec3 kyotoMirror=mix(K_LACQ_ROOM,K_BOUNCE_C*K_LACQ_GROUND,kyotoBelow)+vec3(1.,.95,.86)*pow(max(dot(kyotoR,normalize(uKey)),0.),K_LACQ_WIN_EXP)*K_LACQ_WIN;
+  vec3 kyotoMirror=mix(K_LACQ_ROOM,K_BOUNCE_C*K_LACQ_GROUND,kyotoBelow)+ROOM_KEY_DAY*pow(max(dot(kyotoR,normalize(uKey)),0.),ROOM_LACQ_WIN_EXP)*ROOM_LACQ_WIN_GAIN;
   reflectedLight.indirectSpecular+=kyotoMirror*mix(K_LACQ_MIN,1.,kyotoFres)*K_LACQ_MIRROR*mix(1.,.45,uNight)*kyotoContact;` : ''}${isRock ? `
   float kyotoRockGlint=kyotoKiriGlint(kyotoNW,kyotoRockTilt,kyotoRockKiri,normalize(uKey),normalize(uView),uNight);
   reflectedLight.directSpecular*=mix(vec3(1.),K_KIRI_NIGHT_SPEC_TINT,uNight*kyotoRockKiri);
@@ -334,6 +356,7 @@ diffuseColor.rgb *= 1. + (kyotoVnoise(vKyotoRest.xz * .23 + vKyotoRest.y * .1) -
   const patchLimbMaterial = (material, spec) => {
     // Wood is silver where the foliage is gold (Hatsune); a tree that flowers in silver keeps gold wood.
     const silver = spec.wood === 'silver', foil = silver ? 'kyotoAgedSilver(K_ROCK_FOIL_SILVER, .35)' : 'kyotoKiriGold()';
+    tag(material, spec, 'limb');
     material.customProgramCacheKey = () => `kyoto-limb-${spec.glow ? 1 : 0}-${silver ? 's' : 'g'}-kiri-v3${COAT_ON > 0 ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
@@ -375,6 +398,7 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
     return material;
   };
   const patchStampMaterial = (material, spec) => {
+    tag(material, spec, 'stamp');
     material.customProgramCacheKey = () => `kyoto-stamp-${spec.glow ? 1 : 0}${COAT_ON > 0 ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
       bindGlow(shader, spec);
@@ -563,6 +587,8 @@ void main() {`)
   const cords = FITTINGS.map(f => ({...f, cord: createCord(f)}));
   for (const c of cords) c.cord.settle();
   const cordMaterial = physical(BOX_MATERIALS[27]);
+  // The cords take no patch of their own, only the room's tint: they mirror the same environment as everything else.
+  tag(cordMaterial, BOX_MATERIALS[27], 'cord');
   let cordMesh = null, cordCount = 0;
   const setCords = strands => {
     const n = strands.length / STRIDE;
@@ -1063,9 +1089,11 @@ void main() {`)
     const night = f.night;
     // An aged box sits in a slightly quieter day. (The ground is dark by its own structure now, so the pieces no longer need the light held down to sit above it.)
     const age = shared.uAge.value, dayDim = night ? 1 : 1 - .14 * age;
-    ambient.color.set(night ? '#7f96d6' : '#fff4e0'); ambient.intensity = (night ? .5 : .55) * dayDim;
-    key.color.set(night ? '#c4c8e2' : '#fff0d6'); key.intensity = (night ? 3.1 : 3.4) * dayDim;
-    scene.environmentIntensity = (night ? .36 : .55) * dayDim;
+    const time = roomTime(night);
+    ambient.color.set(ROOM.direct.ambient[time].color); ambient.intensity = ROOM.direct.ambient[time].intensity * dayDim;
+    key.color.set(ROOM.direct.key[time].color); key.intensity = ROOM.direct.key[time].intensity * dayDim;
+    scene.environmentIntensity = ROOM_ENV.gain[time] * dayDim;
+    shared.uRoomTint.value.fromArray(roomTint(night));
     lamp.position.set(lampAt[0], lampAt[1], lampAt[2]); lamp.intensity = (night ? 120000 : 50000) * (.15 + presence.x);
 
     shared.uLamp.value.set(lampAt[0], lampAt[1], lampAt[2]);
