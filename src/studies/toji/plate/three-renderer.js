@@ -31,7 +31,7 @@ import {
 import {ageFromSearch} from './age.js';
 import {EYE, TARGET, NEAR, FAR} from './camera.js';
 import {ROOM, roomTime} from './room.js';
-import {ROOM_ENV, buildRoomEnvironment, roomTint} from './room-env.js';
+import {ROOM_ENV, buildRoomEnvironment, roomTint, patchRoomTint} from './room-env.js';
 
 /** ?coat=0..1: the shared tinted-lacquer coat (three-pack COAT, docs/plans/2026-11-16-coat.md). 0, the default, compiles none of it. */
 const COAT_DEFAULT = 1; // the recommended strength once the user has chosen (docs/agent-runs/2026-11-16-coat.md)
@@ -220,10 +220,11 @@ export function* createThreeRendererInSteps(gl, canvas, onReady, onFailure) {
   yield 'flake-normal';
   const NORMAL_FIX = THREE.ShaderChunk.normal_fragment_begin.replace('gl_FrontFacing ? 1.0 : - 1.0', '1.0');
   const GLOW_BASE = {plain: 1, glow: .3}; // how much of its emissive a material shows at rest (a glowing one keeps most for the hand)
-  const bindGlow = (shader, spec) => {
+  const bindGlow = (shader, spec, material) => {
     Object.assign(shader.uniforms, shared);
     shader.uniforms.uGlowBase = {value: spec.glow ? GLOW_BASE.glow : GLOW_BASE.plain};
     shader.uniforms.uGlowGain = {value: spec.glow ? 1.8 : 0};
+    patchRoomTint(shader, shared.uRoomTint, roomGainOf(material)); // every material lit by three.js mirrors the same room (room-env.js)
   };
   /** Marks a material with what it is, for the dev mask (window.__kyotoPlateMask): the table's name and the kind of thing it paints. */
   const tag = (material, spec, kind) => { material.userData.kyoto = {name: spec.name, kind, glowBase: spec.glow ? GLOW_BASE.glow : GLOW_BASE.plain}; };
@@ -242,7 +243,7 @@ export function* createThreeRendererInSteps(gl, canvas, onReady, onFailure) {
     const isPowder = isPart && spec.grain === 'powder', isLeaf = isPart && spec.grain === 'leaf', isGrain = isPowder || isLeaf;
     material.customProgramCacheKey = () => `kyoto-${call}-${spec.glow ? 1 : 0}${isPart ? '-l2w' : ''}${isRock ? '-rock-kiri-v6' : ''}${isLacq ? '-shinnuri' : ''}${isRockP ? '-rockp-v1' : ''}${isPowder ? '-powder-v1' : ''}${isLeaf ? '-leaf-v1' : ''}${isCoat ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
-      bindGlow(shader, spec);
+      bindGlow(shader, spec, material);
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>\n${isRock || isRockP ? 'varying vec2 vRockUv;\n' : ''}${isGrain ? 'varying vec2 vKyotoUv; varying vec3 vKyotoRest;\n' : ''}${glsl}`)
         .replace('#include <beginnormal_vertex>', `vec3 kyotoP; vec3 objectNormal; ${call}(position, normal, kyotoP, objectNormal);`)
@@ -328,15 +329,12 @@ diffuseColor.rgb *= 1. + (kyotoVnoise(vKyotoRest.xz * .23 + vKyotoRest.y * .1) -
   vec3 kyotoBounce=K_BOUNCE_C*K_BOUNCE*mix(1.,K_AGE_BOUNCE,uAge)*kyotoDown*mix(1.,.45,uNight)*kyotoContact;
   reflectedLight.indirectDiffuse+=material.diffuseContribution*kyotoBounce;
   reflectedLight.indirectSpecular+=material.specularColorBlended*kyotoBounce;
-  // Soft window reflection in the key-light direction for upward-facing metallic faces (e.g. gold roofs).
-  vec3 kyotoR=reflect(-normalize(uView),kyotoNW);
-  float kyotoWin=smoothstep(1.-ROOM_PART_WIN_SOFT,1.,dot(kyotoR,normalize(uKey)));
-  kyotoWin*=1.-smoothstep(.3,.8,material.roughness);
-  reflectedLight.directSpecular+=material.specularColorBlended*kyotoWin*ROOM_PART_WIN_GAIN*mix(1.,ROOM_PART_WIN_NIGHT,uNight)*kyotoContact;${isLacq ? `
-  // Shin-nuri: the black body shows what is around it, the gold ground below and the window above, more so at grazing angles.
+  // The window and the room the pieces mirror come from the environment map (room-env.js): none is added here.
+  vec3 kyotoR=reflect(-normalize(uView),kyotoNW);${isLacq ? `
+  // Shin-nuri: the black body shows the gold ground below it, more so at grazing angles.
   float kyotoFres=.04+.96*pow(1.-clamp(dot(kyotoNW,normalize(uView)),0.,1.),5.);
   float kyotoBelow=smoothstep(.75,.2,dot(kyotoNW,kyotoUp)); // walls and undersides face the gold ground; tops face the room
-  vec3 kyotoMirror=mix(K_LACQ_ROOM,K_BOUNCE_C*K_LACQ_GROUND,kyotoBelow)+ROOM_KEY_DAY*pow(max(dot(kyotoR,normalize(uKey)),0.),ROOM_LACQ_WIN_EXP)*ROOM_LACQ_WIN_GAIN;
+  vec3 kyotoMirror=K_BOUNCE_C*K_LACQ_GROUND*kyotoBelow;
   reflectedLight.indirectSpecular+=kyotoMirror*mix(K_LACQ_MIN,1.,kyotoFres)*K_LACQ_MIRROR*mix(1.,.45,uNight)*kyotoContact;` : ''}${isRock ? `
   float kyotoRockGlint=kyotoKiriGlint(kyotoNW,kyotoRockTilt,kyotoRockKiri,normalize(uKey),normalize(uView),uNight);
   reflectedLight.directSpecular*=mix(vec3(1.),K_KIRI_NIGHT_SPEC_TINT,uNight*kyotoRockKiri);
@@ -359,7 +357,7 @@ diffuseColor.rgb *= 1. + (kyotoVnoise(vKyotoRest.xz * .23 + vKyotoRest.y * .1) -
     tag(material, spec, 'limb');
     material.customProgramCacheKey = () => `kyoto-limb-${spec.glow ? 1 : 0}-${silver ? 's' : 'g'}-kiri-v3${COAT_ON > 0 ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
-      bindGlow(shader, spec);
+      bindGlow(shader, spec, material);
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>\n${TREE_LIMB_MOTION_GLSL}\nvarying vec2 vTreeUv;\nvarying float vBark;\nvarying vec3 vTreeTanX, vTreeTanZ;`)
         .replace('#include <beginnormal_vertex>', 'vec3 kyotoP, objectNormal, kyotoTx, kyotoTz; kyotoLimb(position, normal, kyotoP, objectNormal, kyotoTx, kyotoTz);')
@@ -401,7 +399,7 @@ roughnessFactor = mix(roughnessFactor, mix(K_KIRI_ROUGH, K_KIRI_ROUGH_NIGHT, uNi
     tag(material, spec, 'stamp');
     material.customProgramCacheKey = () => `kyoto-stamp-${spec.glow ? 1 : 0}${COAT_ON > 0 ? '-coat-v1' : ''}`;
     material.onBeforeCompile = shader => {
-      bindGlow(shader, spec);
+      bindGlow(shader, spec, material);
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>\n${TREE_STAMP_MOTION_GLSL}\nvarying vec3 vTreeTanX, vTreeTanZ;`)
         .replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_NORMALMAP\nvNormalMapUv = (normalMapTransform * vec3(uv * aStamp.xy, 1.0)).xy;\n#endif')
@@ -459,6 +457,8 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
    * changes (setAge below). The coat is one lacquer on everything: no surface sits below COAT.shine of clearcoat, and a
    * glossy-but-not-mirror one takes the shared roughness.
    */
+  /** How much of the room a material mirrors (the roomGain column of mat.js; 1 when it has none): its own uniform, which ages with it. */
+  const roomGainOf = m => m.userData.roomGain ??= {value: 1};
   const setLook = (m, spec, coated) => {
     m.color.set(spec.color); m.metalness = spec.metalness; m.roughness = spec.roughness;
     m.clearcoat = coated ? Math.max(spec.clearcoat, CLEARCOAT_FLOOR) : spec.clearcoat; m.clearcoatRoughness = spec.clearcoatRoughness;
@@ -466,7 +466,7 @@ normal = normalize(normal - kyotoGrad.x * vTreeTanX - kyotoGrad.y * vTreeTanZ);`
       m.clearcoat = Math.max(m.clearcoat, COAT.shine * COAT_ON);
       if (spec.clearcoat <= .6) m.clearcoatRoughness = THREE.MathUtils.lerp(spec.clearcoatRoughness, COAT.shineRough, COAT_ON);
     }
-    if (spec.envMapIntensity) m.envMapIntensity = spec.envMapIntensity;
+    roomGainOf(m).value = spec.roomGain ?? 1;
   };
   /**
    * Clearcoat never quite reaches 0 on a surface that has some at any age: three.js compiles another program when clearcoat crosses 0,
@@ -589,6 +589,8 @@ void main() {`)
   const cordMaterial = physical(BOX_MATERIALS[27]);
   // The cords take no patch of their own, only the room's tint: they mirror the same environment as everything else.
   tag(cordMaterial, BOX_MATERIALS[27], 'cord');
+  cordMaterial.customProgramCacheKey = () => 'kyoto-cord';
+  cordMaterial.onBeforeCompile = shader => patchRoomTint(shader, shared.uRoomTint, roomGainOf(cordMaterial));
   let cordMesh = null, cordCount = 0;
   const setCords = strands => {
     const n = strands.length / STRIDE;

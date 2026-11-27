@@ -319,11 +319,22 @@ export const ROOM_GLSL = [
   `const float ${Object.entries({
     ROOM_WIN_EDGE_SHARP: ROOM.window.edge.sharp, ROOM_WIN_EDGE_ROUGH: ROOM.window.edge.rough,
     ROOM_WIN_GAIN_SHARP: ROOM.window.gain.sharp, ROOM_WIN_GAIN_ROUGH: ROOM.window.gain.rough,
-    ROOM_SKY_FLOOR: ROOM.sky.floor, ROOM_SKY_ZENITH: ROOM.sky.zenith,
-    ROOM_PART_WIN_SOFT: ROOM.partWindow.soft, ROOM_PART_WIN_GAIN: ROOM.partWindow.gain, ROOM_PART_WIN_NIGHT: ROOM.partWindow.night,
-    ROOM_LACQ_WIN_GAIN: ROOM.lacquerWindow.gain, ROOM_LACQ_WIN_EXP: ROOM.lacquerWindow.exp,
+    ROOM_SKY_FLOOR: ROOM.sky.floor, ROOM_SKY_ZENITH: ROOM.sky.zenith, ROOM_SKY_HORIZON: ROOM.sky.horizon,
   }).map(([name, v]) => `${name}=${glslFloat(v)}`).join(',')};`,
 ].join('\n');
+/**
+ * What a mirror of roughness `rough` shows along the ray `r`, as GLSL text: the sky's light (colour `ambC`) and the window
+ * toward `key` (colour `keyC`). The one description of the room's shape: the lid's shader spells it out per pixel (mRoom) and
+ * the environment map is the same text drawn on a sphere (room-env.js). `terms` declares up and win; sky and window use them.
+ * It is text, not a GLSL function, on purpose: a function call reworded the lid's shader enough for the compiler to round
+ * its gold flakes otherwise in two dev views (docs/plans/2026-11-28-room.md, B0). Needs ROOM_GLSL in the shader.
+ */
+export const roomLightGlsl = ({r, rough, key, keyC, ambC}) => ({
+  terms: `float up=smoothstep(ROOM_SKY_HORIZON,1.,${r}.y),win=smoothstep(mix(ROOM_WIN_EDGE_SHARP,ROOM_WIN_EDGE_ROUGH,${rough}),1.,dot(${r},${key}));`,
+  sky: `${ambC}*(ROOM_SKY_FLOOR+ROOM_SKY_ZENITH*up*up)`,
+  window: `${keyC}*win*mix(ROOM_WIN_GAIN_SHARP,ROOM_WIN_GAIN_ROUGH,${rough})`,
+});
+const LID_ROOM = roomLightGlsl({r: 'r', rough: 'rough', key: 'uKey', keyC: 'mKeyC', ambC: 'mAmbC'});
 
 export const PART_LIGHT_GLSL = `
 // Live-view stand-ins for what the path-traced reference shows (docs/agent-runs/2026-11-14-threert-reference.md):
@@ -333,12 +344,9 @@ const float K_CONTACT_MIN=.45, K_CONTACT_H=10., K_BOUNCE=.8;
 // a low piece (a fox, a lantern) is all foot, and went black when it was.
 const float K_AGE_CONTACT_MIN=.45, K_AGE_BOUNCE=.75;
 const vec3 K_BOUNCE_C=vec3(1.,.72,.36);
-// The soft window the pieces mirror, and the window in black lacquer, are the room's: ROOM_PART_WIN_*, ROOM_LACQ_WIN_* (room.js).
-${ROOM_GLSL}
-// Shin-nuri black lacquer as a dark mirror: overall strength, the floor at head-on angles, how much gold ground and
-// room it shows (the window's sharpness and strength in it are ROOM_LACQ_WIN_*).
+// Shin-nuri black lacquer as a dark mirror of the gold ground below it: overall strength, the floor at head-on angles, and
+// how much of the ground it shows. The room and its window it mirrors like every other piece, from the environment map.
 const float K_LACQ_MIRROR=.3, K_LACQ_MIN=.35, K_LACQ_GROUND=.9;
-const vec3 K_LACQ_ROOM=vec3(.05,.045,.04);
 uniform mat3 uTilt; uniform float uNight, uAge; uniform vec3 uView, uKey;
 varying float vLift;`;
 
@@ -653,8 +661,8 @@ vec3 mSpec(float e){return (M_KEY*pow(max(dot(mN,mHk),0.),e)*mKeyC+mPool()*mAtt*
 vec3 mAgedSilver(vec3 f0,vec2 p,float k){return f0*mix(vec3(1.),M_TARNISH,clamp(uAge*k*(.86+.26*smoothstep(.25,.8,mVnoise(p*.05+17.))),0.,1.));}
 vec3 mRoom(float rough){
   vec3 r=reflect(-uView,mN);
-  float up=smoothstep(-.35,1.,r.y),win=smoothstep(mix(ROOM_WIN_EDGE_SHARP,ROOM_WIN_EDGE_ROUGH,rough),1.,dot(r,uKey));
-  return (mAmbC*(ROOM_SKY_FLOOR+ROOM_SKY_ZENITH*up*up)+mKeyC*win*mix(ROOM_WIN_GAIN_SHARP,ROOM_WIN_GAIN_ROUGH,rough))*mix(1.,mOcc,.7);
+  ${LID_ROOM.terms}
+  return (${LID_ROOM.sky}+${LID_ROOM.window})*mix(1.,mOcc,.7);
 }
 void mSetLight(vec3 n,vec3 worldPos){
   mN=n;mWP=worldPos;

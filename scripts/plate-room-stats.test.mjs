@@ -1,7 +1,7 @@
 // The arithmetic of scripts/plate-room-stats.mjs on synthetic pictures (the shooting side needs a browser and is not tested here).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {LIMITS, MASK_GROUPS, luminance, isMagenta, maskOf, erode, dilate, largestBlob, lumsUnder, summary, groupStats, tailBlueOverRed, differOutside} from './plate-room-stats.mjs';
+import {LIMITS, MASK_GROUPS, luminance, isMagenta, maskOf, erode, dilate, largestBlob, lumsUnder, summary, groupStats, tailBlueOverRed, differOutside, touchedBy} from './plate-room-stats.mjs';
 import {MAT} from '../src/studies/toji/plate/mat.js';
 
 /** A w×h RGB picture from a function (x, y) => [r, g, b]. */
@@ -71,4 +71,10 @@ test('room stats: differences count only outside the mask', () => {
   const mask = {width: 4, height: 1, on: Uint8Array.from([0, 0, 0, 1])};
   assert.deepEqual(differOutside(a, b, mask), {differ: 1, max: 2});
   assert.deepEqual(differOutside(a, a, mask), {differ: 0, max: 0});
+});
+
+test('room stats: a pixel the mask picture changed at all belongs to the masked thing', () => {
+  const shot = picture(3, 1, () => [100, 90, 40]), masked = picture(3, 1, x => x === 0 ? MAGENTA : x === 1 ? [140, 70, 110] : [101, 90, 41]);
+  assert.deepEqual([...touchedBy(shot, masked).on], [1, 1, 0], 'a half-blended edge counts; a level of noise does not');
+  assert.equal(count(maskOf(masked)), 1, 'maskOf alone would miss the edge');
 });

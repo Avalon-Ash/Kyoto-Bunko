@@ -16,16 +16,11 @@ export const ROOM = {
    * `sharp` is a mirror-smooth surface, `rough` a fully rough one; the shader mixes between them by roughness.
    */
   window: {edge: {sharp: .74, rough: .15}, gain: {sharp: 1.15, rough: .5}},
-  /** The sky the lid mirrors: amb × (floor + zenith × up²), up running from below the horizon to straight up. */
-  sky: {floor: .04, zenith: .30},
   /**
-   * The same window as the pieces mirror it, added on top of the environment map (three-renderer.js kyotoWin): the smoothstep
-   * starts at 1 − soft, `gain` is its strength by day and a night keeps `night` of it. Wider than the lid's (1 − .35 = .65
-   * against .74): the two were tuned apart and are kept as they were (K1 package A moves values, it does not change them).
+   * The sky above the box: amb × (floor + zenith × up²). up is a smoothstep of the ray's height from `horizon` (a little
+   * below level: the room's light reaches under the horizon) to straight up.
    */
-  partWindow: {soft: .35, gain: .55, night: .35},
-  /** The window in shin-nuri black lacquer (a dark mirror): its strength and the exponent of its lobe. Its colour is key.day. */
-  lacquerWindow: {gain: .8, exp: 40},
+  sky: {floor: .04, zenith: .30, horizon: -.35},
   /**
    * The lights three.js shines on the pieces (the ambient and the key DirectionalLight), by day and by night. A second set
    * of "the room's light colours" beside key/amb above, with other values: kept as found, to be unified in a later round

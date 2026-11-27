@@ -6,6 +6,7 @@
 // Usage:
 //   node scripts/plate-room-stats.mjs stats <dir>                 one JSON line per picture and group, then the pooled lines
 //   node scripts/plate-room-stats.mjs lid-diff <dirA> <dirB>      pixels that differ outside everything that mirrors the room
+//                                                                  (every pixel the room mask touched, grown by LIMITS.lidDilate)
 //   node scripts/plate-room-stats.mjs daynight <dir>              blue/red of the brightest silver, night over day, per ward
 //   node scripts/plate-room-stats.mjs check <baseDir> <dir>       V4, V5 and V7 of the plan against a baseline; exits 1 on a miss
 // Shooting: PLATE_CLOCK=60000 PLATE_MASK=gold,silver,parts,room node scripts/plate-shot.mjs <dir> <job…>
@@ -114,6 +115,15 @@ export function tailBlueOverRed(png, rawMask, tail = LIMITS.tail) {
   const top = px.slice(0, Math.max(1, Math.round(px.length * tail))), red = top.reduce((a, p) => a + p[1], 0), blue = top.reduce((a, p) => a + p[2], 0);
   return red ? round(blue / red, 4) : 0;
 }
+/**
+ * Every pixel the mask picture changed in a picture, by more than `tol` levels: where a masked material shows at all. Wider than
+ * maskOf: a leaf's soft edge is part leaf and part lid, and its blend of magenta is not magenta enough to count there.
+ */
+export function touchedBy(picture, maskPicture, tol = 2) {
+  const {width, height} = picture, on = new Uint8Array(width * height);
+  for (let i = 0; i < on.length; i++) for (let c = 0; c < 3; c++) if (Math.abs(picture.data[i * picture.channels + c] - maskPicture.data[i * maskPicture.channels + c]) > tol) on[i] = 1;
+  return {width, height, on};
+}
 /** How many pixels of two pictures differ outside a mask. */
 export function differOutside(a, b, mask) {
   let differ = 0, max = 0;
@@ -164,8 +174,8 @@ export function folderLidDiff(dirA, dirB) {
   for (const p of pictures(dirA)) {
     const other = join(dirB, `${p.name}.png`), maskB = join(dirB, `${p.name}-mask-room.png`);
     if (!existsSync(other) || !p.masks.room || !existsSync(maskB)) { rows.push({name: p.name, missing: true, differ: 0, max: 0, masked: 0}); continue; }
-    const mask = dilate(union(maskOf(png(p.masks.room)), maskOf(png(maskB))), LIMITS.lidDilate);
-    rows.push({name: p.name, missing: false, ...differOutside(png(p.file), png(other), mask), masked: mask.on.reduce((a, v) => a + v, 0)});
+    const a = png(p.file), b = png(other), mask = dilate(union(touchedBy(a, png(p.masks.room)), touchedBy(b, png(maskB))), LIMITS.lidDilate);
+    rows.push({name: p.name, missing: false, ...differOutside(a, b, mask), masked: mask.on.reduce((s, v) => s + v, 0)});
   }
   return rows;
 }
