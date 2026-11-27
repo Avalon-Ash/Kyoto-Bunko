@@ -11,6 +11,7 @@
 // the lid it covers with luminance above 75 (bright). Dev mask view 5 paints plain ground magenta, dense faces cyan, the rest green.
 import {writeFileSync, mkdirSync} from 'node:fs';
 import {join} from 'node:path';
+import {MASK_GROUPS} from './plate-room-stats.mjs';
 import {SHARED_DEBUG_PORT, ensureSharedChrome, connectCdp, studyUrl, sleep, cabinetOrder, stepsTo, wardAfter} from './lib/plate-env.mjs';
 
 const [outDir, ...jobs] = process.argv.slice(2);
@@ -78,6 +79,21 @@ const shoot = async job => {
   if (process.env.PLATE_EVAL && process.env.PLATE_EVAL_SHOT) {
     const after = await send('Page.captureScreenshot', {format: 'png'});
     writeFileSync(join(outDir, `${name}-after.png`), Buffer.from(after.result.data, 'base64'));
+  }
+  // PLATE_MASK=gold,silver,parts,room also writes <name>-mask-<group>.png: the group's materials painted magenta by the dev hook
+  // window.__kyotoPlateMask (three-renderer.js); the groups are scripts/plate-room-stats.mjs MASK_GROUPS, which reads the pictures.
+  if (process.env.PLATE_MASK) {
+    const clip = {x: Math.max(0, r[0] + r[4]), y: Math.max(0, r[1] + r[5]), width: r[2], height: r[3], scale: 1};
+    for (const group of process.env.PLATE_MASK.split(',')) {
+      if (!MASK_GROUPS[group]) throw new Error('PLATE_MASK: no group ' + group);
+      const painted = await evalJs('window.__kyotoPlateMask(' + JSON.stringify(MASK_GROUPS[group]) + ')');
+      await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x, y}); await sleep(500);
+      const mask = await send('Page.captureScreenshot', {format: 'png', clip});
+      writeFileSync(join(outDir, name + '-mask-' + group + '.png'), Buffer.from(mask.result.data, 'base64'));
+      console.log(name, 'mask', group, painted);
+    }
+    await evalJs('window.__kyotoPlateMask(null)');
+    await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x: x + 1, y}); await sleep(300);
   }
   if (process.env.PLATE_KIRI) {
     // Dev view 4 (?dens=kiri): kirikane pixels red, the rest of the bank ground (materials 2-4) blue, all else black. Prints red / (red + blue).
