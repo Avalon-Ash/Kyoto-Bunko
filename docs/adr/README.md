@@ -97,3 +97,4 @@
 - [0025 首盤在第一次編譯前分步建造，步與步之間讓出主執行緒](0025-first-plate-builds-in-tasks.md)：`ward-build.js` 是唯一的讓出工具，`setWard` 回傳布林或 Promise，換區取消建造；溫快取首盤最長任務約 1.3 秒 → 330 ms（已由 0026 取代）。
 - [0026 首盤分步建造；任何一次建造失敗都退回降級圖](0026-ward-builds-in-tasks-and-failed-builds-fall-back.md)：沿用 0025 的分步建造，換函時同步建造丟錯也交 `fallback`，顯示該區降級圖（取代 0025；已由 0027 取代）。
 - [0027 首頁第一次載入全程分步：渲染器啟動、構圖與每一次建造都依同一個切片預算讓出](0027-first-load-in-steps-one-slice-budget.md)：`TASK_SLICE_MS`／`taskSlice` 只在 `ward-build.js`；渲染器啟動是生成器；構圖是 `composition(steps)`；預建依 idle deadline 跑細步（取代 0026）。
+- [0028 蒔繪盤的房間只定義在 room.js，環境貼圖由公式畫出](0028-plate-room-one-source-environment-drawn-from-it.md)：房間正本在 `room.js`，`roomLightGlsl` 供蓋面與球面環境共用；單張日色貼圖加 `uRoomTint` 與每材質 `roomGain` 接縫；窗只留環境裡，蓋面 0 差異。

@@ -2,6 +2,7 @@
 // packing and the GLSL that moves a part. Nothing here imports three, so node:test can check it.
 import {MAT, KIND} from './vocab.js';
 import {MAT_LOOK, lookOf, COAT_KIND, TONE, TIER, RECIPE, meshLook} from './mat.js';
+import {ROOM} from './room.js';
 import {MAX_PARTS} from './parts.js';
 import {packMeshes} from './mesh-geometry.js';
 import {limbMesh, stampInstances} from './limbs.js';
@@ -306,6 +307,35 @@ void kyotoMotion(vec3 aPos, vec3 aNormal, out vec3 outPos, out vec3 outNormal){
   vGlow=A.w; vLift=height;
 }`;
 
+/** A number as a GLSL float, written out in full (String, not toFixed), so the shader holds exactly the table's value. */
+function glslFloat(v) { const text = String(v); return /[.e]/.test(text) ? text : `${text}.`; }
+const glslVec3 = c => `vec3(${c.map(glslFloat).join(',')})`;
+/**
+ * ROOM (room.js) as GLSL constants: the room the box sits in, for the lid's shader and the pieces' alike. The shaders name
+ * these and never spell a value of the room themselves (scripts/room.test.mjs).
+ */
+export const ROOM_GLSL = [
+  `const vec3 ROOM_KEY_DAY=${glslVec3(ROOM.key.day)},ROOM_KEY_NIGHT=${glslVec3(ROOM.key.night)},ROOM_AMB_DAY=${glslVec3(ROOM.amb.day)},ROOM_AMB_NIGHT=${glslVec3(ROOM.amb.night)};`,
+  `const float ${Object.entries({
+    ROOM_WIN_EDGE_SHARP: ROOM.window.edge.sharp, ROOM_WIN_EDGE_ROUGH: ROOM.window.edge.rough,
+    ROOM_WIN_GAIN_SHARP: ROOM.window.gain.sharp, ROOM_WIN_GAIN_ROUGH: ROOM.window.gain.rough,
+    ROOM_SKY_FLOOR: ROOM.sky.floor, ROOM_SKY_ZENITH: ROOM.sky.zenith, ROOM_SKY_HORIZON: ROOM.sky.horizon,
+  }).map(([name, v]) => `${name}=${glslFloat(v)}`).join(',')};`,
+].join('\n');
+/**
+ * What a mirror of roughness `rough` shows along the ray `r`, as GLSL text: the sky's light (colour `ambC`) and the window
+ * toward `key` (colour `keyC`). The one description of the room's shape: the lid's shader spells it out per pixel (mRoom) and
+ * the environment map is the same text drawn on a sphere (room-env.js). `terms` declares up and win; sky and window use them.
+ * It is text, not a GLSL function, on purpose: a function call reworded the lid's shader enough for the compiler to round
+ * its gold flakes otherwise in two dev views (docs/plans/2026-11-28-room.md, B0). Needs ROOM_GLSL in the shader.
+ */
+export const roomLightGlsl = ({r, rough, key, keyC, ambC}) => ({
+  terms: `float up=smoothstep(ROOM_SKY_HORIZON,1.,${r}.y),win=smoothstep(mix(ROOM_WIN_EDGE_SHARP,ROOM_WIN_EDGE_ROUGH,${rough}),1.,dot(${r},${key}));`,
+  sky: `${ambC}*(ROOM_SKY_FLOOR+ROOM_SKY_ZENITH*up*up)`,
+  window: `${keyC}*win*mix(ROOM_WIN_GAIN_SHARP,ROOM_WIN_GAIN_ROUGH,${rough})`,
+});
+const LID_ROOM = roomLightGlsl({r: 'r', rough: 'rough', key: 'uKey', keyC: 'mKeyC', ambC: 'mAmbC'});
+
 export const PART_LIGHT_GLSL = `
 // Live-view stand-ins for what the path-traced reference shows (docs/agent-runs/2026-11-14-threert-reference.md):
 // L1 the pieces darken where they meet the ground; L2 faces turned down catch the gold ground's bounce.
@@ -314,12 +344,9 @@ const float K_CONTACT_MIN=.45, K_CONTACT_H=10., K_BOUNCE=.8;
 // a low piece (a fox, a lantern) is all foot, and went black when it was.
 const float K_AGE_CONTACT_MIN=.45, K_AGE_BOUNCE=.75;
 const vec3 K_BOUNCE_C=vec3(1.,.72,.36);
-const float K_WIN=.55; // soft window reflection intensity on upward-facing metallic parts
-const float K_WIN_SOFT=.35; // soft window reflection angular width (larger is wider)
-// Shin-nuri black lacquer as a dark mirror: overall strength, the floor at head-on angles, how much gold ground and
-// room it shows, and the window's sharpness and strength in it.
-const float K_LACQ_MIRROR=.3, K_LACQ_MIN=.35, K_LACQ_GROUND=.9, K_LACQ_WIN=.8, K_LACQ_WIN_EXP=40.;
-const vec3 K_LACQ_ROOM=vec3(.05,.045,.04);
+// Shin-nuri black lacquer as a dark mirror of the gold ground below it: overall strength, the floor at head-on angles, and
+// how much of the ground it shows. The room and its window it mirrors like every other piece, from the environment map.
+const float K_LACQ_MIRROR=.3, K_LACQ_MIN=.35, K_LACQ_GROUND=.9;
 uniform mat3 uTilt; uniform float uNight, uAge; uniform vec3 uView, uKey;
 varying float vLift;`;
 
@@ -589,6 +616,7 @@ ${COAT_GLSL}
 #endif
 uniform vec3 uView, uKey, uLamp;
 uniform float uTime, uNight, uPresence, uPx, uOpening, uAge;
+${ROOM_GLSL}
 uniform vec3 uTrails[20];
 uniform sampler2D uSoft0, uIdent0;
 const vec2 M_HALF=vec2(360.,230.);
@@ -633,14 +661,14 @@ vec3 mSpec(float e){return (M_KEY*pow(max(dot(mN,mHk),0.),e)*mKeyC+mPool()*mAtt*
 vec3 mAgedSilver(vec3 f0,vec2 p,float k){return f0*mix(vec3(1.),M_TARNISH,clamp(uAge*k*(.86+.26*smoothstep(.25,.8,mVnoise(p*.05+17.))),0.,1.));}
 vec3 mRoom(float rough){
   vec3 r=reflect(-uView,mN);
-  float up=smoothstep(-.35,1.,r.y),win=smoothstep(mix(.74,.15,rough),1.,dot(r,uKey));
-  return (mAmbC*(.04+.30*up*up)+mKeyC*win*mix(1.15,.5,rough))*mix(1.,mOcc,.7);
+  ${LID_ROOM.terms}
+  return (${LID_ROOM.sky}+${LID_ROOM.window})*mix(1.,mOcc,.7);
 }
 void mSetLight(vec3 n,vec3 worldPos){
   mN=n;mWP=worldPos;
-  mKeyC=mix(vec3(1.,.95,.86),vec3(.64,.72,.90),uNight);
+  mKeyC=mix(ROOM_KEY_DAY,ROOM_KEY_NIGHT,uNight);
   mPoolC=mix(vec3(1.,.93,.80),vec3(.96,.96,1.),uNight);
-  mAmbC=mix(vec3(1.,.96,.90),vec3(.50,.60,.84),uNight);
+  mAmbC=mix(ROOM_AMB_DAY,ROOM_AMB_NIGHT,uNight);
   vec3 toLamp=uLamp-worldPos;float d2=dot(toLamp,toLamp);vec3 lp=toLamp*inversesqrt(max(d2,1.));
   mAtt=(uPresence/(1.+d2/24000.))+mWake*.55;
   mDk=max(dot(n,uKey),0.);mDp=max(dot(n,lp),0.);
@@ -871,7 +899,6 @@ vec4 mFinish(vec3 c,float a){
  */
 const LOOK_N = Math.max(...Object.keys(MAT_LOOK).map(Number)) + 1;
 const lookColumn = (type, value) => `const ${type} T_${value.name}[${LOOK_N}]=${type}[${LOOK_N}](${Array.from({length: LOOK_N}, (_, id) => value.of(lookOf(id))).join(',')});`;
-const glslFloat = v => { const text = String(v); return /[.e]/.test(text) ? text : `${text}.`; };
 const glslName = key => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
 const glslKinds = (prefix, kinds) => `const int ${Object.entries(kinds).map(([key, id]) => `${prefix}_${glslName(key)}=${id}`).join(',')};`;
 export const MAT_LOOK_GLSL = [

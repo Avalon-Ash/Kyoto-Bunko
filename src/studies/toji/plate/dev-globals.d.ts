@@ -15,6 +15,8 @@ declare global {
       a: Float32Array;
       b: Float32Array;
     };
+    /** Paints the named materials magenta (null gives them back); returns how many it painted. scripts/plate-room-stats.mjs MASK_GROUPS. */
+    __kyotoPlateMask?: (want: {names: string[] | null; kinds: string[]} | null) => number;
     __kyotoPlateProbe?: (opts?: {treeAtAnchor?: boolean; minDepth?: number}) => Promise<ReturnType<typeof probeClip>>;
   }
 }

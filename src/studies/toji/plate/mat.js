@@ -85,20 +85,20 @@ export const MAT_LOOK = Object.freeze({
   // T3: railings read dull grey under the grey room; a whiter, smoother silver with a thin coat keeps them silver.
   // Age: silver and sheet silver stand for white things (sand, a fox, blossom, an eave's edge), so they dull a little but stay
   // pale and keep their polish (a rougher silver only mirrors the dim room and goes dark);
-  // envMapIntensity makes up for the quieter day an aged box sits in, which would otherwise grey them. The dark, sulphided silver is the shade of rocks, trunks and banks, which the shaders lay themselves.
+  // roomGain makes up for the quieter day an aged box sits in, which would otherwise grey them. The dark, sulphided silver is the shade of rocks, trunks and banks, which the shaders lay themselves.
   [MAT.silver]: look({coat: 'half', tone: 'silver', recipe: 'hirame', refColour: '#a8a8a4'},
-    {name: 'silver', aged: {color: '#d9d6cc', roughness: .27, metalness: .7, clearcoat: .2, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#e6e8e4', paint: '#d8dad6', metalness: 1, roughness: .2, clearcoat: .3, clearcoatRoughness: .08, flake: .3, wood: 'silver'}),
+    {name: 'silver', aged: {color: '#d9d6cc', roughness: .27, metalness: .7, clearcoat: .2, roomGain: 1.4}, roomGain: 1, color: '#e6e8e4', paint: '#d8dad6', metalness: 1, roughness: .2, clearcoat: .3, clearcoatRoughness: .08, flake: .3, wood: 'silver'}),
   [MAT.kirikane]: look({coat: 'inlayEdge', foil: true, recipe: 'foil', refColour: '#f0c860'},
     {name: 'kirikane', aged: {color: '#dcc892', roughness: .52}, color: '#f2c65e', paint: '#e0b650', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12}),
   [MAT.kirigin]: look({coat: 'inlayEdge', foil: true, tone: 'silver', recipe: 'foil', refColour: '#c8c8c4'},
-    {name: 'kirigin', aged: {color: '#d0ccc1', roughness: .45, metalness: .66, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#d8dbd6', paint: '#bfc0b8', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12}),
+    {name: 'kirigin', aged: {color: '#d0ccc1', roughness: .45, metalness: .66, roomGain: 1.4}, roomGain: 1, color: '#d8dbd6', paint: '#bfc0b8', metalness: .88, roughness: .45, clearcoat: 0, clearcoatRoughness: 0, flake: .12}),
   // T3: mother-of-pearl is pale with colour that shifts, not a teal paint: lighter base, wider film range.
   [MAT.aogai]: look({coat: 'none', recipe: 'aogai', refColour: '#6fa8b0'},
     {name: 'aogai', color: '#8fbcb6', paint: '#9cc6c0', metalness: .2, roughness: .2, clearcoat: 1, clearcoatRoughness: .05, flake: 0, iridescence: 1, iridescenceIOR: 1.6, iridescenceThicknessRange: [250, 800], coat: 'faint'}),
   [MAT.hyomonGold]: look({coat: 'inlayEdge', recipe: 'sheet', refColour: '#e6b94e'},
     {name: 'hyomonGold', aged: {color: '#d6c294', roughness: .36}, color: '#e6b94e', paint: '#e2b24c', metalness: 1, roughness: .18, clearcoat: 0, clearcoatRoughness: 0, flake: .15}),
   [MAT.hyomonSilver]: look({coat: 'inlayEdge', tone: 'silver', recipe: 'sheet', refColour: '#d0d2ce'},
-    {name: 'hyomonSilver', aged: {color: '#d6d3c8', roughness: .21, metalness: .66, envMapIntensity: 1.4}, envMapIntensity: 1, color: '#e0e2de', paint: '#d8d9d4', metalness: 1, roughness: .15, clearcoat: 0, clearcoatRoughness: 0, flake: .15}),
+    {name: 'hyomonSilver', aged: {color: '#d6d3c8', roughness: .21, metalness: .66, roomGain: 1.4}, roomGain: 1, color: '#e0e2de', paint: '#d8d9d4', metalness: 1, roughness: .15, clearcoat: 0, clearcoatRoughness: 0, flake: .15}),
   [MAT.water]: look({ch: 0, coat: 'waterEdge', density: true, tier: 'dense', recipe: 'ryusui', refColour: '#d6a64c'},
     {name: 'water', color: '#2c4256', paint: '#2a3d50', metalness: .6, roughness: .12, clearcoat: 1, clearcoatRoughness: .02, flake: 0}),
   [MAT.kasumi]: look({recipe: 'kasumi', refColour: '#e6be66'},
@@ -114,7 +114,7 @@ export const MAT_LOOK = Object.freeze({
   // Roof faces: gold powder under clear lacquer (takamakie). Broad, soft sheen rather than a mirror; the grain and the
   // unevenness come from the shader (PART_POWDER_GLSL), not from a normal map.
   [MAT.roofPowder]: look({},
-    {name: 'roofPowder', aged: {color: '#b99d5f', roughness: .68, clearcoat: 0, envMapIntensity: .5}, color: '#c4973f', paint: '#d6a640', metalness: .92, roughness: .6, clearcoat: .06, clearcoatRoughness: .5, envMapIntensity: .7, flake: 0, grain: 'powder'}),
+    {name: 'roofPowder', aged: {color: '#b99d5f', roughness: .68, clearcoat: 0, roomGain: .5}, color: '#c4973f', paint: '#d6a640', metalness: .92, roughness: .6, clearcoat: .06, clearcoatRoughness: .5, roomGain: .7, flake: 0, grain: 'powder'}),
   // Doha: the ground pieces are painted into the lid by the ground shader (the mat id is read from the ident map), not meshed; these
   // entries give each a plain stand-in colour for the glb export and the material table's checks.
   [MAT.bankGold]: look({ch: 15, coat: 'powder30', density: true, tier: 'dense', recipe: 'bank', fine: 'wedge', refColour: '#cfa24e'},
