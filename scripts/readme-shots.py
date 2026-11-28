@@ -1,17 +1,22 @@
 # Converts the PNGs written by scripts/readme-shots.mjs into the README WebPs (docs/images) and the OG image (public/og.jpg),
 # and writes a contact sheet to check them side by side. Needs Pillow.
 # Usage: python -I scripts/readme-shots.py [srcDir]   (default .shots/readme)
+import json
 import sys
 from pathlib import Path
 from PIL import Image
 
 SRC = Path(sys.argv[1] if len(sys.argv) > 1 else '.shots/readme')
 ROOT = Path(__file__).resolve().parent.parent
-# Names come from README_SHOTS in readme-shots.mjs; README.md links docs/images/<name>.webp.
-NAMES = ['home-night', 'home-night-ja', 'home-day', 'lid', 'mobile-home']
+# The names are the ones readme-shots.mjs wrote (README_SHOTS there); README*.md link docs/images/<name>.webp.
+manifest = json.loads((SRC / 'shots.json').read_text(encoding='utf-8'))
+if not manifest['complete']:
+    sys.exit('readme-shots.mjs did not write every shot; nothing converted')
+NAMES = manifest['names']
 WEBP_QUALITY = 80
-# The OG card is the home-night picture cropped to the box (1200 x 630 is the OG size; the origin keeps the box centred).
-OG_SOURCE, OG_ORIGIN, OG_SIZE, OG_QUALITY = 'home-night', (140, 165), (1200, 630), 85
+# The OG card is the home-night picture (1440 x 900) cropped to the box: 1200 x 630 is the OG size, and the origin keeps the
+# whole box with its cords inside (the box spans about x 235-1200, y 340-865 in that picture).
+OG_SOURCE, OG_ORIGIN, OG_SIZE, OG_QUALITY = 'home-night', (140, 255), (1200, 630), 85
 
 for name in NAMES:
     im = Image.open(SRC / f'{name}.png').convert('RGB')

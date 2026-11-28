@@ -1,6 +1,6 @@
 # 京都專案交接入口
 
-更新：2026-11-25（晚）。這是**唯一的目前狀態入口**；各輪細節在 `agent-runs/`，舊狀態以 Git 歷史為準，不在文件頂端堆疊「最新狀態」。新對話依序讀 `../AGENTS.md`、本檔（**先看 §4**）、[`plans/2026-11-24-chain-3.md`](plans/2026-11-24-chain-3.md)（目前的開案書：第三條鏈與待辦）。[`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md) 是第二條鏈的紀錄，[`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) 是體檢與第一條鏈的紀錄。架構決策在 [`adr/`](adr/README.md)，動結構前先查。蒔繪盤的畫法在 skill `makie-painting`（§4.4）。
+更新：2026-11-29。這是**唯一的目前狀態入口**；各輪細節在 `agent-runs/`，舊狀態以 Git 歷史為準，不在文件頂端堆疊「最新狀態」。新對話依序讀 `../AGENTS.md`、本檔（**先看 §4**）、[`plans/2026-11-24-chain-3.md`](plans/2026-11-24-chain-3.md)（目前的開案書：第三條鏈與待辦）。[`plans/2026-11-24-chain-2.md`](plans/2026-11-24-chain-2.md) 是第二條鏈的紀錄，[`plans/2026-11-22-health-and-backlog.md`](plans/2026-11-22-health-and-backlog.md) 是體檢與第一條鏈的紀錄。架構決策在 [`adr/`](adr/README.md)，動結構前先查。蒔繪盤的畫法在 skill `makie-painting`（§4.4）。
 
 ## 1. Git 狀態
 
@@ -40,7 +40,11 @@ npm run dev -- --host 127.0.0.1 --strictPort
 | 歲時記 | 只有[計畫](SEASONAL_PLAN.md)；首頁入口已移除。使用者 2026-11-22：擱到體質與畫面收完 |
 | 文箱架構 | `study.js`（`mountBunko`：手勢、移光、縮放、換函、開蓋）、`renderer.js`（選 three 或靜態圖）、`plate/three-renderer.js`＋`three-pack.js`、`plate/static-plate.js`、`plate/parts.js`＋`vocab.js`＋`mat.js`＋`<區>.js`（構圖資料）、`plate/creature-mesh.js`／`crag-mesh.js`／`architecture-mesh.js` 等（網格）、`backdrop.js`＋`ward-art.js`（背景） |
 
-## 3. 最近一次驗收（2026-11-24 上午，分支 `claude/chain3-1124`，第三條鏈）
+## 3. 最近一次驗收
+
+**2026-11-29（分支 `claude/burn-1129`，`f780730` 之後）**：lint exit 0（ADR 28 份）；`validate_data.js --strict` ERROR 0／WARN 0，734 筆；`npm test` 186／186＋94／94；build 過（`three-renderer` 810.37 kB，gzip 233.04）；smoke 三種（three、`plate=shaderfail`、`plate=static`）都過；`plate-parts-hash --check` 11／11（新基準）；`plate-clip` findings 0。截圖用無頭 Chrome（這輪是 AMD 內顯，只看畫面不量時間）。日誌在 `.shots/burn/checks.log`。
+
+以下是 2026-11-24 上午（分支 `claude/chain3-1124`，第三條鏈）的紀錄：
 
 | 檢查 | 結果 |
 |---|---|
@@ -91,6 +95,8 @@ npm run dev -- --host 127.0.0.1 --strictPort
 **K1「房間收成同一個來源」開案（2026-11-27）**：來源是 `C:\Git\_art_study\kyoto-bunko.md`（Fable 的美術研究提案；使用者 11/27「Kyoto 的解耦我同意」）。開案書 [`plans/2026-11-28-room.md`](plans/2026-11-28-room.md)（Fable 經 API）。已證實：材質表的 `envMapIntensity` 沒有作用（three 0.186.1 在材質沒有自己的 `envMap` 時用 `scene.environmentIntensity`）。實作使用者 11/28 開工，主席 Opus 做，開工前先看開案書 §9 的使用者回答。
 
 **K1 實作（2026-11-27～28）**：K0 實測確認 `material.envMapIntensity` 無效後，A 包將房間正本收進 `plate/room.js`、S 包建量測腳本、B＋C 包改由 `room-env.js` 用與蓋面同一份 `roomLightGlsl` 公式畫球面環境貼圖，加上 `uRoomTint` 日夜色調與每材質 `uRoomGain` 接縫（K0b 採 (b)，欄位改名 `roomGain`），並把窗只留在環境裡、刪除 `kyotoWin` 與真塗窗瓣。工作在分支 `claude/room-1128`（A 包 `c995a35`／標籤 `k1-a`、S 包 `036e624`、B＋C 包 `545166c`、降級圖 `f22657a`），22 張降級圖已重拍。蓋面對 A 包在日夜、lightoff、mobile、`?coat=0`、`?matSwap` 合計 58 張皆為 0 差異，例行檢查與三種冒煙全過，新開 ADR 0028。使用者 2026-11-28 驗收（金的明暗起伏 1.08–1.23 倍，未到開案書 1.15 的起始門檻，照「高於改前」收），ADR 0028 改為採用，同日合併 `main`；待辦還有金堂窗格與底板閃爍（`claude/flicker-1128`）、README／OG 圖是否重拍、`ROOM.direct` 光色統一（Q2）與 K2 障子格。房間量測跑 `bash scripts/plate-room-shots.sh <dir>` 與 `node scripts/plate-room-stats.mjs stats|check|lid-diff|daynight`，完整數字見 [`plans/2026-11-28-room.md`](plans/2026-11-28-room.md) §11。
+
+**11/29 額度消耗輪**（紀錄 [`plans/2026-11-29-burn.md`](plans/2026-11-29-burn.md)，分支 `claude/burn-1129`）：Claude 週額度 11/29 21:00 作廢，使用者要先在 Kyoto 用掉（只到重設為止；之後回到 11/28「Claude 留給戰旗、Kyoto 實作外派」）。金堂窗格與底板閃爍修好（Codex 的牆面襯底＋主席把頂點格式具名），parts-hash 基準與 22 張降級圖重產，README 五張與 OG 重拍（拍圖腳本 `scripts/readme-shots.mjs`、`.py` 已提交）。開盒圖審過沒有缺陷；蓋面不改（亮斑是手燈的移光碎閃，不是房間光；要連續亮帶得把手燈改成面光源，另案）。歲時記 21 筆待公告重查沒有公告。耦合體檢提案 [`plans/2026-11-29-coupling-audit.md`](plans/2026-11-29-coupling-audit.md) §6 待使用者決定。
 
 誰做什麼：照全域合約「跨模型派工」（Fable 預算、動手原則）與目前開案書（`plans/2026-11-24-chain-2.md`）§1 的額度表、§3 的執行者欄；每包開工前用 `quota` skill 重查額度。定調類的視覺由主代理自己做，可拆且有目標圖或數字驗收的才派子代理。
 
