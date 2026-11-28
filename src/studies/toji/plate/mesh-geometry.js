@@ -2,6 +2,11 @@
 // Vertex format before packing: 8 floats [x, y, z, nx, ny, nz, u, v] (non-indexed triangles).
 // Packed vertex format: 16 floats [pos3, normal3, uv2, owner4(index, foot, anchorX, anchorZ), style4(hinge, mat, isBird, bias)].
 
+/** Unpacked mesh vertex layout (the 8-float format above). Older loops in this folder still spell 8 and 24 out. */
+export const VERTEX_FLOATS = 8;
+export const TRIANGLE_FLOATS = 3 * VERTEX_FLOATS;
+export const VERTEX_OFFSET = Object.freeze({x: 0, y: 1, z: 2, nx: 3, ny: 4, nz: 5, u: 6, v: 7});
+
 const isFiniteVec = (v, n) => Array.isArray(v) && v.length === n && v.every(Number.isFinite);
 const assertMat = (mat, fn) => {
   if (!Number.isInteger(mat) || mat <= 0) throw new Error(`${fn}: invalid material ${mat}`);
