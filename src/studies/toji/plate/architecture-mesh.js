@@ -3,7 +3,7 @@
 // outline; tile lines are thin bands laid on that same surface. Walls are flat boxes, posts stand a little proud,
 // windows sit back between them. Openings in gates and galleries are real holes: neither mesh nor fills cover them.
 import {MAT, KIND} from './vocab.js';
-import {extrudeConvex, sweepHalfTube, ribbonMesh} from './mesh-geometry.js';
+import {extrudeConvex, sweepHalfTube, ribbonMesh, VERTEX_FLOATS, TRIANGLE_FLOATS, VERTEX_OFFSET} from './mesh-geometry.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -234,6 +234,48 @@ export function meshRoof(id, cx, zEave, halfW, rise, {ridgeHalf = halfW * .2, up
 
 /** Relief depth of a wall: narrow storeys stand a fifth lower. */
 const wallDepth = halfW => (halfW < 60 ? 6.4 : 8);
+const WALL_CHAMFER = .35;
+const WINDOW_RELIEF = .12; // Profile above the backing, whose triangles share the window's terrain samples.
+const FOOT_BEAM_WIDTH = 1.3;
+// chamferConvex(rect(...)) emits two points per corner in rect order (x0z0, x1z0, x1z1, x0z1), each corner's
+// point toward the previous corner first: [7, 0] lie on the left edge, [3, 4] on the right edge.
+const LEFT_EDGE = [7, 0], RIGHT_EDGE = [3, 4];
+
+/** Close the wall shell around the backing triangles of each bay. Bay seams share edges and have no internal faces. */
+function storeyWall(x0, x1, zTop, zBottom, depth, mat, windows) {
+  const vertices = [];
+  const point = ([x, z], y) => [x, y, z];
+  const top = [0, 1, 0], bottom = [0, -1, 0];
+  for (const [bay, {outline, panel}] of windows.entries()) {
+    const left = lerp(x0, x1, bay / windows.length), right = lerp(x0, x1, (bay + 1) / windows.length);
+    const border = chamferConvex(rect(left, right, zTop, zBottom), WALL_CHAMFER);
+    const first = bay === 0, last = bay === windows.length - 1;
+    // Flatten the corner bevels at internal bay seams. Preserve the wall's outside chamfers.
+    if (!first) { border[LEFT_EDGE[1]][1] = zTop; border[LEFT_EDGE[0]][1] = zBottom; }
+    if (!last) { border[RIGHT_EDGE[0]][1] = zTop; border[RIGHT_EDGE[1]][1] = zBottom; }
+
+    // Use the actual panel cap triangles as the backing. Different XZ tessellation interpolates different
+    // groundY and can bury a window even when its rest height and hinge are correct.
+    const v = panel.vertices, {x, z, ny} = VERTEX_OFFSET;
+    for (let j = 0; j < v.length; j += TRIANGLE_FLOATS) {
+      if (v[j + ny] !== 1) continue; // upward cap
+      const [ia, ib, ic] = [j, j + VERTEX_FLOATS, j + 2 * VERTEX_FLOATS];
+      const a = [v[ia + x], depth, v[ia + z]], b = [v[ib + x], depth, v[ib + z]], c = [v[ic + x], depth, v[ic + z]];
+      tri(vertices, a, b, c, top, top, top, top);
+      tri(vertices, [a[0], 0, a[2]], [b[0], 0, b[2]], [c[0], 0, c[2]], bottom, bottom, bottom, bottom);
+    }
+    for (let j = 0; j < border.length; j++) {
+      const next = (j + 1) % border.length;
+      const a = border[j], b = border[next], c = outline[next], d = outline[j];
+      quadFace(vertices, point(a, depth), point(b, depth), point(c, depth), point(d, depth), top);
+      quadFace(vertices, point(a, 0), point(b, 0), point(c, 0), point(d, 0), bottom);
+      if ((!first && j === LEFT_EDGE[0]) || (!last && j === RIGHT_EDGE[0])) continue; // internal bay seam
+      const outward = [b[1] - a[1], 0, a[0] - b[0]];
+      quadFace(vertices, point(a, 0), point(b, 0), point(b, depth), point(a, depth), outward);
+    }
+  }
+  return {mat, vertices};
+}
 
 /**
  * Storey: a flat wall box, posts and beams a little proud of it, windows set back between the posts.
@@ -247,25 +289,30 @@ const wallDepth = halfW => (halfW < 60 ? 6.4 : 8);
 export function meshStorey(id, cx, zTop, zBottom, halfW, {bays = 3, layer = 2, group = id, order = 0, mat = MAT.lacquer, windowMat = MAT.lamp, motionWith} = {}) {
   const wy = wallDepth(halfW), timber = mat === MAT.lacquer ? MAT.gold : mat;
   const wall = part(id, KIND.tier, layer, mat, [cx, zBottom], {group, order, ...(motionWith ? {motionWith} : {})});
-  wall.fills.push({d: rect(cx - halfW, cx + halfW, zTop, zBottom), soft: 0, crisp: .45});
-  const mesh = [box(cx - halfW, cx + halfW, zTop, zBottom, 0, wy, mat, .35)];
+  const left = cx - halfW, right = cx + halfW;
+  wall.fills.push({d: rect(left, right, zTop, zBottom), soft: 0, crisp: .45});
+
+  const lamp = part(`${id}-lamp`, KIND.tier, layer, windowMat, [cx, zBottom], {group, order, motionWith: id});
+  const bay = halfW * 2 / bays, windows = [];
+  for (let i = 0; i < bays; i++) {
+    const x0 = left + bay * i + bay * .2, x1 = x0 + bay * .6, z0 = lerp(zTop, zBottom, .16), z1 = lerp(zTop, zBottom, .66);
+    const footprint = rect(x0, x1, z0, z1), outline = chamferConvex(footprint, .2);
+    lamp.fills.push({d: footprint, soft: 0, crisp: .3});
+    windows.push({outline, panel: extrudeConvex(outline, wy - 1, wy + WINDOW_RELIEF, windowMat)});
+  }
+  lamp.mesh = windows.map(({panel}) => panel);
+
+  // Stop the hidden wall face halfway through the foot beam. The beam owns the outside face and silhouette.
+  const mesh = [storeyWall(left, right, zTop, zBottom - FOOT_BEAM_WIDTH / 2, wy, mat, windows)];
   for (let i = 0; i <= bays; i++) {
     const x = lerp(cx - halfW, cx + halfW, i / bays);
     mesh.push(box(x - .875, x + .875, zTop, zBottom, 0, wy + 1.5, timber, .2));
   }
-  mesh.push(box(cx - halfW - 3, cx + halfW + 3, zBottom - 1.3, zBottom, 0, wy + .9, timber, .2));
+  mesh.push(box(left - 3, right + 3, zBottom - FOOT_BEAM_WIDTH, zBottom, 0, wy + .9, timber, .2));
   const zw = lerp(zTop, zBottom, .72);
   mesh.push(box(cx - halfW - 2, cx + halfW + 2, zw - .35, zw + .35, 0, wy + .6, timber, .15));
   wall.mesh = mesh;
 
-  const lamp = part(`${id}-lamp`, KIND.tier, layer, windowMat, [cx, zBottom], {group, order, motionWith: id});
-  const bay = halfW * 2 / bays, lampMesh = [];
-  for (let i = 0; i < bays; i++) {
-    const x0 = cx - halfW + bay * i + bay * .2, x1 = x0 + bay * .6, z0 = lerp(zTop, zBottom, .16), z1 = lerp(zTop, zBottom, .66);
-    lamp.fills.push({d: rect(x0, x1, z0, z1), soft: 0, crisp: .3});
-    lampMesh.push(box(x0, x1, z0, z1, wy - 1, wy + .12, windowMat, .2));
-  }
-  lamp.mesh = lampMesh;
   return [wall, lamp];
 }
 
